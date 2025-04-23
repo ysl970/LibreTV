@@ -123,27 +123,40 @@ const M3U8_PATTERN = /\$https?:\/\/[^"'\s]+?\.m3u8/g;
 const CUSTOM_PLAYER_URL = 'player.html'; // 使用相对路径引用本地player.html
 
 // 增加视频播放相关配置
+const DEFAULTS = {
+    enablePreloading: true, // 预加载，默认关闭
+    preloadCount: 2, // 预加载集数
+    debugMode: false // 预加载日志，默认关闭
+};
+
 const PLAYER_CONFIG = {
     autoplay: true,
     allowFullscreen: true,
     width: '100%',
     height: '600',
-    timeout: 15000,  // 播放器加载超时时间
-    filterAds: true,  // 是否启用广告过滤
-    autoPlayNext: true,  // 默认启用自动连播功能
+    timeout: 15000, // 播放器加载超时时间
+    filterAds: true, // 是否启用广告过滤
+    autoPlayNext: true, // 默认启用自动连播功能
     adFilteringEnabled: true, // 默认开启分片广告过滤
-    adFilteringStorage: 'adFilteringEnabled' // 存储广告过滤设置的键名
+    adFilteringStorage: 'adFilteringEnabled', // 存储广告过滤设置的键名
+    enablePreloading: getBoolConfig('enablePreloading', DEFAULTS.enablePreloading),
+    preloadCount: getIntConfig('preloadCount', DEFAULTS.preloadCount, 1, 10),
+    debugMode: getBoolConfig('preloadDebugMode', DEFAULTS.debugMode),
 };
 
-// 修正：挂到window上，供全局/其它文件使用
+
 window.PLAYER_CONFIG = PLAYER_CONFIG;
 
-// ==== LibreTV: 预加载功能与调试日志开关 ====
-// 是否启用播放器多集预加载功能（见player.html微调）。如需关闭，设为 false
-window.PLAYER_CONFIG.enablePreloading = true;  // 可根据需要设为 false
+function getBoolConfig(key, def) {
+    const v = localStorage.getItem(key);
+    return v === null ? def : v === 'true';
+}
+function getIntConfig(key, def, min, max) {
+    const v = parseInt(localStorage.getItem(key));
+    return (!isNaN(v) && v >= min && v <= max) ? v : def;
+}
 
-// 是否启用详细调试日志（推荐测试/定位问题时启用）。如需关闭，设为 false 或删除此行
-window.PLAYER_CONFIG.debugMode = true;         // 或 false/留空关闭详细日志
+
 // 增加错误信息本地化
 const ERROR_MESSAGES = {
     NETWORK_ERROR: '网络连接错误，请检查网络设置',

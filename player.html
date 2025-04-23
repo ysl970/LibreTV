@@ -1400,23 +1400,26 @@
         }
     </script>
 
-
-    
 <script>
 /**
- * 优化后的集数预加载功能（自动兼容window作用域和多次切集数）
- * - 集成到player.html和全局
- * - 优化事件&变量同步
- * - 日志更友好调试
+ * 集数预加载功能
+ * 依赖：window.PLAYER_CONFIG.currentEpisodes, currentEpisodeIndex
+ * config.js 已保证 window.PLAYER_CONFIG.preloadCount/enablePreloading/debugMode 是最终正确值
  */
 (function(){
-    const PRELOAD_EPISODE_COUNT = 2;
-
-    // 兼容性检测
-    function supportsCacheStorage() {
-        return 'caches' in window && window.caches.open;
+    // 只需返回全局配置的预加载集数
+    function getPreloadCount() {
+        return window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.preloadCount !== 'undefined'
+            ? window.PLAYER_CONFIG.preloadCount
+            : 2;
     }
 
+    // 简易的缓存支持判断
+    function supportsCacheStorage() {
+        return 'caches' in window && typeof window.caches.open === 'function';
+    }
+
+    // 网络慢时可跳过预加载
     function isSlowNetwork() {
         try {
             const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -1426,51 +1429,43 @@
         }
     }
 
-    /**
-     * 自动同步局部变量到window，防止作用域bug
-     */
+    // 同步全局变量（用于外部调用兼容）
     function syncGlobalEpisodes() {
         if (typeof currentEpisodes !== "undefined") window.currentEpisodes = currentEpisodes;
         if (typeof currentEpisodeIndex !== "undefined") window.currentEpisodeIndex = currentEpisodeIndex;
     }
 
     /**
-     * 预加载下N集（m3u8和前3个ts分片）
+     * 预加载下N集的m3u8和前几个ts分片
      */
-    async function preloadNextEpisodeParts(preloadCount = PRELOAD_EPISODE_COUNT) {
-        // 检查开关
+    async function preloadNextEpisodeParts(preloadCount) {
+        preloadCount = typeof preloadCount === 'undefined' ? getPreloadCount() : preloadCount;
         if (!(window.PLAYER_CONFIG && PLAYER_CONFIG.enablePreloading)) return;
         if (isSlowNetwork()) {
-            if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log('[Preload] 跳过，网络过慢');
+            if (PLAYER_CONFIG.debugMode) console.log('[Preload] 跳过，网络过慢');
             return;
         }
-
-        // 确保有全局数据（后端逻辑已在player.html同步!）
         syncGlobalEpisodes();
         if (!window.currentEpisodes || !Array.isArray(window.currentEpisodes) || typeof window.currentEpisodeIndex !== 'number') {
-            if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log('[Preload] 跳过，集数或索引缺失');
+            if (PLAYER_CONFIG.debugMode) console.log('[Preload] 跳过，集数或索引缺失');
             return;
         }
-
         const idx = window.currentEpisodeIndex, maxIndex = window.currentEpisodes.length - 1;
-        if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode)
-            console.log(`[Preload] 尝试预加载第${idx+1}~${Math.min(idx+preloadCount, maxIndex)+1}集`);
+        if (PLAYER_CONFIG.debugMode)
+            console.log(`[Preload] 预加载第${idx+1}~${Math.min(idx+preloadCount, maxIndex)+1}集`);
 
         for (let offset = 1; offset <= preloadCount; offset++) {
             const episodeIdx = idx + offset;
             if (episodeIdx > maxIndex) break;
             const nextUrl = window.currentEpisodes[episodeIdx];
-
-            if (!nextUrl || typeof nextUrl !== 'string') {
-                if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode)
-                    console.log(`[Preload] 略过空URL@${episodeIdx}`);
+            if (!nextUrl) {
+                if (PLAYER_CONFIG.debugMode) console.log(`[Preload] 略过空URL@${episodeIdx}`);
                 continue;
             }
             try {
-                const m3u8Resp = await fetch(nextUrl, { method: "GET", credentials: "same-origin" });
+                const m3u8Resp = await fetch(nextUrl, { method: "GET" });
                 if (!m3u8Resp.ok) {
-                    if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode)
-                        console.log(`[Preload] m3u8请求失败: ${nextUrl}`);
+                    if (PLAYER_CONFIG.debugMode) console.log(`[Preload] m3u8请求失败: ${nextUrl}`);
                     continue;
                 }
                 const m3u8Text = await m3u8Resp.text();
@@ -1482,9 +1477,8 @@
                         tsUrls.push(/^https?:\/\//i.test(t) ? t : base + t);
                     }
                 });
-
-                if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode)
-                    console.log(`[Preload] m3u8分析结果: ts分片=${tsUrls.length}, ep${episodeIdx+1} ${nextUrl}`);
+                if (PLAYER_CONFIG.debugMode)
+                    console.log(`[Preload] m3u8分片: ts数=${tsUrls.length}, ep${episodeIdx+1} ${nextUrl}`);
 
                 for (const tsUrl of tsUrls) {
                     if (supportsCacheStorage()) {
@@ -1492,74 +1486,71 @@
                             const cache = await caches.open('libretv-preload1');
                             const cachedResp = await cache.match(tsUrl);
                             if (!cachedResp) {
-                                const resp = await fetch(tsUrl, { method: "GET", credentials: "same-origin" });
+                                const resp = await fetch(tsUrl, { method: "GET" });
                                 if (resp.ok) {
                                     await cache.put(tsUrl, resp.clone());
-                                    if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode)
+                                    if (PLAYER_CONFIG.debugMode)
                                         console.log(`[Preload] ts已缓存: ${tsUrl}`);
-                                } else if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) {
+                                } else if (PLAYER_CONFIG.debugMode) {
                                     console.log(`[Preload] ts拉取失败: ${tsUrl}`);
                                 }
                             } else {
-                                if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode)
+                                if (PLAYER_CONFIG.debugMode)
                                     console.log(`[Preload] ts已存在缓存: ${tsUrl}`);
                             }
                         } catch (ex) {
-                            if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode)
+                            if (PLAYER_CONFIG.debugMode)
                                 console.log(`[Preload] ts缓存失败: ${tsUrl}, e=${ex}`);
                         }
                     } else {
-                        // fallback fetch (非缓存环境也拉一下)
                         try {
-                            const resp = await fetch(tsUrl, { method: "GET", credentials: "same-origin" });
-                            if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) {
+                            const resp = await fetch(tsUrl, { method: "GET" });
+                            if (PLAYER_CONFIG.debugMode) {
                                 if (resp.ok) console.log(`[Preload] ts已拉取(非缓存): ${tsUrl}`);
                                 else console.log(`[Preload] ts拉取失败: ${tsUrl}`);
                             }
                         } catch (ex) {
-                            if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode)
+                            if (PLAYER_CONFIG.debugMode)
                                 console.log(`[Preload] ts拉取异常(非缓存): ${tsUrl} e=${ex}`);
                         }
                     }
                 }
             } catch (e) {
-                if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode)
+                if (PLAYER_CONFIG.debugMode)
                     console.log(`[Preload] m3u8拉取异常: ${nextUrl}; e=${e}`);
             }
         }
     }
-    // 挂到window
     window.preloadNextEpisodeParts = preloadNextEpisodeParts;
 
-    // 事件注册优化：只有当数据可用时才注册
+    /** 自动注册相关事件 **/
     function safeRegisterPreloadEvents() {
         syncGlobalEpisodes();
-        if (!(window.PLAYER_CONFIG && PLAYER_CONFIG.enablePreloading)) return;
+        if (!(window.PLAYER_CONFIG && window.PLAYER_CONFIG.enablePreloading)) return;
         if (!window.currentEpisodes || !Array.isArray(window.currentEpisodes) || typeof window.currentEpisodeIndex !== 'number') {
-            // 数据未准备，稍后再试
             setTimeout(safeRegisterPreloadEvents, 300);
             return;
         }
-        // 下一集按钮悬停、触摸预加载
+
+        // 下一集按钮悬停、触摸
         const nextBtn = document.getElementById('nextButton');
         if (nextBtn && !nextBtn._preloadHooked) {
             nextBtn._preloadHooked = true;
-            nextBtn.addEventListener('mouseenter', () => preloadNextEpisodeParts(PRELOAD_EPISODE_COUNT), {passive:true});
-            nextBtn.addEventListener('touchstart', () => preloadNextEpisodeParts(PRELOAD_EPISODE_COUNT), {passive:true});
+            nextBtn.addEventListener('mouseenter', () => preloadNextEpisodeParts(getPreloadCount()), {passive:true});
+            nextBtn.addEventListener('touchstart', () => preloadNextEpisodeParts(getPreloadCount()), {passive:true});
         }
-        // 播放接近结尾时预加载
+        // 视频时间靠近结尾时自动预加载
         function setupTimeupdatePreload() {
             if (window.dp && window.dp.video && typeof window.dp.video.addEventListener === 'function' && !window.dp._preloadHooked) {
                 window.dp._preloadHooked = true;
                 window.dp.video.addEventListener('timeupdate', function() {
                     if (window.dp.video.duration &&
                         window.dp.video.currentTime > window.dp.video.duration - 12) {
-                        preloadNextEpisodeParts(PRELOAD_EPISODE_COUNT);
+                        preloadNextEpisodeParts(getPreloadCount());
                     }
                 });
             }
         }
-        // 确保 dp 可用再注册
         if (window.dp && window.dp.video) setupTimeupdatePreload();
         else {
             let tries = 0;
@@ -1571,40 +1562,55 @@
                 if (++tries > 50) clearInterval(timer);
             }, 200);
         }
-        // Any 集数点击后预加载
+        // 点任意集数列表，也可预加载
         const episodesList = document.getElementById('episodesList');
         if (episodesList && !episodesList._preloadHooked) {
             episodesList._preloadHooked = true;
             episodesList.addEventListener('click', function(e){
                 const btn = e.target.closest('button[id^="episode-"]');
-                if (btn) setTimeout(() => preloadNextEpisodeParts(PRELOAD_EPISODE_COUNT), 200);
+                if (btn) setTimeout(() => preloadNextEpisodeParts(getPreloadCount()), 200);
             });
         }
     }
 
-    // 数据同步后挂载事件
+    // 加入页面打开后自动预加载下一集
+    function triggerFirstPreload(tryCount) {
+        syncGlobalEpisodes();
+        if (
+            window.PLAYER_CONFIG && window.PLAYER_CONFIG.enablePreloading &&
+            window.currentEpisodes && Array.isArray(window.currentEpisodes) &&
+            typeof window.currentEpisodeIndex === 'number'
+        ) {
+            preloadNextEpisodeParts();
+            if (window.PLAYER_CONFIG.debugMode)
+                console.log('[Preload] 首次自动预加载已触发');
+        } else if ((tryCount||0) < 10) {
+            setTimeout(function() {
+                triggerFirstPreload((tryCount||0)+1);
+            }, 150);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', ()=>{
         syncGlobalEpisodes();
-        // 首次注册
         safeRegisterPreloadEvents();
-        // 集数切换时重新同步全局变量并尝试预加载
-        // （注意：playEpisode 函数调用后同步全局即可）
+
+        // 首次自动预加载调用
+        triggerFirstPreload(0);
+
+        // 集数切换后也预加载
         const origPlayEpisode = window.playEpisode;
         if (typeof origPlayEpisode === 'function') {
             window.playEpisode = function(idx){
                 if (typeof currentEpisodes !== "undefined") window.currentEpisodes = currentEpisodes;
                 if (typeof currentEpisodeIndex !== "undefined") window.currentEpisodeIndex = currentEpisodeIndex;
                 origPlayEpisode(idx);
-                // 仅播放后才触发，防止误预加载
-                setTimeout(()=>preloadNextEpisodeParts(PRELOAD_EPISODE_COUNT), 250);
+                setTimeout(()=>preloadNextEpisodeParts(getPreloadCount()), 250);
             }
         }
     });
 })();
 </script>
-
-
-
     
 </body>
 </html>
