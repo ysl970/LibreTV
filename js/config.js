@@ -126,7 +126,7 @@ const CUSTOM_PLAYER_URL = 'player.html'; // 使用相对路径引用本地player
 const DEFAULTS = {
     enablePreloading: true, // 预加载，默认关闭
     preloadCount: 2, // 预加载集数
-    debugMode: false // 预加载日志，默认关闭
+    debugMode: true // 预加载日志，默认关闭
 };
 
 const PLAYER_CONFIG = {
