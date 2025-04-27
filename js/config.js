@@ -1,13 +1,44 @@
 // 全局常量配置
-const PROXY_URL = '/proxy/';    // 适用于 Cloudflare, Netlify (带重写), Vercel (带重写)
-// const HOPLAYER_URL = 'https://hoplayer.com/index.html';
+const PROXY_URL = '/proxy/';
 const SEARCH_HISTORY_KEY = 'videoSearchHistory';
 const MAX_HISTORY_ITEMS = 5;
 
-// 密码保护配置
 const PASSWORD_CONFIG = {
-    localStorageKey: 'passwordVerified',  // 存储验证状态的键名
-    verificationTTL: 90 * 24 * 60 * 60 * 1000,  // 验证有效期（90天，约3个月）
+    localStorageKey: 'passwordVerified',
+    verificationTTL: 90 * 24 * 60 * 60 * 1000,
+};
+
+// 设置密码
+const PASSWORD = 'letmesee'; // 修改这里为你想要的密码
+
+// 密码验证逻辑
+function checkPassword() {
+    const stored = JSON.parse(localStorage.getItem(PASSWORD_CONFIG.localStorageKey));
+    if (stored && stored.timestamp && Date.now() - stored.timestamp < PASSWORD_CONFIG.verificationTTL) {
+      return true;
+    }
+    return false;
+}
+
+function showPasswordModal() {
+    document.getElementById('passwordModal').style.display = 'flex';
+}
+
+function verifyPassword() {
+    const input = document.getElementById('passwordInput').value;
+    if (input === PASSWORD) {
+      localStorage.setItem(PASSWORD_CONFIG.localStorageKey, JSON.stringify({timestamp: Date.now()}));
+      document.getElementById('passwordModal').style.display = 'none';
+    } else {
+      document.getElementById('errorText').innerText = '密码不对呢，请再试一次～';
+    }
+}
+
+// 页面加载检查
+window.onload = function() {
+    if (!checkPassword()) {
+        showPasswordModal();
+    }
 };
 
 // 网站信息配置
