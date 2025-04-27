@@ -49,6 +49,15 @@
                 </svg>
             </button>
         </div>
+    <div class="fixed top-4 right-16 z-50">
+        <button onclick="openLiveModal(event)" class="bg-[#222] hover:bg-[#333] border border-[#333] hover:border-white rounded-lg px-3 py-1.5 transition-colors" aria-label="直播源" type="button">
+            <!-- 可自行换图标 -->
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+        </button>
+    </div>
     </nav>
 
     <!-- 历史记录面板 -->
@@ -346,6 +355,26 @@
             </div>
         </div>
     </div>
+    
+<!-- m3u直播源 Modal -->
+<div id="liveModal"
+     class="fixed inset-0 bg-black/80 hidden items-center justify-center z-[70]"
+     role="dialog" aria-modal="true" aria-labelledby="liveModalTitle" tabindex="-1">
+  <div class="bg-[#111] p-6 rounded-lg w-11/12 max-w-lg border border-[#333]">
+    <div class="flex justify-between items-center mb-4">
+      <h2 id="liveModalTitle" class="text-xl font-bold gradient-text">直播源导入</h2>
+      <button onclick="closeLiveModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+    </div>
+    <p class="text-gray-400 mb-2">请输入 `.m3u` 播放列表 URL：</p>
+    <input id="liveM3uUrl" type="text" class="w-full bg-[#222] border border-[#333] text-white px-3 py-2 rounded mb-4"
+           placeholder="https://xxx.com/live.m3u" autocomplete="off">
+    <div class="flex justify-end space-x-2">
+      <button onclick="loadLiveChannels()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">加载频道</button>
+      <button onclick="closeLiveModal()" class="px-4 py-2 bg-[#444] hover:bg-[#555] text-white rounded">取消</button>
+    </div>
+    <div id="liveList" class="mt-4 max-h-64 overflow-y-auto grid grid-cols-1 gap-2 text-sm"></div>
+  </div>
+</div>
 
     <!-- 版权声明弹窗 -->
     <div id="disclaimerModal"
