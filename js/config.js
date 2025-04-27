@@ -190,3 +190,8 @@ const CUSTOM_API_CONFIG = {
 
 // 新增隐藏内置黄色采集站API的变量，默认为true
 const HIDE_BUILTIN_ADULT_APIS = true;
+
+// 直播源相关配置
+const M3U_SOURCES_KEY = 'm3uLiveSources'; // localStorage key for M3U sources
+const LIVE_VIEW_ID = 'liveStreamsArea'; // ID for the live streams container
+const MAX_M3U_SOURCES = 10; // Maximum number of M3U sources allowed
