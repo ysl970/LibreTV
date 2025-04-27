@@ -67,16 +67,12 @@ async function loadLiveChannels() {
 /**
  * 点击频道后，跳转到 player.html 播放
  */
- function playLiveChannel(idx) {
-
+function playLiveChannel(idx) {
   const ch = (window.__LIVE_CHANNELS||[])[idx];
-   if (!ch) return;
-
+  if (!ch) return;
   const title = encodeURIComponent(ch.name);
-  // 1) 先拿到原始直播源
+  // 只传原始地址，不包 proxy
   const raw = ch.url;
-  // 2) 再走 /proxy/ 代理，encodeURIComponent(raw)
-  const proxied = PROXY_URL + encodeURIComponent(raw);
-  // 3) 然后把代理地址当 url 参数传给 player.html
-  window.location.href = `player.html?url=${encodeURIComponent(proxied)}&title=${title}&source_code=live`;
- }
+  window.location.href =
+    `player.html?url=${encodeURIComponent(raw)}&title=${title}&source_code=live`;
+}
