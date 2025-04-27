@@ -13,16 +13,16 @@ function initDouban() {
     // 设置豆瓣开关的初始状态
     const doubanToggle = document.getElementById('doubanToggle');
     if (doubanToggle) {
-        // ==== 新增代码：设置默认值 ====
-        if (localStorage.getItem('doubanEnabled') === null) {
-            localStorage.setItem('doubanEnabled', 'true');
-        }
-        // ============================
-        
         const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
         doubanToggle.checked = isEnabled;
         
-        
+        // 设置开关外观
+        const toggleBg = doubanToggle.nextElementSibling;
+        const toggleDot = toggleBg.nextElementSibling;
+        if (isEnabled) {
+            toggleBg.classList.add('bg-pink-600');
+            toggleDot.classList.add('translate-x-6');
+        }
         
         // 添加事件监听
         doubanToggle.addEventListener('change', function(e) {
@@ -195,7 +195,7 @@ function renderDoubanMovieTvSwitch() {
             setupDoubanRefreshBtn();
             
             // 初始加载热门内容
-            if (localStorage。getItem('doubanEnabled') === 'true') {
+            if (localStorage.getItem('doubanEnabled') === 'true') {
                 renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
             }
         }
@@ -421,13 +421,13 @@ function renderDoubanCards(data, container) {
             
             // 生成卡片内容，确保安全显示（防止XSS）
             const safeTitle = item.title
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
+                。replace(/</g, '&lt;')
+                。replace(/>/g, '&gt;')
+                。replace(/"/g, '&quot;');
             
             const safeRate = (item.rate || "暂无")
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
+                。replace(/</g, '&lt;')
+                。replace(/>/g, '&gt;');
             
             // 处理图片URL
             // 1. 直接使用豆瓣图片URL (添加no-referrer属性)
@@ -448,7 +448,7 @@ function renderDoubanCards(data, container) {
                         <span class="text-yellow-400">★</span> ${safeRate}
                     </div>
                     <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors">
-                        <a href="${item.url}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看">
+                        <a href="${item。url}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看">
                             🔗
                         </a>
                     </div>
@@ -478,4 +478,4 @@ function resetToHome() {
 }
 
 // 加载豆瓣首页内容
-document.addEventListener('DOMContentLoaded', initDouban);
+document。addEventListener('DOMContentLoaded', initDouban);
