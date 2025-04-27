@@ -75,7 +75,8 @@ const API_SITES = {
     ruyi: {
         api: 'https://cj.rycjapi.com',
         name: '如意资源',
-    },
+    }
+/*    },
     
     jkun: {
         api: 'https://jkunzyapi.com',
@@ -113,6 +114,7 @@ const API_SITES = {
         adult: true,
         detail: 'https://hsckzy.vip' // 添加detail URL以便特殊处理
     }
+*/
 };
 
 // 添加聚合搜索的配置选项
