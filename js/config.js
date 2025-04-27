@@ -91,7 +91,7 @@ const API_SITES = {
     api: "",               // 播放直播流时不会用到 api
     name: "直播源",         // 仅作标识
     filterAdRule: ""       // 空规则，不过滤
-  },
+  }
 };
 
 // 添加聚合搜索的配置选项
