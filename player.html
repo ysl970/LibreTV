@@ -738,6 +738,10 @@
                     }
             }
             });
+            // 添加移动端触摸控制
+            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                initMobileTouchControl(dp);
+            }
             // 全屏模式下锁定横屏
             dp.on('fullscreen', () => {
                 if (window.screen.orientation && window.screen.orientation.lock) {
