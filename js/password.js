@@ -19,7 +19,7 @@ function isPasswordVerified() {
     try {
         // 如果没有设置密码保护，则视为已验证
         if (!isPasswordProtected()) {
-            return true;
+            return false;
         }
 
         const verificationData = JSON.parse(localStorage.getItem(PASSWORD_CONFIG.localStorageKey) || '{}');
