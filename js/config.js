@@ -86,22 +86,6 @@ const API_SITES = {
         api: 'https://caiji.dbzy5.com',
         name: '豆瓣资源',
     },
-	mozhua: {
-        api: 'https://mozhuazy.com',
-        name: '魔爪资源',
-        detail: 'https://mozhuazy.com'
-    },
-    yayazy: {
-        api: 'https://cj.yayazy.net',
-        name: '鸭鸭资源',
-        detail: 'https://cj.yayazy.net'
-    },
-    suoni: {
-        api: 'https://suoniapi.com',
-        name: '索尼资源',
-        detail: 'https://suoniapi.com'
-    },
-
 
 
     yutuzy: {
