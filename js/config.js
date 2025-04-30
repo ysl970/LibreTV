@@ -54,6 +54,11 @@ const API_SITES = {
         name: '魔都资源',
         detail: 'https://www.mdzyapi.com',
     },
+    mozhua: {
+        api: 'https://mozhuazy.com',
+        name: '魔爪资源',
+        detail: 'https://mozhuazy.com',
+    },
     wolong: {
         api: 'https://collect.wolongzy.cc',
         name: '卧龙资源',
@@ -87,10 +92,7 @@ const API_SITES = {
         api: 'https://caiji.dbzy5.com',
         name: '豆瓣资源',
     },
-    mozhua: {
-        api: 'https://mozhuazy.com',
-        name: '魔爪资源',
-    },
+
 
     
 
