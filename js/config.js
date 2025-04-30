@@ -86,14 +86,6 @@ const API_SITES = {
         api: 'https://caiji.dbzy5.com',
         name: '豆瓣资源',
     },
-    huya: {
-        api: 'https://www.huyaapi.com',
-        name: '虎牙资源',
-    },
-    jyzy: {
-    api: 'https://jyzyapi.com',
-        name: '金鹰资源',
-    },
     subo: {
         api: 'https://subocaiji.com',
         name: '速播资源',
