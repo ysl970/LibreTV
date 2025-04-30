@@ -57,7 +57,6 @@ const API_SITES = {
     mozhua: {
         api: 'https://mozhuazy.com',
         name: '魔爪资源',
-        detail: 'https://mozhuazy.com',
     },
     wolong: {
         api: 'https://collect.wolongzy.cc',
