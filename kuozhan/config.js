@@ -26,9 +26,9 @@ const API_SITES = {
         name: '如意资源',
     },
     ffzy: {
-        api: 'http://ffzy5.tv',
+        api: 'http://api.ffzyapi.com',
         name: '非凡影视',
-        detail: 'http://ffzy5.tv',
+        detail: 'http://api.ffzyapi.com',
         filterAdRule: '#EXT-X-DISCONTINUITY\\r*\\n*#EXTINF:6.666667,[\\s\\S]*?#EXT-X-DISCONTINUITY'
     },
     lzzy: {
