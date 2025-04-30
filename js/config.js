@@ -46,10 +46,6 @@ const API_SITES = {
         api: 'https://wolongzyw.com',
         name: '卧龙资源',
     },
-    cjhw: {
-        api: 'https://cjhwba.com',
-        name: '新华为',
-    },
     hwba: {
         api: 'https://cjwba.com',
         name: '华为吧资源',
@@ -84,14 +80,7 @@ const API_SITES = {
     zuid: {
         api: 'https://api.zuidapi.com',
         name: '最大资源'
-    },
-
-  // 加这一行：
-  live: {
-    api: "",               // 播放直播流时不会用到 api
-    name: "直播源",         // 仅作标识
-    filterAdRule: ""       // 空规则，不过滤
-  }
+    }
 };
 
 // 添加聚合搜索的配置选项
