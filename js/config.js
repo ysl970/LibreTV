@@ -52,6 +52,7 @@ const API_SITES = {
     mdzy: {
         api: 'https://www.mdzyapi.com',
         name: '魔都资源',
+        detail: 'https://www.mdzyapi.com',
     },
     wolong: {
         api: 'https://collect.wolongzy.cc',
