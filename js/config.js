@@ -49,10 +49,6 @@ const API_SITES = {
         detail: 'https://heimuer.tv',
         filterAdRule: '#EXT-X-DISCONTINUITY\\n#EXTINF:\\d+\\.\\d+,\\n.*?\\n#EXT-X-DISCONTINUITY'
     },
-    mozhua: {
-        api: 'https://mozhuazy.com',
-        name: '魔爪资源',
-    },
     mdzy: {
         api: 'https://www.mdzyapi.com',
         name: '魔都资源',
