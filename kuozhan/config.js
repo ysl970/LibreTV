@@ -25,10 +25,6 @@ const API_SITES = {
         api: 'https://cj.rycjapi.com',
         name: '如意资源',
     },
-    cjhw: {
-        api: 'https://cjhwba.com',
-        name: '新华为',
-    },
     ffzy: {
         api: 'http://ffzy5.tv',
         name: '非凡影视',
@@ -93,18 +89,6 @@ const API_SITES = {
     dbzy: {
         api: 'https://caiji.dbzy5.com',
         name: '豆瓣资源',
-    },
-    wuxianzy: {
-        api: 'https://api.wuxianzy.net',
-        name: '无线资源',
-    },
-    yayazy: {
-        api: 'https://cj.yayazy.net',
-        name: '鸭鸭资源',
-    },
-    suoni: {
-        api: 'https://suoniapi.com',
-        name: '索尼资源',
     },
 
 
