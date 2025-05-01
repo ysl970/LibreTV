@@ -37,7 +37,6 @@ const API_SITES = {
         api: 'https://tyyszy.com',
         name: '天涯资源',
     },
-
     zy360: {
         api: 'https://360zy.com',
         name: '360资源',
@@ -75,8 +74,6 @@ const API_SITES = {
         api: 'https://cj.rycjapi.com',
         name: '如意资源',
     },
-
-
     zuid: {
         api: 'https://api.zuidapi.com',
         name: '最大资源'
@@ -87,7 +84,7 @@ const API_SITES = {
 const AGGREGATED_SEARCH_CONFIG = {
     enabled: true,             // 是否启用聚合搜索
     timeout: 8000,            // 单个源超时时间（毫秒）
-    maxResults: 10000,          // 最大结果数量
+    maxResults: 10000,        // 最大结果数量
     parallelRequests: true,   // 是否并行请求所有源
     showSourceBadges: true    // 是否显示来源徽章
 };
@@ -95,7 +92,7 @@ const AGGREGATED_SEARCH_CONFIG = {
 // 抽象API请求配置
 const API_CONFIG = {
     search: {
-    	// 修改搜索接口为返回更多详细数据（包括视频封面、简介和播放列表）
+        // 修改搜索接口为返回更多详细数据（包括视频封面、简介和播放列表）
         path: '/api.php/provide/vod/?ac=videolist&wd=',
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -103,7 +100,7 @@ const API_CONFIG = {
         }
     },
     detail: {
-    	// 修改详情接口也使用videolist接口，但是通过ID查询，减少请求次数
+        // 修改详情接口也使用videolist接口，但是通过ID查询，减少请求次数
         path: '/api.php/provide/vod/?ac=videolist&ids=',
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -114,9 +111,6 @@ const API_CONFIG = {
 
 // 优化后的正则表达式模式
 const M3U8_PATTERN = /\$https?:\/\/[^"'\s]+?\.m3u8/g;
-
-// 添加自定义播放器URL
-const CUSTOM_PLAYER_URL = 'player.html'; // 使用相对路径引用本地player.html
 
 // 增加视频播放相关配置
 const DEFAULTS = {
@@ -140,18 +134,17 @@ const PLAYER_CONFIG = {
     debugMode: getBoolConfig('preloadDebugMode', DEFAULTS.debugMode),
 };
 
-
 window.PLAYER_CONFIG = PLAYER_CONFIG;
 
 function getBoolConfig(key, def) {
     const v = localStorage.getItem(key);
     return v === null ? def : v === 'true';
 }
+
 function getIntConfig(key, def, min, max) {
     const v = parseInt(localStorage.getItem(key));
     return (!isNaN(v) && v >= min && v <= max) ? v : def;
 }
-
 
 // 增加错误信息本地化
 const ERROR_MESSAGES = {
@@ -185,4 +178,21 @@ const CUSTOM_API_CONFIG = {
 // 新增隐藏内置黄色采集站API的变量，默认为true
 const HIDE_BUILTIN_ADULT_APIS = true;
 
-
+// 导出配置
+export {
+    PROXY_URL,
+    SEARCH_HISTORY_KEY,
+    MAX_HISTORY_ITEMS,
+    PASSWORD_CONFIG,
+    SITE_CONFIG,
+    API_SITES,
+    AGGREGATED_SEARCH_CONFIG,
+    API_CONFIG,
+    M3U8_PATTERN,
+    DEFAULTS,
+    PLAYER_CONFIG,
+    ERROR_MESSAGES,
+    SECURITY_CONFIG,
+    CUSTOM_API_CONFIG,
+    HIDE_BUILTIN_ADULT_APIS
+};
