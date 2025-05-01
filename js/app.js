@@ -895,13 +895,4 @@ function toggleEpisodeOrder(sourceCode) {
     }
 }
 
-// 初始化密码保护中间件
-function initPasswordProtection() {
-    // 对所有请求启用鉴权
-    if (config.auth.enabled) {
-        app.use(authMiddleware);
-    }
-    
-    // 或者针对特定路由
-    app.use('/api', authMiddleware);
-}
+
