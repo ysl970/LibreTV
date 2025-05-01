@@ -36,7 +36,7 @@ function getBaseUrl(urlStr) {
         const basePath = pathParts.join('/');
         return `${url.origin}${basePath}/`;
     } catch (e) {
-        // 容错
+        // 容错处理
         const protocolEnd = urlStr.indexOf('://');
         if (protocolEnd === -1) return urlStr;
         const lastSlashIndex = urlStr.lastIndexOf('/');
@@ -103,7 +103,7 @@ function safeJsonParse(jsonString, defaultValue = null, logFn) {
     }
 }
 function safeJsonStringify(value, defaultValue = 'null', logFn) {
-     try {
+    try {
         return JSON.stringify(value);
     } catch (e) {
         if (logFn) logFn(`JSON stringify error: ${e.message}`);
@@ -292,11 +292,11 @@ export async function onRequest(context) {
     const { request, env, waitUntil } = context;
     const url = new URL(request.url);
 
-    // ======== 优化：配置项先赋值再组装对象，避免ReferenceError ========
+    // 开启/关闭debug日志
     const DEBUG_ENABLED = env.DEBUG === 'true';
     const log = (msg) => logDebug(DEBUG_ENABLED, msg);
 
-    // 1. 先初始化单项变量
+    // 1. 读取/校验配置
     let CACHE_TTL = parseInt(env.CACHE_TTL, 10);
     if (isNaN(CACHE_TTL) || CACHE_TTL < 0) {
         log(`Invalid CACHE_TTL value "${env.CACHE_TTL}". Using default: ${DEFAULT_CACHE_TTL}`);
@@ -320,7 +320,7 @@ export async function onRequest(context) {
     } else {
         log("Env variable USER_AGENTS_JSON not set. Using default User-Agents.");
     }
-    // 2. 再组合成config对象
+
     const config = { DEBUG_ENABLED, CACHE_TTL, MAX_RECURSION, USER_AGENTS };
 
     // ------ 目标URL提取逻辑 ------
@@ -356,7 +356,7 @@ export async function onRequest(context) {
         const rawCacheKey = `${KV_RAW_PREFIX}${targetUrl}`;
         let cachedRawData = null;
 
-        // -- KV原始缓存 --
+        // -- 尝试KV原始缓存 --
         if (kvNamespace) {
             try {
                 const cachedRawJson = await kvNamespace.get(rawCacheKey);
@@ -383,31 +383,38 @@ export async function onRequest(context) {
             contentType = responseHeaders.get('content-type') || '';
             log(`Using cached raw content. Content-Type: ${contentType}`);
         } else {
-            // 若没缓存，从源fetch
+            // 没有缓存，真实请求源站
             const fetchedData = await fetchContentWithType(targetUrl, request, config, log);
             content = fetchedData.content;
             contentType = fetchedData.contentType;
             responseHeaders = fetchedData.responseHeaders;
-            // KV更新
-            if (Object.keys(headersToCache).length > 0) {
-            const stringifiedValue = safeJsonStringify({
-                body: content,
-                headers: safeJsonStringify(headersToCache, '{}', log)
-            }, null, log);
-            if (stringifiedValue) {
-                waitUntil(kvNamespace.put(rawCacheKey, stringifiedValue, { expirationTtl: CACHE_TTL }));
-                log(`[Cache Write - Raw]`);
-            } else {
-                log(`[Cache Write Error - Raw] stringify failed`);
-            }
-        } else {
-            log(`[Cache Write Error - Raw] serialize headers fail`);
-        }
-                } catch (kvError) {
-                    log(`KV put error for raw key: ${kvError.message}`);
+
+            // ------- KV 写入逻辑（防错，小白友好） -------
+            if (kvNamespace) {
+                // 将响应的Headers变成普通对象
+                const headersObj = {};
+                responseHeaders.forEach((value, key) => {
+                    headersObj[key.toLowerCase()] = value;
+                });
+                // 有header就写缓存
+                if (Object.keys(headersObj).length > 0) {
+                    const stringifiedValue = safeJsonStringify({
+                        body: content,
+                        headers: safeJsonStringify(headersObj, '{}', log)
+                    }, null, log);
+                    if (stringifiedValue) {
+                        waitUntil(kvNamespace.put(rawCacheKey, stringifiedValue, { expirationTtl: CACHE_TTL }));
+                        log(`[Cache Write - Raw]`);
+                    } else {
+                        log(`[Cache Write Error - Raw] stringify failed`);
+                    }
+                } else {
+                    log(`[Cache Write Error - Raw] serialize headers fail`);
                 }
             }
+            // ------- 结束 -------
         }
+
         // M3U8智能处理/直出
         if (isM3u8Content(content, contentType)) {
             log(`Content is M3U8, processing`);
@@ -435,7 +442,7 @@ export async function onRequest(context) {
 
 
 export async function onOptions(context) {
-    // CORS 预检
+    // CORS 预检支持
     return new Response(null, {
         status: 204,
         headers: OPTIONS_HEADERS,
