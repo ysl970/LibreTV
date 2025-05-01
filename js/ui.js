@@ -193,6 +193,34 @@ function clearSearchHistory() {
 
 // ========== 观看历史相关 ================
 
+// 历史面板相关函数
+function toggleHistory(e) {
+    // 密码保护校验
+    if (window.isPasswordProtected && window.isPasswordVerified) {
+        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
+            showPasswordModal && showPasswordModal();
+            return;
+        }
+    }
+    if (e) e.stopPropagation();
+    
+    const panel = document.getElementById('historyPanel');
+    if (panel) {
+        panel.classList.toggle('show');
+        
+        // 如果打开了历史记录面板，则加载历史数据
+        if (panel.classList.contains('show')) {
+            loadViewingHistory();
+        }
+        
+        // 如果设置面板是打开的，则关闭它
+        const settingsPanel = document.getElementById('settingsPanel');
+        if (settingsPanel && settingsPanel.classList.contains('show')) {
+            settingsPanel.classList.remove('show');
+        }
+    }
+}
+
 /** 时间戳人性化显示 */
 function formatTimestamp(timestamp) {
     const date = new Date(timestamp), now = new Date();
