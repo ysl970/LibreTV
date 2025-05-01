@@ -1,8 +1,8 @@
 // =================== 全局常量、工具 =====================
 
 // 搜索与历史相关常量
-const MAX_HISTORY_ITEMS = 30;           // 搜索历史最大条数
-window.SEARCH_HISTORY_KEY = 'searchHistory';
+window.MAX_HISTORY_ITEMS = window.MAX_HISTORY_ITEMS || 30;
+window.SEARCH_HISTORY_KEY = window.SEARCH_HISTORY_KEY || 'searchHistory';
 
 // UI样式类型
 const TOAST_BG_COLORS = {
