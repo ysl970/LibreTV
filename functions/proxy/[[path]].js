@@ -389,27 +389,20 @@ export async function onRequest(context) {
             contentType = fetchedData.contentType;
             responseHeaders = fetchedData.responseHeaders;
             // KV更新
-            if (kvNamespace) {
-                try {
-                    const headersToCache = {};
-                    responseHeaders.forEach((value, key) => {
-                        headersToCache[key.toLowerCase()] = value;
-                    });
-                    const cacheValue = {
-                        body: content,
-                        headers: safeJsonStringify(headersToCache, '{}', log)
-                    };
-                    if (cacheValue.headers !== '{}' || Object.keys(headersToCache).length === 0) {
-                        const stringifiedValue = safeJsonStringify(cacheValue, null, log);
-                        if (stringifiedValue) {
-                            waitUntil(kvNamespace.put(rawCacheKey, stringifiedValue, { expirationTtl: CACHE_TTL }));
-                            log(`[Cache Write - Raw]`);
-                        } else {
-                            log(`[Cache Write Error - Raw] stringify failed`);
-                        }
-                    } else {
-                        log(`[Cache Write Error - Raw] serialize headers fail`);
-                    }
+            if (Object.keys(headersToCache).length > 0) {
+            const stringifiedValue = safeJsonStringify({
+                body: content,
+                headers: safeJsonStringify(headersToCache, '{}', log)
+            }, null, log);
+            if (stringifiedValue) {
+                waitUntil(kvNamespace.put(rawCacheKey, stringifiedValue, { expirationTtl: CACHE_TTL }));
+                log(`[Cache Write - Raw]`);
+            } else {
+                log(`[Cache Write Error - Raw] stringify failed`);
+            }
+        } else {
+            log(`[Cache Write Error - Raw] serialize headers fail`);
+        }
                 } catch (kvError) {
                     log(`KV put error for raw key: ${kvError.message}`);
                 }
