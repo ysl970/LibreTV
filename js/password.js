@@ -1,11 +1,15 @@
 // 密码保护功能
 
 // ========== 配置项校验 ==========
-const PASSWORD_CONFIG = window.PASSWORD_CONFIG || {
-    localStorageKey: 'passwordVerification',
-    verificationTTL: 1000 * 60 * 60 * 12 // 默认12小时
-};
 
+// 只从全局读取，不再声明const，避免重复
+const PASSWORD_CONFIG = window.PASSWORD_CONFIG;
+if (!PASSWORD_CONFIG) {
+    console.warn('PASSWORD_CONFIG 未定义，密码功能默认关闭');
+    // 可选兜底（如果你担心某些页面不引入config.js）
+    // window.PASSWORD_CONFIG = { localStorageKey: 'passwordVerified', verificationTTL: 12*60*60*1000 };
+    // 或强制return，停止执行
+}
 /**
  * 检查是否设置了密码保护（依赖 window.__ENV__ 挂载的 PASSWORD SHA256 哈希）
  */
