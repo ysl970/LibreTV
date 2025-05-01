@@ -1,5 +1,4 @@
-// functions/_middleware.js
-import { sha256 } from './sha256.js'; // 使用 functions/sha256.js
+import { sha256 } from './sha256.js';
 
 export async function onRequest(context) {
   const { request, env, next } = context;
@@ -12,8 +11,13 @@ export async function onRequest(context) {
     if (password) {
       passwordHash = await sha256(password);
     }
-    html = html.replace('window.__ENV__.PASSWORD = "{{PASSWORD}}";', 
-      `window.__ENV__.PASSWORD = "${passwordHash}"; // SHA-256 hash`);
+    // 最佳实践：用正则宽松匹配替换
+    html = html.replace(
+      /window\.__ENV__\.PASSWORD\s*=\s*["']\{\{PASSWORD\}\}["'];?/,
+      `window.__ENV__.PASSWORD = "${passwordHash}"; // SHA-256 hash`
+    );
+    // 可选调试输出: 将 hash 或密码是否注入打印到页面底部
+    // html += `<div style="display:none">DEBUG-PASSWORD-HASH: ${passwordHash}</div>`;
     return new Response(html, {
       headers: response.headers,
       status: response.status,
