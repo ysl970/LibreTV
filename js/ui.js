@@ -2,7 +2,7 @@
 
 // 搜索与历史相关常量
 const MAX_HISTORY_ITEMS = 30;           // 搜索历史最大条数
-const SEARCH_HISTORY_KEY = 'searchHistory';
+window.SEARCH_HISTORY_KEY = 'searchHistory';
 
 // UI样式类型
 const TOAST_BG_COLORS = {
@@ -394,5 +394,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+window.renderSearchHistory = renderSearchHistory;
+window.showToast = showToast;
+window.showLoading = showLoading;
+window.hideLoading = hideLoading;
+window.toggleSettings = toggleSettings;
+window.toggleHistory = toggleHistory;
+
 
 // ============= END UI 相关优化 ================
