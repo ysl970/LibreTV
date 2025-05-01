@@ -1,182 +1,185 @@
-// 密码保护功能
+/**
+ * Password Protection Module
+ * 用于管理全局的密码访问保护逻辑。
+ */
+const PASSWORD_CONFIG = {
+    localStorageKey: "__ACCESS_STATUS__", // 存储验证状态的 localStorage 键名
+    defaultExpirationMs: 24 * 60 * 60 * 1000, // 密码验证有效期：24小时
+    encryptionKey: "__SECRET_KEY__", // 盐和加密密钥（前端只是弱保护，实际更需后端验证）
+};
+
+// 密码验证相关
+let cachedPasswordHash = null;
 
 /**
- * 检查是否设置了密码保护
- * 通过读取页面上嵌入的环境变量来检查
+ * 判断当前页面是否开启了密码保护功能。
+ * 通过检测 window.__ENV__.PASSWORD 的值来决定。
  */
 function isPasswordProtected() {
-    // 检查页面上嵌入的环境变量
-    const pwd = window.__ENV__ && window.__ENV__.PASSWORD;
-    // 只有当密码 hash 存在且为64位（SHA-256十六进制长度）才认为启用密码保护
-    return typeof pwd === 'string' && pwd.length === 64 && !/^0+$/.test(pwd);
+    return !!window.__ENV__.PASSWORD; // 环境变量注入的密码
 }
 
 /**
- * 检查用户是否已通过密码验证
- * 检查localStorage中的验证状态和时间戳是否有效，并确认密码哈希未更改
+ * 校验用户是否已经通过密码验证。
+ * 检查 localStorage 中缓存的状态，并验证有效性。
  */
 function isPasswordVerified() {
     try {
-        // 如果没有设置密码保护，则视为已验证
-        if (!isPasswordProtected()) {
-            return true;
+        const storedData = localStorage.getItem(PASSWORD_CONFIG.localStorageKey);
+        if (!storedData) return false;
+
+        const decryptedData = JSON.parse(AES.decrypt(storedData, PASSWORD_CONFIG.encryptionKey)); // 解密数据
+        const { verified, timestamp, passwordHash } = decryptedData;
+
+        // 验证时间是否过期
+        if (!verified || Date.now() - timestamp > PASSWORD_CONFIG.defaultExpirationMs) {
+            localStorage.removeItem(PASSWORD_CONFIG.localStorageKey); // 过期移除
+            return false;
         }
 
-        const verificationData = JSON.parse(localStorage.getItem(PASSWORD_CONFIG.localStorageKey) || '{}');
-        const { verified, timestamp, passwordHash } = verificationData;
-        
-        // 获取当前环境中的密码哈希
-        const currentHash = window.__ENV__ && window.__ENV__.PASSWORD;
-        
-        // 验证是否已验证、未过期，且密码哈希未更改
-        if (verified && timestamp && passwordHash === currentHash) {
-            const now = Date.now();
-            const expiry = timestamp + PASSWORD_CONFIG.verificationTTL;
-            return now < expiry;
+        // 如果页面注入的密码发生变化，重新要求用户验证
+        if (passwordHash !== cachedPasswordHash && window.__ENV__.PASSWORD) {
+            localStorage.removeItem(PASSWORD_CONFIG.localStorageKey); // 清除旧验证
+            return false;
         }
-        
+
+        return true;
+    } catch (e) {
+        console.error("密码验证检查失败:", e);
         return false;
-    } catch (error) {
-        console.error('验证密码状态时出错:', error);
-        return false;
     }
 }
 
-window.isPasswordProtected = isPasswordProtected;
-window.isPasswordVerified = isPasswordVerified;
-
 /**
- * 验证用户输入的密码是否正确（异步，使用SHA-256哈希）
+ * 验证用户输入的密码是否合法。
+ * 成功后存储验证状态到 localStorage。
+ * @param {string} inputPassword 用户输入的密码
  */
-async function verifyPassword(password) {
-    const correctHash = window.__ENV__ && window.__ENV__.PASSWORD;
-    if (!correctHash) return false;
-    const inputHash = await sha256(password);
-    const isValid = inputHash === correctHash;
-    if (isValid) {
-        const verificationData = {
-            verified: true,
-            timestamp: Date.now(),
-            passwordHash: correctHash // 保存当前密码的哈希值
-        };
-        localStorage.setItem(PASSWORD_CONFIG.localStorageKey, JSON.stringify(verificationData));
-    }
-    return isValid;
-}
+async function verifyPassword(inputPassword) {
+    // 动画渲染用于用户体验
+    const errorElement = document.getElementById("passwordError");
 
-// SHA-256实现，可用Web Crypto API
-async function sha256(message) {
-    if (window.crypto && crypto.subtle && crypto.subtle.digest) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-    // HTTP 下调用原始 js‑sha256
-    if (typeof window._jsSha256 === 'function') {
-        return window._jsSha256(message);
-    }
-    throw new Error('No SHA-256 implementation available.');
-}
+    try {
+        const hashedPassword = await _jsSha256(inputPassword);
+        const envPasswordHash = await _jsSha256(window.__ENV__.PASSWORD);
 
-/**
- * 显示密码验证弹窗
- */
-function showPasswordModal() {
-    const passwordModal = document.getElementById('passwordModal');
-    if (passwordModal) {
-        passwordModal.style.display = 'flex';
-        
-        // 确保输入框获取焦点
-        setTimeout(() => {
-            const passwordInput = document.getElementById('passwordInput');
-            if (passwordInput) {
-                passwordInput.focus();
-            }
-        }, 100);
+        if (hashedPassword === envPasswordHash) {
+            console.log("密码验证成功");
+
+            // 缓存密码哈希以检测后续变化
+            cachedPasswordHash = envPasswordHash;
+
+            // 将验证结果写入 localStorage，使用加密存储
+            const dataToSave = {
+                verified: true,
+                timestamp: Date.now(),
+                passwordHash: envPasswordHash,
+            };
+
+            const encryptedData = AES.encrypt(JSON.stringify(dataToSave), PASSWORD_CONFIG.encryptionKey); // 加密写入
+            localStorage.setItem(PASSWORD_CONFIG.localStorageKey, encryptedData);
+
+            // 隐藏验证窗口
+            hidePasswordModal();
+
+            // 触发页面能继续访问的事件
+            document.dispatchEvent(new Event("passwordVerified"));
+        } else {
+            console.warn("密码错误");
+            errorElement.style.display = "block";
+            errorElement.textContent = "密码错误，请重试";
+
+            // 添加错误动画效果
+            const modal = document.getElementById("passwordModal");
+            modal.classList.add("shake");
+            setTimeout(() => modal.classList.remove("shake"), 500);
+        }
+    } catch (e) {
+        console.error("密码验证失败:", e);
+        errorElement.style.display = "block";
+        errorElement.textContent = "无法验证密码，请稍后重试";
     }
 }
 
 /**
- * 隐藏密码验证弹窗
- */
-function hidePasswordModal() {
-    const passwordModal = document.getElementById('passwordModal');
-    if (passwordModal) {
-        passwordModal.style.display = 'none';
-    }
-}
-
-/**
- * 显示密码错误信息
- */
-function showPasswordError() {
-    const errorElement = document.getElementById('passwordError');
-    if (errorElement) {
-        errorElement.classList.remove('hidden');
-    }
-}
-
-/**
- * 隐藏密码错误信息
- */
-function hidePasswordError() {
-    const errorElement = document.getElementById('passwordError');
-    if (errorElement) {
-        errorElement.classList.add('hidden');
-    }
-}
-
-/**
- * 处理密码提交事件（异步）
+ * 处理密码提交事件。
  */
 async function handlePasswordSubmit() {
-    const passwordInput = document.getElementById('passwordInput');
-    const password = passwordInput ? passwordInput.value.trim() : '';
-    if (await verifyPassword(password)) {
-        hidePasswordError();
-        hidePasswordModal();
+    const passwordInput = document.getElementById("passwordInput");
+    const inputPassword = passwordInput.value.trim();
 
-        // 触发密码验证成功事件
-        document.dispatchEvent(new CustomEvent('passwordVerified'));
-    } else {
-        showPasswordError();
-        if (passwordInput) {
-            passwordInput.value = '';
-            passwordInput.focus();
-        }
+    if (!inputPassword) return;
+
+    await verifyPassword(inputPassword);
+}
+
+/**
+ * 隐藏密码验证窗口。
+ */
+function hidePasswordModal() {
+    const passwordModal = document.getElementById("passwordModal");
+    if (passwordModal) {
+        passwordModal.style.display = "none";
     }
 }
 
 /**
- * 初始化密码验证系统（需适配异步事件）
+ * 显示密码验证窗口。
  */
-function initPasswordProtection() {
-    if (!isPasswordProtected()) {
-        return; // 如果未设置密码保护，则不进行任何操作
-    }
-    
-    // 如果未验证密码，则显示密码验证弹窗
-    if (!isPasswordVerified()) {
-        showPasswordModal();
-        
-        // 设置密码提交按钮事件监听
-        const submitButton = document.getElementById('passwordSubmitBtn');
-        if (submitButton) {
-            submitButton.addEventListener('click', handlePasswordSubmit);
-        }
-        
-        // 设置密码输入框回车键监听
-        const passwordInput = document.getElementById('passwordInput');
-        if (passwordInput) {
-            passwordInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    handlePasswordSubmit();
-                }
-            });
-        }
+function showPasswordModal() {
+    const passwordModal = document.getElementById("passwordModal");
+    if (passwordModal) {
+        passwordModal.style.display = "flex";
+
+        // 重置输入状态
+        const passwordInput = document.getElementById("passwordInput");
+        const errorMessage = document.getElementById("passwordError");
+        passwordInput.value = ""; // 清除输入框内容
+        errorMessage.style.display = "none"; // 隐藏错误消息
     }
 }
 
-// 在页面加载完成后初始化密码保护
-document.addEventListener('DOMContentLoaded', initPasswordProtection);
+/**
+ * AES 加密模块（简单示例，实际部署中应结合后端验证）。
+ */
+const AES = {
+    encrypt: function (text, key) {
+        // 基于文本和密钥简单生成加密数据
+        const encodedText = btoa(
+            text
+                .split("")
+                .map((char, i) => String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length)))
+                .join("")
+        );
+        return encodedText;
+    },
+    decrypt: function (encodedText, key) {
+        // 解密文本
+        const decoded = atob(encodedText) // atob解码
+            .split("")
+            .map((char, i) => String.fromCharCode(char.charCodeAt(0) ^ key.charCodeAt(i % key.length)))
+            .join("");
+        return decoded;
+    },
+};
+
+/**
+ * 页面加载后初始化密码逻辑。
+ */
+document.addEventListener("DOMContentLoaded", () => {
+    if (!isPasswordProtected()) return;
+
+    // 如果用户未验证，显示密码验证窗口
+    if (!isPasswordVerified()) {
+        showPasswordModal();
+    }
+
+    // 表单绑定提交事件
+    const passwordForm = document.getElementById("passwordForm");
+    if (passwordForm) {
+        passwordForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            handlePasswordSubmit();
+        });
+    }
+});
