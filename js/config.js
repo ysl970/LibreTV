@@ -4,7 +4,7 @@ const SEARCH_HISTORY_KEY = 'videoSearchHistory';
 const MAX_HISTORY_ITEMS = 5;
 
 // 密码保护配置
-const PASSWORD_CONFIG = {
+window.PASSWORD_CONFIG = window.PASSWORD_CONFIG || {
     localStorageKey: 'passwordVerified',
     verificationTTL: 90 * 24 * 60 * 60 * 1000, // 90天验证有效期
 };
