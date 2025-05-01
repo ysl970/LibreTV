@@ -782,3 +782,8 @@ body {
     opacity: 1 !important;
     pointer-events: auto !important;
 }
+
+/* 隐藏整个 footer */
+footer.footer {
+  display: none;
+}
