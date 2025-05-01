@@ -1,5 +1,5 @@
 // 全局变量
-let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["heimuer", "dbzy"]'); // 默认选中黑木耳和豆瓣资源
+let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["heimuer", "wolong", "ruyi"]'); // 默认选中黑木耳和豆瓣资源
 let customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]'); // 存储自定义API列表
 
 // 添加当前播放的集数索引
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 设置默认API选择（如果是第一次加载）
     if (!localStorage.getItem('hasInitializedDefaults')) {
         // 仅选择黑木耳源和豆瓣资源
-        selectedAPIs = ["heimuer", "dbzy"];
+        selectedAPIs = ["heimuer", "wolong", "ruyi"];
         localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
         
         // 默认选中过滤开关
@@ -56,6 +56,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 初始检查成人API选中状态
     setTimeout(checkAdultAPIsSelected, 100);
+
+        // 设置首页集数预加载功能开关和数字
+    const preloadingToggle = document.getElementById('preloadingToggle');
+    const preloadCountInput = document.getElementById('preloadCountInput');
+    if (preloadingToggle && preloadCountInput) {
+        // 初始化UI状态
+        if (localStorage.getItem('enablePreloading') !== null) {
+            preloadingToggle.checked = localStorage.getItem('enablePreloading') === 'true';
+        } else {
+            preloadingToggle.checked = (typeof PLAYER_CONFIG.enablePreloading === 'undefined') ? true : PLAYER_CONFIG.enablePreloading;
+        }
+        const storedCount = parseInt(localStorage.getItem('preloadCount'));
+        if (!isNaN(storedCount)) {
+            preloadCountInput.value = storedCount;
+        } else if (typeof PLAYER_CONFIG.preloadCount !== 'undefined') {
+            preloadCountInput.value = PLAYER_CONFIG.preloadCount;
+        } else {
+            preloadCountInput.value = 2;
+        }
+
+        // 保存状态的函数
+        function applyPreloadingConfigChange() {
+            localStorage.setItem('enablePreloading', preloadingToggle.checked ? 'true' : 'false');
+            PLAYER_CONFIG.enablePreloading = preloadingToggle.checked;
+        }
+        function applyPreloadCountChange() {
+            let val = parseInt(preloadCountInput.value);
+            if (isNaN(val) || val < 1) val = 2;
+            if (val > 10) val = 10;
+            preloadCountInput.value = val;
+            localStorage.setItem('preloadCount', val);
+            PLAYER_CONFIG.preloadCount = val;
+        }
+
+        // 事件绑定
+        preloadingToggle.addEventListener('change', applyPreloadingConfigChange);
+        preloadCountInput.addEventListener('change', applyPreloadCountChange);
+        preloadCountInput.addEventListener('input', applyPreloadCountChange);
+    }
 });
 
 // 初始化API复选框
@@ -936,7 +975,8 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0) {
     const playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(videoTitle)}&index=${episodeIndex}&source=${encodeURIComponent(sourceName)}&source_code=${encodeURIComponent(sourceCode)}`;
     
     // 在新标签页中打开播放页面
-    window.open(playerUrl, '_blank');
+   // window.open(playerUrl, '_blank');
+    window.location.href = playerUrl;
 }
 
 // 播放上一集
