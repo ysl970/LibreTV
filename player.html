@@ -261,8 +261,8 @@
                 <h1 class="text-xl font-bold gradient-text">X</h1>
             </a>
         </div>
-        <h2 id="videoTitle" class="text-xl font-semibold truncate flex-1 text-center mx-4"></h2> {/* Added margin */}
-        <a href="index.html" class="control-button flex-shrink-0"> {/* Applied common button style */}
+        <h2 id="videoTitle" class="text-xl font-semibold truncate flex-1 text-center mx-4"></h2> 
+        <a href="index.html" class="control-button flex-shrink-0">
             返回首页
         </a>
     </header>
@@ -272,18 +272,18 @@
         <div class="bg-[#111] p-8 rounded-lg w-11/12 max-w-md border border-[#333] max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center mb-6 flex-none">
                 <h2 class="text-2xl font-bold gradient-text">访问验证</h2>
-                {/* Optional: Add a close button if needed, but keep functionality same */}
+        
             </div>
             <div class="mb-6">
                 <p class="text-gray-300 mb-4">请输入密码继续访问</p>
-                <form id="passwordForm"> {/* Removed inline onsubmit */}
-                    <label for="username" class="sr-only">Username</label> {/* Accessibility */}
+                <form id="passwordForm"> 
+                    <label for="username" class="sr-only">Username</label> 
                     <input type="text" name="username" id="username" autocomplete="username" style="display:none" tabindex="-1" aria-hidden="true">
 
-                    <label for="passwordInput" class="sr-only">Password</label> {/* Accessibility */}
-                    <input type="password" id="passwordInput" class="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-lg focus:outline-none focus:border-white transition-colors mb-4" placeholder="密码..." autocomplete="new-password" required> {/* Added required & mb-4 */}
+                    <label for="passwordInput" class="sr-only">Password</label>
+                    <input type="password" id="passwordInput" class="w-full bg-[#111] border border-[#333] text-white px-4 py-3 rounded-lg focus:outline-none focus:border-white transition-colors mb-4" placeholder="密码..." autocomplete="new-password" required> 
 
-                    <button id="passwordSubmitBtn" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors">提交</button> {/* Added transition */}
+                    <button id="passwordSubmitBtn" type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors">提交</button> 
                 </form>
                 <p id="passwordError" class="text-red-500 mt-2 hidden">密码错误，请重试</p>
             </div>
@@ -297,12 +297,12 @@
                 <div id="player"></div>
                 <div class="loading-container" id="loading">
                     <div class="loading-spinner"></div>
-                    <div id="loadingText">正在加载视频...</div> {/* Added ID for text */}
+                    <div id="loadingText">正在加载视频...</div> 
                 </div>
                 <div class="error-container" id="error">
                     <div class="error-icon">⚠️</div>
-                    <div id="errorMessage">视频加载失败</div> {/* Renamed ID */}
-                    <div id="errorDetails" class="error-details">请尝试其他视频源或稍后重试</div> {/* Added ID and class */}
+                    <div id="errorMessage">视频加载失败</div> 
+                    <div id="errorDetails" class="error-details">请尝试其他视频源或稍后重试</div>
                 </div>
             </div>
         </div>
@@ -310,14 +310,14 @@
         <!-- Episode Navigation Controls -->
         <div class="player-container">
             <div class="flex justify-between items-center my-4">
-                <button id="prevButton" class="control-button"> {/* Applied common style, removed inline onclick */}
+                <button id="prevButton" class="control-button"> 
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                     </svg>
                     <span>上一集</span>
                 </button>
-                <span class="text-gray-400 mx-2 text-center" id="episodeInfo">加载中...</span> {/* Added margin and centering text */}
-                <button id="nextButton" class="control-button"> {/* Applied common style, removed inline onclick */}
+                <span class="text-gray-400 mx-2 text-center" id="episodeInfo">加载中...</span>
+                <button id="nextButton" class="control-button"> 
                     <span>下一集</span>
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
@@ -328,7 +328,7 @@
 
         <!-- Settings Row -->
         <div class="player-container">
-            <div class="flex justify-end items-center mb-4 gap-4"> {/* Increased gap */}
+            <div class="flex justify-end items-center mb-4 gap-4"> 
                 <label for="autoplayToggle" class="flex items-center gap-2 cursor-pointer">
                     <span class="text-gray-400 text-sm">自动连播</span>
                     <span class="switch">
@@ -336,13 +336,12 @@
                         <span class="slider"></span>
                     </span>
                 </label>
-                <button id="orderButton" class="ml-4 px-4 py-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2"> {/* Added ID, removed inline onclick */}
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" id="orderIcon" viewBox="0 0 20 20" fill="currentColor" style="transition: transform 0.3s ease;"> {/* Added transition */}
+                <button id="orderButton" class="ml-4 px-4 py-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center space-x-2"> 
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" id="orderIcon" viewBox="0 0 20 20" fill="currentColor" style="transition: transform 0.3s ease;"> 
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" />
                     </svg>
                     <span id="orderText">倒序排列</span>
                 </button>
-                 {/* Removed Lock Button - Assuming it's not core or was experimental. If needed, re-add with proper ID and event listener */}
                  <!--
                  <button id="lockToggle" title="锁定控制" class="px-2 py-1 bg-[#333] hover:bg-[#444] text-white rounded-full transition">
                      <svg id="lockIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -356,7 +355,7 @@
         <!-- Episode Grid -->
         <div class="player-container">
             <div class="episode-grid" id="episodesGrid">
-                {/* Use event delegation on this container */}
+     
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2" id="episodesList">
                     <div class="col-span-full text-center text-gray-400 py-8">加载中...</div>
                 </div>
@@ -367,7 +366,7 @@
     <!-- Shortcut Key Hint -->
     <div class="shortcut-hint" id="shortcutHint">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="shortcutIcon">
-            {/* Path set dynamically */}
+         
         </svg>
         <span id="shortcutText"></span>
     </div>
@@ -540,6 +539,8 @@
                 renderEpisodes();
                 updateButtonStates();
                 updateOrderButton();
+                window.currentEpisodes = currentEpisodes;
+                window.currentEpisodeIndex = currentEpisodeIndex;
                 // setupProgressBarPreciseClicks(); // Setup done after player init
             }
 
