@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>播放器</title>
+
     <script src="libs/tailwindcss.min.js"></script>
     <link rel="stylesheet" href="css/styles.css">
     <style>
@@ -276,7 +278,6 @@
         window._jsSha256 = window.sha256;
     </script>
     
-
     <script src="libs/hls.min.js" crossorigin="anonymous"></script>
     <script src="libs/DPlayer.min.js" crossorigin="anonymous"></script>
 
@@ -885,7 +886,9 @@
         function filterAdsFromM3U8(m3u8Content, strictMode = false) {
             if (!m3u8Content) return '';
 
-             if (window.filterAdPattern) {
+
+            if (window.filterAdPattern) {
+
                 const regex = new RegExp(window.filterAdPattern, 'g');
                 return m3u8Content.replace(regex, '');
             };
