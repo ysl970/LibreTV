@@ -8,15 +8,20 @@ function toggleSettings(e) {
         }
     }
     // 阻止事件冒泡，防止触发document的点击事件
-    e && e.stopPropagation();
+    e?.stopPropagation();
     const panel = document.getElementById('settingsPanel');
-    panel.classList.toggle('show');
+    panel?.classList.toggle('show');
 }
 
 // 改进的Toast显示函数 - 支持队列显示多个Toast
 const toastQueue = [];
 let isShowingToast = false;
 
+/**
+ * 显示Toast消息
+ * @param {string} message 消息文本
+ * @param {string} [type='error'] 类型（error/success/info/warning）
+ */
 function showToast(message, type = 'error') {
     // 将新的toast添加到队列
     toastQueue.push({ message, type });
@@ -39,6 +44,7 @@ function showNextToast() {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toastMessage');
     
+    // 定义背景颜色映射
     const bgColors = {
         'error': 'bg-red-500',
         'success': 'bg-green-500',
@@ -46,6 +52,7 @@ function showNextToast() {
         'warning': 'bg-yellow-500'
     };
     
+    // 设置样式
     const bgColor = bgColors[type] || bgColors.error;
     toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${bgColor} text-white`;
     toastMessage.textContent = message;
@@ -66,13 +73,14 @@ function showNextToast() {
     }, 3000);
 }
 
-// 添加显示/隐藏 loading 的函数
+// 显示/隐藏 loading 的函数
 let loadingTimeoutId = null;
 
 function showLoading(message = '加载中...') {
     // 清除任何现有的超时
     if (loadingTimeoutId) {
         clearTimeout(loadingTimeoutId);
+        loadingTimeoutId = null;
     }
     
     const loading = document.getElementById('loading');
@@ -96,15 +104,6 @@ function hideLoading() {
     
     const loading = document.getElementById('loading');
     loading.style.display = 'none';
-}
-
-function updateSiteStatus(isAvailable) {
-    const statusEl = document.getElementById('siteStatus');
-    if (isAvailable) {
-        statusEl.innerHTML = '<span class="text-green-500">●</span> 可用';
-    } else {
-        statusEl.innerHTML = '<span class="text-red-500">●</span> 不可用';
-    }
 }
 
 function closeModal() {
@@ -137,7 +136,7 @@ function getSearchHistory() {
     }
 }
 
-// 保存搜索历史的增强版本 - 添加时间戳和最大数量限制，现在缓存2个月
+// 保存搜索历史的增强版本 - 添加时间戳和最大数量限制
 function saveSearchHistory(query) {
     if (!query || !query.trim()) return;
     
@@ -149,7 +148,7 @@ function saveSearchHistory(query) {
     // 获取当前时间
     const now = Date.now();
     
-    // 过滤掉超过2个月的记录（约60天，60*24*60*60*1000 = 5184000000毫秒）
+    // 过滤掉超过2个月的记录（约60天）
     history = history.filter(item => 
         typeof item === 'object' && item.timestamp && (now - item.timestamp < 5184000000)
     );
@@ -186,7 +185,7 @@ function saveSearchHistory(query) {
     renderSearchHistory();
 }
 
-// 渲染最近搜索历史的增强版本
+// 渲染最近搜索历史
 function renderSearchHistory() {
     const historyContainer = document.getElementById('recentSearches');
     if (!historyContainer) return;
@@ -198,37 +197,49 @@ function renderSearchHistory() {
         return;
     }
     
-    // 创建一个包含标题和清除按钮的行
-    historyContainer.innerHTML = `
-        <div class="flex justify-between items-center w-full mb-2">
-            <div class="text-gray-500">最近搜索:</div>
-            <button id="clearHistoryBtn" class="text-gray-500 hover:text-white transition-colors" 
-                    onclick="clearSearchHistory()" aria-label="清除搜索历史">
-                清除搜索历史
-            </button>
-        </div>
-    `;
+    // 创建文档片段以提高性能
+    const fragment = document.createDocumentFragment();
     
+    // 创建标题和清除按钮
+    const header = document.createElement('div');
+    header.className = "flex justify-between items-center w-full mb-2";
+    header.innerHTML = `
+        <div class="text-gray-500">最近搜索:</div>
+        <button id="clearHistoryBtn" class="text-gray-500 hover:text-white transition-colors" 
+                onclick="clearSearchHistory()" aria-label="清除搜索历史">
+            清除搜索历史
+        </button>
+    `;
+    fragment.appendChild(header);
+    
+    // 添加搜索历史标签
     history.forEach(item => {
         const tag = document.createElement('button');
         tag.className = 'search-tag';
         tag.textContent = item.text;
         
-        // 添加时间提示（如果有时间戳）
+        // 添加时间提示
         if (item.timestamp) {
             const date = new Date(item.timestamp);
             tag.title = `搜索于: ${date.toLocaleString()}`;
         }
         
         tag.onclick = function() {
-            document.getElementById('searchInput').value = item.text;
-            search();
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = item.text;
+                search();
+            }
         };
-        historyContainer.appendChild(tag);
+        fragment.appendChild(tag);
     });
+    
+    // 清空容器并添加新内容
+    historyContainer.innerHTML = '';
+    historyContainer.appendChild(fragment);
 }
 
-// 增加清除搜索历史功能
+// 清除搜索历史功能
 function clearSearchHistory() {
     // 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
@@ -243,7 +254,7 @@ function clearSearchHistory() {
         showToast('搜索历史已清除', 'success');
     } catch (e) {
         console.error('清除搜索历史失败:', e);
-        showToast('清除搜索历史失败:', 'error');
+        showToast('清除搜索历史失败', 'error');
     }
 }
 
@@ -332,8 +343,11 @@ function loadViewingHistory() {
         return;
     }
     
+    // 创建文档片段以提高性能
+    const fragment = document.createDocumentFragment();
+    
     // 渲染历史记录
-    historyList.innerHTML = history.map(item => {
+    history.forEach(item => {
         // 防止XSS
         const safeTitle = item.title
             .replace(/</g, '&lt;')
@@ -367,29 +381,37 @@ function loadViewingHistory() {
         // 为防止XSS，使用encodeURIComponent编码URL
         const safeURL = encodeURIComponent(item.url);
         
-        // 构建历史记录项HTML，添加删除按钮，需要放在position:relative的容器中
-        return `
-            <div class="history-item cursor-pointer relative group" onclick="playFromHistory('${item.url}', '${safeTitle}', ${item.episodeIndex || 0}, ${item.playbackPosition || 0})">
-                <button onclick="event.stopPropagation(); deleteHistoryItem('${safeURL}')" 
-                        class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-400 p-1 rounded-full hover:bg-gray-800 z-10"
-                        title="删除记录">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-                <div class="history-info">
-                    <div class="history-title">${safeTitle}</div>
-                    <div class="history-meta">
-                        <span class="history-episode">${episodeText}</span>
-                        ${episodeText ? '<span class="history-separator mx-1">·</span>' : ''}
-                        <span class="history-source">${safeSource}</span>
-                    </div>
-                    ${progressHtml}
-                    <div class="history-time">${formatTimestamp(item.timestamp)}</div>
+        // 创建历史记录项
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item cursor-pointer relative group';
+        historyItem.setAttribute('onclick', `playFromHistory('${safeURL}', '${safeTitle}', ${item.episodeIndex || 0}, ${item.playbackPosition || 0})`);
+        
+        historyItem.innerHTML = `
+            <div class="history-info">
+                <div class="history-title">${safeTitle}</div>
+                <div class="history-meta">
+                    <span class="history-episode">${episodeText}</span>
+                    ${episodeText ? '<span class="history-separator mx-1">·</span>' : ''}
+                    <span class="history-source">${safeSource}</span>
                 </div>
+                ${progressHtml}
+                <div class="history-time">${formatTimestamp(item.timestamp)}</div>
             </div>
+            <button onclick="event.stopPropagation(); deleteHistoryItem('${safeURL}')" 
+                    class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-400 p-1 rounded-full hover:bg-gray-800 z-10"
+                    title="删除记录">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
         `;
-    }).join('');
+        
+        fragment.appendChild(historyItem);
+    });
+    
+    // 清空并添加所有新元素
+    historyList.innerHTML = '';
+    historyList.appendChild(fragment);
     
     // 检查是否存在较多历史记录，添加底部边距确保底部按钮不会挡住内容
     if (history.length > 5) {
@@ -471,6 +493,7 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
             localStorage.setItem('currentEpisodes', JSON.stringify(episodesList));
             console.log(`已将剧集列表保存到localStorage，共 ${episodesList.length} 集`);
         }
+        
         // 构造带播放进度参数的URL
         const positionParam = playbackPosition > 10 ? `&position=${Math.floor(playbackPosition)}` : '';
         
@@ -497,7 +520,7 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     }
 }
 
-// 添加观看历史 - 确保每个视频标题只有一条记录
+// 添加观看历史 - 础保每个视频标题只有一条记录
 function addToViewingHistory(videoInfo) {
     // 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
