@@ -1,182 +1,458 @@
-// 密码保护功能
-
-/**
- * 检查是否设置了密码保护
- * 通过读取页面上嵌入的环境变量来检查
- */
-function isPasswordProtected() {
-    // 检查页面上嵌入的环境变量
-    const pwd = window.__ENV__ && window.__ENV__.PASSWORD;
-    // 只有当密码 hash 存在且为64位（SHA-256十六进制长度）才认为启用密码保护
-    return typeof pwd === 'string' && pwd.length === 64 && !/^0+$/.test(pwd);
-}
-
-/**
- * 检查用户是否已通过密码验证
- * 检查localStorage中的验证状态和时间戳是否有效，并确认密码哈希未更改
- */
-function isPasswordVerified() {
-    try {
-        // 如果没有设置密码保护，则视为已验证
-        if (!isPasswordProtected()) {
-            return true;
-        }
-
-        const verificationData = JSON.parse(localStorage.getItem(PASSWORD_CONFIG.localStorageKey) || '{}');
-        const { verified, timestamp, passwordHash } = verificationData;
-        
-        // 获取当前环境中的密码哈希
-        const currentHash = window.__ENV__ && window.__ENV__.PASSWORD;
-        
-        // 验证是否已验证、未过期，且密码哈希未更改
-        if (verified && timestamp && passwordHash === currentHash) {
-            const now = Date.now();
-            const expiry = timestamp + PASSWORD_CONFIG.verificationTTL;
-            return now < expiry;
-        }
-        
-        return false;
-    } catch (error) {
-        console.error('验证密码状态时出错:', error);
-        return false;
-    }
-}
-
-window.isPasswordProtected = isPasswordProtected;
-window.isPasswordVerified = isPasswordVerified;
-
-/**
- * 验证用户输入的密码是否正确（异步，使用SHA-256哈希）
- */
-async function verifyPassword(password) {
-    const correctHash = window.__ENV__ && window.__ENV__.PASSWORD;
-    if (!correctHash) return false;
-    const inputHash = await sha256(password);
-    const isValid = inputHash === correctHash;
-    if (isValid) {
-        const verificationData = {
-            verified: true,
-            timestamp: Date.now(),
-            passwordHash: correctHash // 保存当前密码的哈希值
+// 密码保护模块
+class PasswordProtector {
+    constructor() {
+        this.config = {
+            maxAttempts: 5,
+            lockoutTime: 300, // 5分钟
+            saltRounds: 10,
+            sessionExpiry: 86400 // 24小时
         };
-        localStorage.setItem(PASSWORD_CONFIG.localStorageKey, JSON.stringify(verificationData));
-    }
-    return isValid;
-}
-
-// SHA-256实现，可用Web Crypto API
-async function sha256(message) {
-    if (window.crypto && crypto.subtle && crypto.subtle.digest) {
-        const msgBuffer = new TextEncoder().encode(message);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-    // HTTP 下调用原始 js‑sha256
-    if (typeof window._jsSha256 === 'function') {
-        return window._jsSha256(message);
-    }
-    throw new Error('No SHA-256 implementation available.');
-}
-
-/**
- * 显示密码验证弹窗
- */
-function showPasswordModal() {
-    const passwordModal = document.getElementById('passwordModal');
-    if (passwordModal) {
-        passwordModal.style.display = 'flex';
         
-        // 确保输入框获取焦点
-        setTimeout(() => {
-            const passwordInput = document.getElementById('passwordInput');
-            if (passwordInput) {
-                passwordInput.focus();
+        this.attempts = 0;
+        this.lockoutTimer = null;
+        this.isInitialized = false;
+        
+        this.init();
+    }
+
+    // 初始化方法
+    async init() {
+        try {
+            // 检查是否已初始化
+            if (this.isInitialized) return;
+            
+            // 获取配置
+            const storedConfig = localStorage.getItem('authConfig');
+            if (storedConfig) {
+                this.config = { ...this.config, ...JSON.parse(storedConfig) };
             }
-        }, 100);
+            
+            // 检查密码是否已设置
+            const hasPassword = await this.checkIfPasswordSet();
+            if (!hasPassword) {
+                this.showSetupModal();
+            }
+            
+            this.isInitialized = true;
+            this.setupEventListeners();
+        } catch (error) {
+            console.error('初始化密码保护失败:', error);
+            this.showInitError();
+        }
     }
-}
 
-/**
- * 隐藏密码验证弹窗
- */
-function hidePasswordModal() {
-    const passwordModal = document.getElementById('passwordModal');
-    if (passwordModal) {
-        passwordModal.style.display = 'none';
+    // 设置事件监听器
+    setupEventListeners() {
+        // 密码输入框回车事件
+        const passwordInput = document.getElementById('passwordInput');
+        if (passwordInput) {
+            passwordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.handlePasswordSubmit();
+                }
+            });
+        }
+        
+        // 密码确认按钮点击事件
+        const submitButton = document.getElementById('passwordSubmit');
+        if (submitButton) {
+            submitButton.addEventListener('click', () => this.handlePasswordSubmit());
+        }
+        
+        // 密码重置按钮点击事件
+        const resetButton = document.getElementById('resetPasswordBtn');
+        if (resetButton) {
+            resetButton.addEventListener('click', () => this.showResetModal());
+        }
     }
-}
 
-/**
- * 显示密码错误信息
- */
-function showPasswordError() {
-    const errorElement = document.getElementById('passwordError');
-    if (errorElement) {
-        errorElement.classList.remove('hidden');
+    // 显示密码设置模态框
+    showSetupModal() {
+        const modal = document.getElementById('passwordSetupModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            this.resetSetupForm();
+        }
     }
-}
 
-/**
- * 隐藏密码错误信息
- */
-function hidePasswordError() {
-    const errorElement = document.getElementById('passwordError');
-    if (errorElement) {
-        errorElement.classList.add('hidden');
+    // 重置设置表单
+    resetSetupForm() {
+        const form = document.getElementById('passwordSetupForm');
+        if (form) form.reset();
+        
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        if (confirmPasswordInput) confirmPasswordInput.classList.remove('border-red-500');
+        
+        const errorText = document.getElementById('setupErrorText');
+        if (errorText) errorText.textContent = '';
     }
-}
 
-/**
- * 处理密码提交事件（异步）
- */
-async function handlePasswordSubmit() {
-    const passwordInput = document.getElementById('passwordInput');
-    const password = passwordInput ? passwordInput.value.trim() : '';
-    if (await verifyPassword(password)) {
-        hidePasswordError();
-        hidePasswordModal();
+    // 处理密码设置
+    async handleSetupSubmit(event) {
+        event.preventDefault();
+        
+        const newPassword = document.getElementById('newPassword').value.trim();
+        const confirmPassword = document.getElementById('confirmPassword').value.trim();
+        const errorText = document.getElementById('setupErrorText');
+        
+        // 输入验证
+        if (!newPassword || !confirmPassword) {
+            errorText.textContent = '请输入并确认密码';
+            return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+            errorText.textContent = '两次输入的密码不一致';
+            document.getElementById('confirmPassword').classList.add('border-red-500');
+            return;
+        }
+        
+        try {
+            // 哈希密码
+            const hashedPassword = await this.hashPassword(newPassword);
+            
+            // 存储密码哈希
+            localStorage.setItem('authHash', hashedPassword);
+            
+            // 隐藏设置模态框
+            const modal = document.getElementById('passwordSetupModal');
+            if (modal) modal.classList.add('hidden');
+            
+            // 通知用户设置成功
+            this.showSuccessToast('密码设置成功');
+        } catch (error) {
+            console.error('密码设置失败:', error);
+            errorText.textContent = '密码设置失败，请重试';
+        }
+    }
 
-        // 触发密码验证成功事件
-        document.dispatchEvent(new CustomEvent('passwordVerified'));
-    } else {
-        showPasswordError();
+    // 显示密码验证模态框
+    showAuthModal() {
+        const modal = document.getElementById('passwordAuthModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            this.resetAuthForm();
+            
+            // 如果被锁定，显示锁定信息
+            if (this.isLocked()) {
+                this.showLockoutMessage();
+            }
+        }
+    }
+
+    // 重置验证表单
+    resetAuthForm() {
+        const passwordInput = document.getElementById('passwordInput');
         if (passwordInput) {
             passwordInput.value = '';
             passwordInput.focus();
         }
-    }
-}
-
-/**
- * 初始化密码验证系统（需适配异步事件）
- */
-function initPasswordProtection() {
-    if (!isPasswordProtected()) {
-        return; // 如果未设置密码保护，则不进行任何操作
-    }
-    
-    // 如果未验证密码，则显示密码验证弹窗
-    if (!isPasswordVerified()) {
-        showPasswordModal();
         
-        // 设置密码提交按钮事件监听
-        const submitButton = document.getElementById('passwordSubmitBtn');
-        if (submitButton) {
-            submitButton.addEventListener('click', handlePasswordSubmit);
+        const errorText = document.getElementById('authErrorText');
+        if (errorText) errorText.textContent = '';
+    }
+
+    // 处理密码验证
+    async handlePasswordSubmit() {
+        // 检查是否被锁定
+        if (this.isLocked()) {
+            this.showLockoutMessage();
+            return;
         }
         
-        // 设置密码输入框回车键监听
         const passwordInput = document.getElementById('passwordInput');
-        if (passwordInput) {
-            passwordInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    handlePasswordSubmit();
-                }
-            });
+        const errorText = document.getElementById('authErrorText');
+        const password = passwordInput ? passwordInput.value.trim() : '';
+        
+        if (!password) {
+            errorText.textContent = '请输入密码';
+            return;
         }
+        
+        try {
+            // 验证密码
+            const isValid = await this.verifyPassword(password);
+            
+            if (isValid) {
+                // 重置尝试次数
+                this.resetAttempts();
+                
+                // 设置会话
+                this.setSession();
+                
+                // 隐藏模态框
+                const modal = document.getElementById('passwordAuthModal');
+                if (modal) modal.classList.add('hidden');
+                
+                // 通知用户验证成功
+                this.showSuccessToast('密码验证成功');
+                
+                // 触发验证成功事件
+                this.dispatchEvent('authSuccess');
+            } else {
+                // 增加尝试次数
+                this.incrementAttempt();
+                
+                // 显示错误信息
+                errorText.textContent = '密码错误';
+                passwordInput.value = '';
+                passwordInput.focus();
+                
+                // 如果达到最大尝试次数，锁定账户
+                if (this.attempts >= this.config.maxAttempts) {
+                    this.lockAccount();
+                    this.showLockoutMessage();
+                }
+            }
+        } catch (error) {
+            console.error('密码验证失败:', error);
+            errorText.textContent = '验证失败，请重试';
+        }
+    }
+
+    // 检查密码是否已设置
+    async checkIfPasswordSet() {
+        const hash = localStorage.getItem('authHash');
+        return !!hash;
+    }
+
+    // 哈希密码
+    async hashPassword(password) {
+        // 在客户端使用简单的哈希（实际应使用服务端进行更安全的处理）
+        const encoder = new TextEncoder();
+        const data = encoder.encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // 验证密码
+    async verifyPassword(password) {
+        const storedHash = localStorage.getItem('authHash');
+        if (!storedHash) return false;
+        
+        const inputHash = await this.hashPassword(password);
+        return inputHash === storedHash;
+    }
+
+    // 设置会话
+    setSession() {
+        const expiry = Date.now() + this.config.sessionExpiry * 1000;
+        localStorage.setItem('authSession', 'active');
+        localStorage.setItem('authExpiry', expiry.toString());
+        
+        // 设置定时器清除会话
+        setTimeout(() => this.clearSession(), this.config.sessionExpiry * 1000);
+    }
+
+    // 清除会话
+    clearSession() {
+        localStorage.removeItem('authSession');
+        localStorage.removeItem('authExpiry');
+        this.dispatchEvent('authExpired');
+    }
+
+    // 检查会话是否有效
+    isSessionValid() {
+        const session = localStorage.getItem('authSession');
+        const expiry = localStorage.getItem('authExpiry');
+        
+        return session === 'active' && expiry && Date.now() < parseInt(expiry);
+    }
+
+    // 显示锁定信息
+    showLockoutMessage() {
+        const modal = document.getElementById('passwordAuthModal');
+        const errorText = document.getElementById('authErrorText');
+        
+        if (errorText) {
+            errorText.textContent = `尝试次数过多，请${this.formatTime(this.config.lockoutTime)}后再试`;
+        }
+        
+        if (modal) {
+            const submitButton = modal.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
+        }
+        
+        // 启动倒计时
+        this.startCountdown();
+    }
+
+    // 开始倒计时
+    startCountdown() {
+        const modal = document.getElementById('passwordAuthModal');
+        const countdownElement = document.getElementById('countdown');
+        
+        if (!countdownElement) return;
+        
+        let remaining = this.config.lockoutTime;
+        countdownElement.textContent = this.formatTime(remaining);
+        
+        const interval = setInterval(() => {
+            remaining--;
+            if (remaining <= 0) {
+                clearInterval(interval);
+                countdownElement.textContent = '';
+                
+                if (modal) {
+                    const submitButton = modal.querySelector('button[type="submit"]');
+                    if (submitButton) submitButton.disabled = false;
+                }
+            } else {
+                countdownElement.textContent = this.formatTime(remaining);
+            }
+        }, 1000);
+    }
+
+    // 格式化时间（秒转分钟:秒）
+    formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // 增加尝试次数
+    incrementAttempt() {
+        this.attempts++;
+        localStorage.setItem('authAttempts', this.attempts.toString());
+    }
+
+    // 重置尝试次数
+    resetAttempts() {
+        this.attempts = 0;
+        localStorage.removeItem('authAttempts');
+    }
+
+    // 锁定账户
+    lockAccount() {
+        this.resetAttempts();
+        localStorage.setItem('authLockedUntil', (Date.now() + this.config.lockoutTime * 1000).toString());
+    }
+
+    // 检查是否被锁定
+    isLocked() {
+        const lockedUntil = localStorage.getItem('authLockedUntil');
+        if (!lockedUntil) return false;
+        
+        const now = Date.now();
+        return now < parseInt(lockedUntil);
+    }
+
+    // 显示初始化错误
+    showInitError() {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        errorDiv.textContent = '密码保护初始化失败，请刷新页面重试';
+        
+        document.body.appendChild(errorDiv);
+        
+        setTimeout(() => {
+            errorDiv.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => errorDiv.remove(), 300);
+        }, 5000);
+    }
+
+    // 显示成功提示
+    showSuccessToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in-up';
+        toast.textContent = message;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // 分发自定义事件
+    dispatchEvent(eventName) {
+        const event = new CustomEvent(eventName, { detail: { source: 'PasswordProtector' } });
+        window.dispatchEvent(event);
+    }
+
+    // 显示重置密码模态框
+    showResetModal() {
+        const modal = document.getElementById('passwordResetModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            this.resetResetForm();
+        }
+    }
+
+    // 重置重置表单
+    resetResetForm() {
+        const form = document.getElementById('passwordResetForm');
+        if (form) form.reset();
+        
+        const errorText = document.getElementById('resetErrorText');
+        if (errorText) errorText.textContent = '';
+    }
+
+    // 处理密码重置
+    async handleResetSubmit(event) {
+        event.preventDefault();
+        
+        const oldPassword = document.getElementById('oldPassword').value.trim();
+        const newPassword = document.getElementById('newResetPassword').value.trim();
+        const confirmPassword = document.getElementById('confirmResetPassword').value.trim();
+        const errorText = document.getElementById('resetErrorText');
+        
+        // 输入验证
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            errorText.textContent = '请输入所有字段';
+            return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+            errorText.textContent = '两次输入的新密码不一致';
+            return;
+        }
+        
+        try {
+            // 验证旧密码
+            const isValid = await this.verifyPassword(oldPassword);
+            if (!isValid) {
+                errorText.textContent = '旧密码错误';
+                return;
+            }
+            
+            // 哈希新密码
+            const hashedPassword = await this.hashPassword(newPassword);
+            
+            // 更新存储的密码哈希
+            localStorage.setItem('authHash', hashedPassword);
+            
+            // 重置尝试次数
+            this.resetAttempts();
+            
+            // 隐藏模态框
+            const modal = document.getElementById('passwordResetModal');
+            if (modal) modal.classList.add('hidden');
+            
+            // 通知用户重置成功
+            this.showSuccessToast('密码重置成功');
+        } catch (error) {
+            console.error('密码重置失败:', error);
+            errorText.textContent = '密码重置失败，请重试';
+        }
+    }
+
+    // 检查密码保护状态
+    isPasswordProtected() {
+        return this.checkIfPasswordSet();
+    }
+
+    // 检查密码是否已验证
+    isPasswordVerified() {
+        return this.isSessionValid();
     }
 }
 
-// 在页面加载完成后初始化密码保护
-document.addEventListener('DOMContentLoaded', initPasswordProtection);
+// 创建密码保护实例
+const passwordProtector = new PasswordProtector();
+
+// 导出接口
+window.PasswordProtector = PasswordProtector;
+window.passwordProtector = passwordProtector;
