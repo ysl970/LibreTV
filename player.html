@@ -1390,8 +1390,17 @@
             return;
         }
         const idx = window.currentEpisodeIndex, maxIndex = window.currentEpisodes.length - 1;
-        if (PLAYER_CONFIG.debugMode)
-            console.log(`[Preload] 预加载第${idx+1}~${Math.min(idx+preloadCount, maxIndex)+1}集`);
+       
+        // 修正日志输出，仅显示实际要预加载的下一集区域
+        const from = idx + 2;
+        const to = Math.min(idx + preloadCount, maxIndex) + 1;
+        if (PLAYER_CONFIG.debugMode) {
+            if (from <= to) {
+                console.log(`[Preload] 预加载第${from}${from!==to?`-${to}`:''}集`);
+            } else {
+                console.log(`[Preload] 无需预加载`);
+            }
+        }
 
         for (let offset = 1; offset <= preloadCount; offset++) {
             const episodeIdx = idx + offset;
