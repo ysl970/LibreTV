@@ -3,161 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>播放器</title>
-
+    <!-- Tailwind: 若为js而非css仅作原样挂载，不做类型过滤 -->
     <script src="libs/tailwindcss.min.js"></script>
+    <!-- 主样式表 -->
     <link rel="stylesheet" href="css/styles.css">
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #0f1622;
-            color: white;
-        }
-        .player-container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        #player {
-            width: 100%;
-            height: 60vh; /* 视频播放器高度 */
-        }
-        .loading-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            z-index: 100;
-            flex-direction: column;
+        /* 基础布局与播放器相关样式 */
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0f1622; color: #fff; }
+        .player-container { width: 100%; max-width: 1200px; margin: 0 auto; }
+
+        /* 播放器区域 */
+        #player { width: 100%; height: 60vh; }
+
+        /* 加载中与错误弹层 */
+        .loading-container, .error-container {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; align-items: center; justify-content: center;
+            background-color: rgba(0,0,0,0.7); color: #fff; z-index: 100; flex-direction: column;
         }
         .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 10px;
+            width: 50px; height: 50px; border: 4px solid rgba(255,255,255,.3);
+            border-radius: 50%; border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite; margin-bottom: 10px;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .error-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            z-index: 100;
-            flex-direction: column;
-            text-align: center;
-            padding: 1rem;
-        }
-        .error-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-        .episode-active {
-            background-color: #3b82f6 !important;
-            border-color: #60a5fa !important;
-        }
-        .episode-grid {
-            max-height: 30vh;
-            overflow-y: auto;
-            padding: 1rem 0;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 46px;
-            height: 24px;
-        }
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #333;
-            transition: .4s;
-            border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-        input:checked + .slider {
-            background-color: #00ccff;
-        }
-        input:checked + .slider:before {
-            transform: translateX(22px);
-        }
-        /* 添加快捷键提示样式 */
+        @keyframes spin { to{transform:rotate(360deg);} }
+        .error-container { display: none; text-align: center; padding: 1rem; }
+        .error-icon { font-size: 48px; margin-bottom: 10px; }
+        .episode-active { background: #3b82f6 !important; border-color: #60a5fa !important; }
+        .episode-grid { max-height: 30vh; overflow-y: auto; padding: 1rem 0; }
+        /* 简易自定义开关样式 */
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px;}
+        .switch input { opacity: 0; width: 0; height: 0;}
+        .slider { position: absolute; cursor: pointer; top:0; left:0; right:0; bottom:0; background:#333; border-radius: 24px; transition:.4s;}
+        .slider:before { position: absolute; content: ""; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.4s;}
+        input:checked + .slider { background: #00ccff;}
+        input:checked + .slider:before { transform: translateX(22px);}
+        /* 快捷键提示样式 */
         .shortcut-hint {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 0.5rem;
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            position: fixed; top:50%; left:50%; transform: translate(-50%,-50%);
+            background: rgba(0,0,0,.8); color: #fff; padding: 1rem 2rem;
+            border-radius: .5rem; font-size: 1.5rem; display:flex; align-items:center; gap:.5rem; z-index:1000;
+            opacity: 0; transition: opacity .3s;
         }
-        .shortcut-hint.show {
-            opacity: 1;
-        }
-
-        /* 原生全屏时，播放器容器铺满 */
+        .shortcut-hint.show { opacity:1; }
+        /* 全屏适配 */
         .player-container:-webkit-full-screen,
         .player-container:fullscreen {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            z-index: 10000;
-            background-color: #000;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10000; background: #000;
         }
         .player-container:-webkit-full-screen #player,
-        .player-container:fullscreen #player {
-            width: 100%; height: 100%;
-        }
+        .player-container:fullscreen #player { width:100%; height:100%; }
     </style>
 </head>
 <body>
+    <!-- 顶部区域：站点返回与标题 -->
     <header class="bg-[#111] p-4 flex justify-between items-center border-b border-[#333]">
         <div class="flex items-center">
             <a href="index.html" class="flex items-center">
@@ -173,7 +73,7 @@
         </a>
     </header>
 
-    <!-- 密码验证弹窗 -->
+    <!-- 密码验证弹窗（保持结构） -->
     <div id="passwordModal" class="fixed inset-0 bg-black/95 hidden items-center justify-center z-[65] transition-opacity duration-300">
         <div class="bg-[#111] p-8 rounded-lg w-11/12 max-w-md border border-[#333] max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center mb-6 flex-none">
@@ -192,7 +92,7 @@
     </div>
 
     <main class="container mx-auto px-4 py-4">
-        <!-- 视频播放区 -->
+        <!-- 视频播放区域 -->
         <div id="playerContainer" class="player-container">
             <div class="relative">
                 <div id="player"></div>
@@ -208,7 +108,7 @@
             </div>
         </div>
 
-        <!-- 集数导航 -->
+        <!-- 集数导航与控制 -->
         <div class="player-container">
             <div class="flex justify-between items-center my-4">
                 <button onclick="playPreviousEpisode()" id="prevButton" class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors">
@@ -227,7 +127,6 @@
             </div>
         </div>
 
-        <!-- 添加自动播放开关和排序按钮 -->
         <div class="player-container">
             <div class="flex justify-end items-center mb-4 gap-2">
                 <span class="text-gray-400 text-sm">自动连播</span>
@@ -252,18 +151,17 @@
             </div>
         </div>
 
-        <!-- 集数网格 -->
+        <!-- 集数网格区 -->
         <div class="player-container">
             <div class="episode-grid" id="episodesGrid">
                 <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2" id="episodesList">
-                    <!-- 集数将在这里动态加载 -->
                     <div class="col-span-full text-center text-gray-400 py-8">加载中...</div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- 添加快捷键提示元素 -->
+    <!-- 快捷键提示 -->
     <div class="shortcut-hint" id="shortcutHint">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" id="shortcutIcon">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
