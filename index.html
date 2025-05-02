@@ -34,6 +34,23 @@
     
     <!-- 顶部功能按钮区：设置 -->
     <nav aria-label="设置功能" class="fixed top-4 right-4 z-50">
+        
+    <div class="flex items-center space-x-2">
+        <!-- 电视直播按钮 -->
+        <a href="https://m3u-player.pages.dev/"
+           target="_blank" rel="noopener noreferrer"
+           class="bg-[#222] hover:bg-[#333] border border-[#333] hover:border-white rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors"
+           aria-label="电视直播">
+            <!-- 电视图标（SVG） -->
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="7" width="18" height="13" rx="2" stroke="currentColor" stroke-width="2"/>
+                <path d="M8 21h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 7V4M12 4 9 7M12 4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span class="hidden sm:inline">电视直播</span>
+        </a>
+        
+        <!-- 原有设置按钮 -->
         <button onclick="toggleSettings(event)"
                 class="bg-[#222] hover:bg-[#333] border border-[#333] hover:border-white rounded-lg px-3 py-1.5 transition-colors"
                 aria-label="打开设置" 
