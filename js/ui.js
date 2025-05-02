@@ -322,13 +322,11 @@ function deleteHistoryItem(encodedUrl) {
 
 function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     try {
-        // --- 准备剧集列表数据 (保持原始逻辑) ---
         let episodesList = [];
         const historyRaw = localStorage.getItem('viewingHistory');
         if (historyRaw) {
-            try { // 添加 try-catch 以防 JSON 解析错误
+            try { 
                 const history = JSON.parse(historyRaw);
-                // 使用原始标题查找
                 const historyItem = history.find(item => item.title === title);
                 if (historyItem && Array.isArray(historyItem.episodes)) {
                     episodesList = historyItem.episodes;
@@ -337,56 +335,41 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
                 console.error("解析 viewingHistory 出错:", parseError);
             }
         }
-        // 如果历史记录中没有，尝试从全局 currentEpisodes 获取 (保持原始逻辑)
         if (!episodesList.length) {
             try {
                 const stored = JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
-                if (Array.isArray(stored) && stored.length) { // 确保是数组且非空
+                if (Array.isArray(stored) && stored.length) { 
                     episodesList = stored;
                 }
             } catch (e) {
                  console.error("解析 currentEpisodes 失败:", e);
             }
         }
-        // 保存最终确定的剧集列表 (保持原始逻辑)
-        if (episodesList.length) { // 仅当列表非空时保存
+        if (episodesList.length) { 
             localStorage.setItem('currentEpisodes', JSON.stringify(episodesList));
         }
-
-        // --- 构建播放器URL (保持原始逻辑) ---
         const positionParam = playbackPosition > 10 ? `&position=${Math.floor(playbackPosition)}` : '';
 
-        // --- 执行跳转 (修改为同页跳转) ---
         if (url.includes('?')) {
-            // 如果原始 URL 已包含 '?'，则认为它可能是个特殊 URL，按原逻辑处理
-            // 注意：原始逻辑这里创建 URL 对象，可能会因 URL 格式抛错，保留此行为
             const playUrl = new URL(url);
-            // 按原逻辑添加参数 (如果不存在)
             if (!playUrl.searchParams.has('index') && episodeIndex > 0) {
                 playUrl.searchParams.set('index', episodeIndex);
             }
-            if (playbackPosition > 10 && !playUrl.searchParams.has('position')) { // 检查 position 是否已存在
+            if (playbackPosition > 10 && !playUrl.searchParams.has('position')) { 
                  playUrl.searchParams.set('position', Math.floor(playbackPosition));
             }
-            // 修改为同页跳转
             window.location.href = playUrl.toString();
         } else {
-            // 否则，构建标准的 player.html URL
             const playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}${positionParam}`;
-            // 修改为同页跳转
             window.location.href = playerUrl;
         }
 
     } catch (e) {
         console.error('从历史记录播放失败:', e);
-        // 构建备用 URL
         const fallbackUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}`;
-        // 修改为同页跳转
         window.location.href = fallbackUrl;
     }
 }
-
-
 
 /** 增加/更新历史（同标题合并，每标题仅一条记录） */
 function addToViewingHistory(videoInfo) {
