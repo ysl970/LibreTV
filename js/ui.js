@@ -318,38 +318,76 @@ function deleteHistoryItem(encodedUrl) {
     }
 }
 
-/** 从历史打开播放 */
+/**
+ * 从观看历史记录打开播放页面（在当前标签页）
+ * @param {string} url 媒体文件的原始URL
+ * @param {string} title 视频标题
+ * @param {number} episodeIndex 当前集数索引（从0开始）
+ * @param {number} [playbackPosition=0] 上次播放位置（秒）
+ */
 function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     try {
+        // --- 准备剧集列表数据 (供播放页使用) ---
         let episodesList = [];
+        // 尝试从 viewingHistory 中精确查找该标题的剧集列表
         const historyRaw = localStorage.getItem('viewingHistory');
         if (historyRaw) {
-            const history = JSON.parse(historyRaw);
-            const historyItem = history.find(item => item.title === title);
-            if (historyItem && Array.isArray(historyItem.episodes)) episodesList = historyItem.episodes;
-        }
-        if (!episodesList.length) {
             try {
-                const stored = JSON.parse(localStorage.getItem('currentEpisodes')||'[]');
-                if (stored.length) episodesList = stored;
-            } catch {}
+                const history = JSON.parse(historyRaw);
+                // 使用原始标题查找，而不是安全处理后的 safeTitle
+                const historyItem = history.find(item => item.title === title);
+                // 确保找到的条目有有效的 episodes 数组
+                if (historyItem && Array.isArray(historyItem.episodes) && historyItem.episodes.length > 0) {
+                    episodesList = historyItem.episodes;
+                    console.log(`从历史记录找到 "${title}" 的剧集数据: ${episodesList.length} 集`);
+                }
+            } catch (parseError) {
+                console.error("解析 viewingHistory 出错:", parseError);
+            }
         }
-        if (episodesList.length) localStorage.setItem('currentEpisodes', JSON.stringify(episodesList));
-        const positionParam = playbackPosition>10 ? `&position=${Math.floor(playbackPosition)}` : '';
-        if (url.includes('?')) {
-            const playUrl = new URL(url);
-            if (!playUrl.searchParams.has('index') && episodeIndex>0) playUrl.searchParams.set('index', episodeIndex);
-            if (playbackPosition>10) playUrl.searchParams.set('position', Math.floor(playbackPosition));
-            window.open(playUrl.toString(), '_blank');
-        } else {
-            const playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}${positionParam}`;
-            window.open(playerUrl, '_blank');
+        // 如果在历史记录中没找到，尝试使用上次全局保存的集数列表作为备选
+        if (episodesList.length === 0) {
+            try {
+                const stored = JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
+                if (Array.isArray(stored) && stored.length > 0) {
+                    episodesList = stored;
+                    console.log(`使用 localStorage 中缓存的剧集数据 (${episodesList.length} 集) 作为 "${title}" 的备选`);
+                }
+            } catch (e) {
+                console.error("解析 currentEpisodes 失败:", e);
+            }
         }
+        // 将最终确定的剧集列表保存到 localStorage，供播放页读取
+        // 即使列表为空也保存，以覆盖旧数据
+        localStorage.setItem('currentEpisodes', JSON.stringify(episodesList));
+        if (episodesList.length > 0) {
+            console.log(`已将 "${title}" 的剧集列表 (${episodesList.length} 集) 保存到 localStorage`);
+        }
+
+        // --- 构建播放器URL ---
+        // 检查 playbackPosition 是否有效，添加 &position= 参数
+        // 添加一个小的阈值（例如10秒），避免为非常短的进度添加参数
+        const positionParam = playbackPosition > 10 ? `&position=${Math.floor(playbackPosition)}` : '';
+
+        // 统一构建 player.html 的 URL，传递必要的参数
+        // 对参数进行编码以确保URL安全
+        const playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}${positionParam}`;
+
+        // --- 在当前标签页跳转 ---
+        console.log(`准备跳转到播放页面: ${playerUrl}`);
+        window.location.href = playerUrl;
+
     } catch (e) {
-        console.error('从历史记录播放失败:', e);
-        window.open(`player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}`,'_blank');
+        // 如果在上述过程中发生任何错误（例如 localStorage 操作失败）
+        console.error('从历史记录准备播放时出错:', e);
+
+        // 提供一个不带播放位置的备用跳转（仍然在当前标签页）
+        const fallbackUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}`;
+        console.warn(`发生错误，尝试跳转到备用URL: ${fallbackUrl}`);
+        window.location.href = fallbackUrl;
     }
 }
+
 
 /** 增加/更新历史（同标题合并，每标题仅一条记录） */
 function addToViewingHistory(videoInfo) {
