@@ -315,9 +315,25 @@ function deleteHistoryItem(encodedUrl) {
     }
 }
 
-/** 从历史打开播放 */
+/**
+ * 从历史记录播放，确保url为资源直链
+ */
 function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     try {
+        // 多次递归剥离 player.html?url=xxx，获得真实资源地址
+        let maxUnwrap = 3;
+        while (maxUnwrap-- > 0 && /player\.html(\?|%3F)/i.test(url)) {
+            let mark = url.indexOf('?');
+            let qs = mark > -1 ? url.slice(mark+1) : '';
+            let sp = new URLSearchParams(qs);
+            let u = sp.get('url');
+            if (!u) break;
+            let d = decodeURIComponent(u);
+            if (/player\.html(\?|%3F)/i.test(d)) { url = d; continue; }
+            url = d;
+            break;
+        }
+        // 恢复集数等历史状态（如有）
         let episodesList = [];
         const historyRaw = localStorage.getItem('viewingHistory');
         if (historyRaw) {
@@ -333,20 +349,15 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
         }
         if (episodesList.length) localStorage.setItem('currentEpisodes', JSON.stringify(episodesList));
         const positionParam = playbackPosition>10 ? `&position=${Math.floor(playbackPosition)}` : '';
-        if (url.includes('?')) {
-            const playUrl = new URL(url);
-            if (!playUrl.searchParams.has('index') && episodeIndex>0) playUrl.searchParams.set('index', episodeIndex);
-            if (playbackPosition>10) playUrl.searchParams.set('position', Math.floor(playbackPosition));
-            window.open(playUrl.toString(), '_blank');
-        } else {
-            const playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}${positionParam}`;
-            window.open(playerUrl, '_blank');
-        }
+        // 始终统一为player.html直链调用
+        const playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}${positionParam}`;
+        window.open(playerUrl, '_blank');
     } catch (e) {
-        console.error('从历史记录播放失败:', e);
+        console.error('历史播放失败:', e, url);
         window.open(`player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}`,'_blank');
     }
 }
+
 
 /** 增加/更新历史（同标题合并，每标题仅一条记录） */
 function addToViewingHistory(videoInfo) {
