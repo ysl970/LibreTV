@@ -495,3 +495,9 @@ body {
     background: linear-gradient(135deg, var(--card-gradient-end), var(--card-gradient-start));
     border-color: var(--primary-color);
 }
+
+/* 搜索卡片结果居中*/
+#results {
+    justify-content: center;
+}
+
