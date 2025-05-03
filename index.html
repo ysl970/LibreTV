@@ -338,11 +338,13 @@
                             <div id="douban-tags" class="flex space-x-2 min-w-max" role="tablist" aria-label="豆瓣分类标签"></div>
                         </div>
                     </div>
-                    <div id="douban-results" 
-                         class="flex flex-wrap justify-center gap-3" 
-                         role="region" 
-                         aria-live="polite"></div>
-                </div>
+                        <div class="flex justify-center"> 
+                            <div id="douban-results" 
+                                 class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3" 
+                                 role="region" 
+                                 aria-live="polite">
+                            </div>
+                        </div> 
             </section>
             <!-- 搜索结果 -->
             <section id="resultsArea" class="w-full hidden" aria-label="搜索结果">
@@ -352,11 +354,13 @@
                             <span id="searchResultsCount">0</span> 个结果
                         </div>
                     </div>
-                    <div id="results" 
-                         class="flex flex-wrap justify-center gap-3"
-                         role="region" 
-                         aria-live="polite"></div>
+                      <div class="flex justify-center"> 
+                <div id="results" 
+                     class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3" 
+                     role="region" 
+                     aria-live="polite">
                 </div>
+            </div> 
             </section>
         </div>
     </main>
