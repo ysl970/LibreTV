@@ -475,3 +475,23 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
+
+/* 搜索记录标签样式 (从旧代码恢复) */
+.search-tag {
+    background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end));
+    color: var(--text-color);
+    padding: 0.5rem 1rem; /* 8px 16px */
+    border-radius: 0.5rem; /* 8px */
+    font-size: 0.875rem; /* 14px */
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background 0.3s ease, border-color 0.3s ease; /* 添加过渡效果 */
+    cursor: pointer; /* 明确指针样式 */
+    display: inline-block; /* 确保作为标签显示 */
+    margin: 0.25rem; /* 可选：保持间距 */
+}
+
+.search-tag:hover {
+    background: linear-gradient(135deg, var(--card-gradient-end), var(--card-gradient-start));
+    border-color: var(--primary-color);
+}
