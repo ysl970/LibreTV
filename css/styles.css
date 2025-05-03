@@ -463,3 +463,15 @@ body {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+/* API组标题样式 */
+.api-group-title {
+    grid-column: span 2;
+    padding: 0.25rem 0;
+    margin-top: 0.5rem;
+    border-top: 1px solid #333;
+    color: #8599b2;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
