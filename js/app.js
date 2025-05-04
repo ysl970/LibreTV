@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         preloadingToggle.addEventListener('change', applyPreloadingConfigChange);
         preloadCountInput.addEventListener('change', applyPreloadCountChange);
-        preloadCountInput.addEventListener('input', applyPreloadCountChange);
+       // preloadCountInput.addEventListener('input', applyPreloadCountChange);
     }
 });
 
