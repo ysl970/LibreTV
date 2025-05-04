@@ -608,7 +608,7 @@ async function search() {
             
             const sourceCode = item.source_code || '';
             
-            // 更紧凑的卡片布局
+            // 修改为水平卡片布局，图片在左侧，文本在右侧，并优化样式
             const hasCover = item.vod_pic && item.vod_pic.startsWith('http');
             
             return {
