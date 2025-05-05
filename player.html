@@ -153,6 +153,24 @@
         .player-container:fullscreen #player {
             width: 100%; height: 100%;
         }
+        /* 新增：隐藏DPlayer菜单 */
+        .dplayer-menu.dplayer-menu-show {
+            display: none !important;
+        }
+
+            /* 新增移动端响应式布局 */
+        @media (max-width: 768px) {
+            /* 调整播放器高度 */
+            #player {
+                height: 40vh;
+            }
+        }
+            /* 超小屏幕设备优化 */
+        @media (max-width: 480px) {
+            #player {
+                height: 30vh;
+            }
+        }
     </style>
 </head>
 <body>
