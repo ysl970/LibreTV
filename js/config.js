@@ -25,15 +25,10 @@ const API_SITES = {
         api: 'https://cj.rycjapi.com',
         name: '如意资源',
     },
-    cjhw: {
-        api: 'https://cjhwba.com',
-        name: '新华为',
-    },
     ffzy: {
-        api: 'http://ffzy5.tv',
+        api: 'http://api.ffzyapi.com',
         name: '非凡影视',
-        detail: 'http://ffzy5.tv',
-        filterAdRule: '#EXT-X-DISCONTINUITY\\r*\\n*#EXTINF:6.666667,[\\s\\S]*?#EXT-X-DISCONTINUITY'
+        detail: 'http://api.ffzyapi.com',
     },
     lzzy: {
         api: 'https://cj.lziapi.com',
@@ -51,15 +46,15 @@ const API_SITES = {
         api: 'https://json.heimuer.xyz',
         name: '黑木耳',
         detail: 'https://heimuer.tv',
-        filterAdRule: '#EXT-X-DISCONTINUITY\\n#EXTINF:\\d+\\.\\d+,\\n.*?\\n#EXT-X-DISCONTINUITY'
-    },
-    mozhua: {
-        api: 'https://mozhuazy.com',
-        name: '魔爪资源',
     },
     mdzy: {
         api: 'https://www.mdzyapi.com',
         name: '魔都资源',
+        detail: 'https://www.mdzyapi.com',
+    },
+    mozhua: {
+        api: 'https://mozhuazy.com',
+        name: '魔爪资源',
     },
     wolong: {
         api: 'https://collect.wolongzy.cc',
@@ -94,21 +89,9 @@ const API_SITES = {
         api: 'https://caiji.dbzy5.com',
         name: '豆瓣资源',
     },
-    wuxianzy: {
-        api: 'https://api.wuxianzy.net',
-        name: '无线资源',
-    },
-    yayazy: {
-        api: 'https://cj.yayazy.net',
-        name: '鸭鸭资源',
-    },
-    suoni: {
-        api: 'https://suoniapi.com',
-        name: '索尼资源',
-    },
 
 
-
+    
 
     yutuzy: {
         api: 'https://yutuzy10.com',
