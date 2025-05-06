@@ -1,4 +1,7 @@
-// ===================== 全局变量 & 统一常量 ========================
+// 全局变量
+let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["tyyszy", "bfzy", "ruyi"]'); // 默认选中天涯资源、暴风资源和如意资源
+let customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]'); // 存储自定义API列表
+
 
 let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["heimuer", "wolong", "tyyszy"]');
 let customAPIs   = JSON.parse(localStorage.getItem('customAPIs') || '[]');
@@ -586,6 +589,7 @@ async function search() {
         // 处理搜索结果过滤：如果启用了黄色内容过滤，过滤掉敏感分类
         const yellowFilterEnabled = localStorage.getItem('yellowFilterEnabled') === 'true';
         if (yellowFilterEnabled) {
+
             // 用户要求将banned内容替换为数字123
             const banned = ['伦理片','福利','里番动漫','门事件','萝莉少女','制服诱惑','国产传媒','cosplay','黑丝诱惑','无码','日本无码','有码','日本有码','SWAG','网红主播', '色情片','同性片','福利视频','福利片'];
             allResults = allResults.filter(item => {
