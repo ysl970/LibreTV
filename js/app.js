@@ -72,7 +72,7 @@ function initAPICheckboxes() {
     // 创建普通API源的复选框
     Object.keys(API_SITES).forEach(apiKey => {
         const api = API_SITES[apiKey];
-        if (api.adult) return; // 跳过成人内容API，稍后添加
+        if (!api.adult) return; // 跳过成人内容API，稍后添加
         
         const checked = selectedAPIs.includes(apiKey);
         
@@ -109,7 +109,7 @@ function initAPICheckboxes() {
         // 创建成人API源的复选框
         Object.keys(API_SITES).forEach(apiKey => {
             const api = API_SITES[apiKey];
-            if (api.adult) return; // 仅添加成人内容API
+            if (!api.adult) return; // 仅添加成人内容API
             
             const checked = selectedAPIs.includes(apiKey);
             
