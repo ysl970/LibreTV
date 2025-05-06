@@ -167,15 +167,15 @@ function saveUserTags() {
 
 // 初始化豆瓣功能
 function initDouban() {
-  // 初始化DOM元素缓存
+  // 初始化关键DOM元素缓存
   ['doubanToggle', 'doubanArea', 'douban-movie-toggle', 'douban-tv-toggle', 
    'douban-tags', 'douban-refresh', 'douban-results', 'searchInput'].forEach(id => {
-    cachedElements[id] = document.getElementById(id);
+    utils.getElement(id);
   });
 
   const doubanToggle = utils.getElement('doubanToggle');
   if (doubanToggle) {
-    const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
+    const isEnabled = utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true;
     doubanToggle.checked = isEnabled;
 
     const toggleBg = doubanToggle.nextElementSibling;
@@ -188,7 +188,7 @@ function initDouban() {
 
     doubanToggle.addEventListener('change', function(e) {
       const isChecked = e.target.checked;
-      localStorage.setItem('doubanEnabled', isChecked);
+      utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, isChecked);
 
       if (isChecked) {
         toggleBg.classList.add('bg-pink-600');
@@ -209,7 +209,7 @@ function initDouban() {
   renderDoubanTags();
   setupDoubanRefreshBtn();
 
-  if (localStorage.getItem('doubanEnabled') === 'true') {
+  if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true) {
     renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
   }
 }
@@ -219,7 +219,7 @@ function updateDoubanVisibility() {
   const doubanArea = utils.getElement('doubanArea');
   if (!doubanArea) return;
 
-  const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
+  const isEnabled = utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true;
   const resultsArea = utils.getElement('resultsArea');
   const isSearching = resultsArea && !resultsArea.classList.contains('hidden');
 
@@ -272,6 +272,7 @@ function fillAndSearchWithDouban(title) {
 
   const safeTitle = utils.safeText(title);
 
+  // 检查并选择豆瓣资源API
   if (typeof selectedAPIs !== 'undefined' && !selectedAPIs.includes('dbzy')) {
     const doubanCheckbox = document.querySelector('input[id="api_dbzy"]');
     if (doubanCheckbox) {
@@ -281,7 +282,7 @@ function fillAndSearchWithDouban(title) {
         updateSelectedAPIs();
       } else {
         selectedAPIs.push('dbzy');
-        localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
+        utils.storage.set('selectedAPIs', selectedAPIs);
 
         const countEl = document.getElementById('selectedAPICount');
         if (countEl) {
@@ -305,6 +306,7 @@ function fillAndSearchWithDouban(title) {
   }
 }
 
+
 // 渲染电影/电视剧切换器
 function renderDoubanMovieTvSwitch() {
   const movieToggle = utils.getElement('douban-movie-toggle');
@@ -313,24 +315,25 @@ function renderDoubanMovieTvSwitch() {
   if (!movieToggle || !tvToggle) return;
 
   const updateToggleState = (isMovie) => {
-    if (doubanMovieTvCurrentSwitch === (isMovie ? 'movie' : 'tv')) return;
+    const newType = isMovie ? CONFIG.MEDIA_TYPES.MOVIE : CONFIG.MEDIA_TYPES.TV;
+    if (doubanMovieTvCurrentSwitch === newType) return;
 
     const activeToggle = isMovie ? movieToggle : tvToggle;
     const inactiveToggle = isMovie ? tvToggle : movieToggle;
 
-    activeToggle.classList.add('bg-pink-600', 'text-white');
-    activeToggle.classList.remove('text-gray-300');
+    activeToggle.classList.add(...CONFIG.CLASSES.ACTIVE.split(' '));
+    activeToggle.classList.remove(CONFIG.CLASSES.INACTIVE);
 
-    inactiveToggle.classList.remove('bg-pink-600', 'text-white');
-    inactiveToggle.classList.add('text-gray-300');
+    inactiveToggle.classList.remove(...CONFIG.CLASSES.ACTIVE.split(' '));
+    inactiveToggle.classList.add(CONFIG.CLASSES.INACTIVE);
 
-    doubanMovieTvCurrentSwitch = isMovie ? 'movie' : 'tv';
-    doubanCurrentTag = '热门';
+    doubanMovieTvCurrentSwitch = newType;
+    doubanCurrentTag = CONFIG.DEFAULT_TAG;
     doubanPageStart = 0;
 
     renderDoubanTags();
     
-    if (localStorage.getItem('doubanEnabled') === 'true') {
+    if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true) {
       renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
     }
   };
@@ -344,13 +347,20 @@ function renderDoubanTags() {
   const tagContainer = utils.getElement('douban-tags');
   if (!tagContainer) return;
 
-  const currentTags = doubanMovieTvCurrentSwitch === 'movie' ? movieTags : tvTags;
+  const currentTags = doubanMovieTvCurrentSwitch === CONFIG.MEDIA_TYPES.MOVIE ? movieTags : tvTags;
   const fragment = document.createDocumentFragment();
 
   // 添加标签管理按钮
   const manageBtn = document.createElement('button');
   manageBtn.className = 'py-1.5 px-3.5 rounded text-sm font-medium transition-all duration-300 bg-[#1a1a1a] text-gray-300 hover:bg-pink-700 hover:text-white';
-  manageBtn.innerHTML = '<span class="flex items-center"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>管理标签</span>';
+  manageBtn.innerHTML = `
+    <span class="flex items-center">
+      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+      </svg>
+      管理标签
+    </span>
+  `;
   manageBtn.onclick = showTagManageModal;
   fragment.appendChild(manageBtn);
 
@@ -388,7 +398,6 @@ function setupDoubanRefreshBtn() {
     if (doubanPageStart > CONFIG.MAX_PAGE_START) {
       doubanPageStart = 0;
     }
-
     renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
   }, 500);
 }
@@ -438,7 +447,7 @@ async function fetchDoubanData(url) {
       }
 
       const data = await fallbackResponse.json();
-      if (data && data.contents) {
+      if (data?.contents) {
         return JSON.parse(data.contents);
       }
       
@@ -475,6 +484,7 @@ async function renderRecommend(tag, pageLimit, pageStart) {
     if (container.contains(loadingOverlay)) {
       container.removeChild(loadingOverlay);
     }
+    container.classList.remove("relative");
   }
 }
 
@@ -482,7 +492,7 @@ async function renderRecommend(tag, pageLimit, pageStart) {
 function renderDoubanCards(data, container) {
   const fragment = document.createDocumentFragment();
 
-  if (!data || !data.subjects || data.subjects.length === 0) {
+  if (!data?.subjects?.length) {
     const emptyEl = document.createElement("div");
     emptyEl.className = "col-span-full text-center py-8";
     emptyEl.innerHTML = '<div class="text-pink-500">❌ 暂无数据，请尝试其他分类或刷新</div>';
@@ -499,8 +509,12 @@ function renderDoubanCards(data, container) {
 
       const card = document.createElement("div");
       card.className = CONFIG.CLASSES.CARD;
+      
+      // 使用数据属性传递数据，而不是直接在onclick中使用
+      card.setAttribute('data-title', safeTitle);
+      
       card.innerHTML = `
-        <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
+        <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer douban-card-cover">
           <img src="${originalCoverUrl}" alt="${safeTitle}"
               class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
               onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; this.classList.add('object-contain');"
@@ -510,19 +524,35 @@ function renderDoubanCards(data, container) {
               <span class="text-yellow-400">★</span> ${safeRate}
           </div>
           <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors">
-              <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" onclick="event.stopPropagation();">
+              <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" class="douban-link">
                   🔗
               </a>
           </div>
         </div>
         <div class="p-2 text-center bg-[#111]">
-          <button onclick="fillAndSearchWithDouban('${safeTitle}')"
-                  class="text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
+          <button class="douban-search-btn text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
                   title="${safeTitle}">
               ${safeTitle}
           </button>
         </div>
       `;
+      
+      // 使用事件委托而非内联事件
+      const coverEl = card.querySelector('.douban-card-cover');
+      const buttonEl = card.querySelector('.douban-search-btn');
+      const linkEl = card.querySelector('.douban-link');
+      
+      if (coverEl) {
+        coverEl.addEventListener('click', () => fillAndSearchWithDouban(safeTitle));
+      }
+      
+      if (buttonEl) {
+        buttonEl.addEventListener('click', () => fillAndSearchWithDouban(safeTitle));
+      }
+      
+      if (linkEl) {
+        linkEl.addEventListener('click', (e) => e.stopPropagation());
+      }
 
       fragment.appendChild(card);
     });
@@ -539,7 +569,7 @@ function showTagManageModal() {
     document.body.removeChild(modal);
   }
 
-  const isMovie = doubanMovieTvCurrentSwitch === 'movie';
+  const isMovie = doubanMovieTvCurrentSwitch === CONFIG.MEDIA_TYPES.MOVIE;
   const currentTags = isMovie ? movieTags : tvTags;
 
   modal = document.createElement('div');
@@ -559,7 +589,7 @@ function showTagManageModal() {
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4" id="tagsGrid">
           ${currentTags.length ? currentTags.map(tag => {
-            const canDelete = tag !== '热门';
+            const canDelete = tag !== CONFIG.DEFAULT_TAG;
             const safeTag = utils.safeText(tag);
             return `
               <div class="bg-[#1a1a1a] text-gray-300 py-1.5 px-3 rounded text-sm font-medium flex justify-between items-center group">
@@ -597,8 +627,21 @@ function showTagManageModal() {
     if (input) input.focus();
   }, 100);
 
-  // 事件监听器设置
-  modal.querySelector('#closeTagModal').addEventListener('click', () => {
+  // 使用事件委托处理删除按钮点击
+  const tagsGrid = modal.querySelector('#tagsGrid');
+  if (tagsGrid) {
+    tagsGrid.addEventListener('click', (e) => {
+      const deleteBtn = e.target.closest('.delete-tag-btn');
+      if (deleteBtn) {
+        const tagToDelete = deleteBtn.getAttribute('data-tag');
+        deleteTag(tagToDelete);
+        showTagManageModal(); // 刷新弹窗
+      }
+    });
+  }
+
+  // 设置其他事件监听器
+  modal.querySelector('#closeTagModal')?.addEventListener('click', () => {
     document.body.removeChild(modal);
   });
 
@@ -608,20 +651,12 @@ function showTagManageModal() {
     }
   });
 
-  modal.querySelector('#resetTagsBtn').addEventListener('click', () => {
+  modal.querySelector('#resetTagsBtn')?.addEventListener('click', () => {
     resetTagsToDefault();
     showTagManageModal();
   });
 
-  modal.querySelectorAll('.delete-tag-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const tagToDelete = this.getAttribute('data-tag');
-      deleteTag(tagToDelete);
-      showTagManageModal();
-    });
-  });
-
-  modal.querySelector('#addTagForm').addEventListener('submit', function(e) {
+  modal.querySelector('#addTagForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
     const input = document.getElementById('newTagInput');
     if (!input) return;
@@ -640,7 +675,7 @@ function addTag(tag) {
   if (!utils.validateTag(tag)) return;
 
   const safeTag = utils.safeText(tag);
-  const isMovie = doubanMovieTvCurrentSwitch === 'movie';
+  const isMovie = doubanMovieTvCurrentSwitch === CONFIG.MEDIA_TYPES.MOVIE;
   const currentTags = isMovie ? movieTags : tvTags;
 
   if (currentTags.some(existingTag => existingTag.toLowerCase() === safeTag.toLowerCase())) {
@@ -663,12 +698,12 @@ function addTag(tag) {
 function deleteTag(tag) {
   if (!tag) return;
   
-  if (tag === '热门') {
+  if (tag === CONFIG.DEFAULT_TAG) {
     showToast(CONFIG.MESSAGES.TAG_RESERVED, 'warning');
     return;
   }
 
-  const isMovie = doubanMovieTvCurrentSwitch === 'movie';
+  const isMovie = doubanMovieTvCurrentSwitch === CONFIG.MEDIA_TYPES.MOVIE;
   const currentTags = isMovie ? movieTags : tvTags;
   const index = currentTags.indexOf(tag);
 
@@ -677,7 +712,7 @@ function deleteTag(tag) {
     saveUserTags();
 
     if (doubanCurrentTag === tag) {
-      doubanCurrentTag = '热门';
+      doubanCurrentTag = CONFIG.DEFAULT_TAG;
       doubanPageStart = 0;
       renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
     }
@@ -689,7 +724,7 @@ function deleteTag(tag) {
 
 // 重置为默认标签
 function resetTagsToDefault() {
-  const isMovie = doubanMovieTvCurrentSwitch === 'movie';
+  const isMovie = doubanMovieTvCurrentSwitch === CONFIG.MEDIA_TYPES.MOVIE;
   
   if (isMovie) {
     movieTags = [...defaultMovieTags];
@@ -697,7 +732,7 @@ function resetTagsToDefault() {
     tvTags = [...defaultTvTags];
   }
 
-  doubanCurrentTag = '热门';
+  doubanCurrentTag = CONFIG.DEFAULT_TAG;
   doubanPageStart = 0;
 
   saveUserTags();
@@ -716,3 +751,4 @@ function resetToHome() {
 
 // 初始化：页面加载完成时执行
 document.addEventListener('DOMContentLoaded', initDouban);
+
