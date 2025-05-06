@@ -69,6 +69,11 @@ const API_SITES = {
     ruyi: {
         api: 'https://cj.rycjapi.com',
         name: '如意资源'
+    },    
+    jkun: {
+        api: 'https://jkunzyapi.com',
+        name: 'jkun资源',
+        adult: true
     },
     bwzy: {
         api: 'https://api.bwzym3u8.com',
@@ -78,6 +83,16 @@ const API_SITES = {
     souav: {
         api: 'https://api.souavzy.vip',
         name: 'souav资源',
+        adult: true
+    },
+    r155: {
+        api: 'https://155api.com',
+        name: '155资源',
+        adult: true
+    },
+    lsb: {
+        api: 'https://apilsbzy1.com',
+        name: 'lsb资源',
         adult: true
     },
     huangcang: {
@@ -93,6 +108,18 @@ const API_SITES = {
         api: 'https://yutuzy10.com',
         name: '玉兔资源',
         adult: true
+    },
+    yinghua: {
+        api: 'https://m3u8.apiyhzy.com',
+        name: '樱花资源'
+    },
+    baidu: {
+        api: 'https://api.apibdzy.com',
+        name: '百度云资源'
+    },
+    wujin: {
+        api: 'https://api.wujinapi.me',
+        name: '无尽资源'
     },
     liangzi: {
         api: 'http://cj.lziapi.com',
@@ -147,10 +174,6 @@ const API_SITES = {
         api: 'https://jyzyapi.com',
         name: '金鹰资源'
     },
-    piaoling: {
-        api: 'https://p2100.net',
-        name: '飘零资源'
-    },
     subo: {
         api: 'https://subocaiji.com',
         name: '速博资源'
@@ -185,7 +208,6 @@ const API_SITES = {
         name: '老色逼资源',
         adult: true
     }
-
     // 您可以按需添加更多源
 };
 
