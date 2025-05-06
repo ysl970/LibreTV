@@ -1,8 +1,4 @@
 // 全局变量
-let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["tyyszy", "bfzy", "ruyi"]'); // 默认选中天涯资源、暴风资源和如意资源
-let customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]'); // 存储自定义API列表
-
-
 let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["heimuer", "wolong", "tyyszy"]');
 let customAPIs   = JSON.parse(localStorage.getItem('customAPIs') || '[]');
 let currentEpisodeIndex = 0;
