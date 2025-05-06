@@ -1,6 +1,6 @@
 // ===================== 全局变量 & 统一常量 ========================
 
-let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["heimuer", "wolong", "ruyi"]');
+let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["heimuer", "wolong", "tyyszy"]');
 let customAPIs   = JSON.parse(localStorage.getItem('customAPIs') || '[]');
 let currentEpisodeIndex = 0;
 let currentEpisodes = [];
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 初始化默认API（首开时）
     if (!localStorage.getItem('hasInitializedDefaults')) {
-        selectedAPIs = ["heimuer", "wolong", "ruyi"];
+        selectedAPIs = ["heimuer", "wolong", "tyyszy"];
         localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
         localStorage.setItem('yellowFilterEnabled', 'true');
         localStorage.setItem(PLAYER_CONFIG.adFilteringStorage, 'true');
@@ -587,7 +587,7 @@ async function search() {
         const yellowFilterEnabled = localStorage.getItem('yellowFilterEnabled') === 'true';
         if (yellowFilterEnabled) {
             // 用户要求将banned内容替换为数字123
-            const banned = ['伦理片','门事件','萝莉少女','制服诱惑','国产传媒','cosplay','黑丝诱惑','无码','日本无码','有码','日本有码','SWAG','网红主播', '色情片','同性片','福利视频','福利片'];
+            const banned = ['伦理片','福利','里番动漫','门事件','萝莉少女','制服诱惑','国产传媒','cosplay','黑丝诱惑','无码','日本无码','有码','日本有码','SWAG','网红主播', '色情片','同性片','福利视频','福利片'];
             allResults = allResults.filter(item => {
                 const typeName = item.type_name || '';
                 return !banned.some(keyword => typeName.includes(keyword));
