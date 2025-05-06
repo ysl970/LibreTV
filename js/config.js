@@ -23,17 +23,15 @@ const SITE_CONFIG = {
 const API_SITES = {
     heimuer: {
         api: 'https://json.heimuer.xyz',
-        name: '黑木耳',
-        detail: 'https://heimuer.tv',
+        name: '黑木耳'
     },
     ffzy: {
         api: 'http://ffzy5.tv',
-        name: '非凡影视',
-        detail: 'http://ffzy5.tv',
+        name: '非凡影视'
     },
     tyyszy: {
         api: 'https://tyyszy.com',
-        name: '天涯资源',
+        name: '天涯资源'
     },
     ckzy: {
         api: 'https://www.ckzy1.com',
@@ -42,45 +40,35 @@ const API_SITES = {
     },
     zy360: {
         api: 'https://360zy.com',
-        name: '360资源',
+        name: '360资源'
     },
     wolong: {
         api: 'https://wolongzyw.com',
-        name: '卧龙资源',
+        name: '卧龙资源'
     },
     hwba: {
-        api: 'https://cjwba.com',
-        name: '华为吧资源',
+        api: 'https://cjhwba.com/',
+        name: '华为吧资源'
     },
     jisu: {
         api: 'https://jszyapi.com',
-        name: '极速资源',
-        detail: 'https://jszyapi.com'
+        name: '极速资源'
     },
     dbzy: {
         api: 'https://dbzy.com',
-        name: '豆瓣资源',
-    },
-    bfzy: {
-        api: 'https://bfzyapi.com',
-        name: '暴风资源',
+        name: '豆瓣资源'
     },
     mozhua: {
         api: 'https://mozhuazy.com',
-        name: '魔爪资源',
+        name: '魔爪资源'
     },
     mdzy: {
         api: 'https://www.mdzyapi.com',
-        name: '魔都资源',
+        name: '魔都资源'
     },
     ruyi: {
         api: 'https://cj.rycjapi.com',
-        name: '如意资源',
-    },
-    jkun: {
-        api: 'https://jkunzyapi.com',
-        name: 'jkun资源',
-        adult: true
+        name: '如意资源'
     },
     bwzy: {
         api: 'https://api.bwzym3u8.com',
@@ -92,21 +80,10 @@ const API_SITES = {
         name: 'souav资源',
         adult: true
     },
-    r155: {
-        api: 'https://155api.com',
-        name: '155资源',
-        adult: true
-    },
-    lsb: {
-        api: 'https://apilsbzy1.com',
-        name: 'lsb资源',
-        adult: true
-    },
     huangcang: {
         api: 'https://hsckzy.vip',
         name: '黄色仓库',
-        adult: true,
-        detail: 'https://hsckzy.vip'
+        adult: true
     },
     zuid: {
         api: 'https://api.zuidapi.com',
@@ -116,7 +93,99 @@ const API_SITES = {
         api: 'https://yutuzy10.com',
         name: '玉兔资源',
         adult: true
+    },
+    liangzi: {
+        api: 'http://cj.lziapi.com',
+        name: '量子资源'
+    },
+    shandian: {
+        api: 'http://sdzyapi.com',
+        name: '闪电资源'
+    },
+    hongniu: {
+        api: 'https://www.hongniuzy2.com',
+        name: '红牛资源'
+    },
+    shayu: {
+        api: 'http://sybyapi.com',
+        name: '鲨鱼资源',
+        adult: true
+    },
+    suoni: {
+        api: 'https://suoniapi.com',
+        name: '索尼资源'
+    },
+    niuniu: {
+        api: 'https://api.niuniuzy.me',
+        name: '牛牛资源'
+    },
+    yaya: {
+        api: 'https://cj.yayazy.net',
+        name: '鸭鸭资源'
+    },
+    baiduyun: {
+        api: 'https://api.apibdzy.com',
+        name: '百度云资源'
+    },
+    guangsu: {
+        api: 'https://api.guangsuapi.com',
+        name: '光速资源'
+    },
+    haohua: {
+        api: 'https://hhzyapi.com',
+        name: '豪华资源'
+    },
+    huya: {
+        api: 'https://www.huyaapi.com',
+        name: '虎牙资源'
+    },
+    huohuzy: {
+        api: 'https://hhzyapi.com',
+        name: '火狐资源'
+    },
+    jinying: {
+        api: 'https://jyzyapi.com',
+        name: '金鹰资源'
+    },
+    piaoling: {
+        api: 'https://p2100.net',
+        name: '飘零资源'
+    },
+    subo: {
+        api: 'https://subocaiji.com',
+        name: '速博资源'
+    },
+    senlin: {
+        api: 'https://slapibf.com',
+        name: '森林资源',
+        adult: true
+    },
+    aosika: {
+        api: 'https://aosikazy.com',
+        name: '奥斯卡资源',
+        adult: true
+    },
+    lebozy: {
+        api: 'https://lbapi9.com',
+        name: '乐播资源',
+        adult: true
+    },
+    fanhao: {
+        api: 'http://fhapi9.com',
+        name: '番号资源',
+        adult: true
+    },
+    sexnguo: {
+        api: 'https://api.sexnguon.com',
+        name: '色南国资源',
+        adult: true
+    },
+    laosebi: {
+        api: 'https://apilsbzy1.com',
+        name: '老色逼资源',
+        adult: true
     }
+
     // 您可以按需添加更多源
 };
 
