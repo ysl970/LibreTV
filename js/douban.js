@@ -1,13 +1,29 @@
 // douban.js
 
-// 常量配置区域
+// 常量配置区域 
 const CONFIG = {
   // API相关
   TIMEOUT: 10000,
-  PAGE_SIZE: 16,
+  PAGE_SIZE: 16, 
   MAX_TAG_LENGTH: 20,
-  MAX_PAGE_START: 144, // 9 * PAGE_SIZE
+  MAX_PAGE_START: 144,
 
+  // 存储键名
+  STORAGE_KEYS: {
+    ENABLED: 'doubanEnabled',
+    MOVIE_TAGS: 'userMovieTags',
+    TV_TAGS: 'userTvTags'
+  },
+
+  // 媒体类型
+  MEDIA_TYPES: {
+    MOVIE: 'movie',
+    TV: 'tv'
+  },
+
+  // 默认标签
+  DEFAULT_TAG: '热门',
+  
   // UI相关
   CLASSES: {
     ACTIVE: 'bg-pink-600 text-white',
@@ -18,7 +34,7 @@ const CONFIG = {
   // 错误信息
   MESSAGES: {
     NETWORK_ERROR: '网络连接失败，请检查网络设置',
-    TIMEOUT_ERROR: '请求超时，请稍后重试',
+    TIMEOUT_ERROR: '请求超时，请稍后重试', 
     API_ERROR: '获取豆瓣数据失败，请稍后重试',
     TAG_EXISTS: '标签已存在',
     TAG_RESERVED: '热门标签不能删除',
@@ -31,43 +47,42 @@ const CONFIG = {
 const defaultMovieTags = ['热门', '最新', '经典', '豆瓣高分', '冷门佳片', '华语', '欧美', '韩国', '日本', '动作', '喜剧', '爱情', '科幻', '悬疑', '恐怖', '治愈'];
 const defaultTvTags = ['热门', '美剧', '英剧', '韩剧', '日剧', '国产剧', '港剧', '日本动画', '综艺', '纪录片'];
 
-// 用户标签存储
+// 应用状态管理
 let movieTags = [];
 let tvTags = [];
-
-// 应用状态
-let doubanMovieTvCurrentSwitch = 'movie';
-let doubanCurrentTag = '热门';
+let doubanMovieTvCurrentSwitch = CONFIG.MEDIA_TYPES.MOVIE;
+let doubanCurrentTag = CONFIG.DEFAULT_TAG;
 let doubanPageStart = 0;
 const doubanPageSize = CONFIG.PAGE_SIZE;
-
 // DOM 元素缓存
-let cachedElements = {};
-
+const cachedElements = new Map();
 // 工具函数
 const utils = {
   // 防抖函数
   debounce(fn, delay = 300) {
     let timer = null;
     return (...args) => {
-      if (timer) clearTimeout(timer);
+      clearTimeout(timer);
       timer = setTimeout(() => fn.apply(this, args), delay);
     };
   },
 
-  // 安全文本处理
+  // 安全文本处理 - 增强型XSS防护
   safeText(text) {
     if (!text) return '';
     return String(text)
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
   },
-
+  
   // 验证标签格式
   validateTag(tag) {
-    if (!tag || typeof tag !== 'string') {
+    if (!tag?.trim()) {
       showToast('标签不能为空', 'warning');
       return false;
     }
@@ -87,10 +102,13 @@ const utils = {
 
   // 获取缓存的DOM元素
   getElement(id) {
-    if (!cachedElements[id]) {
-      cachedElements[id] = document.getElementById(id);
+    if (!cachedElements.has(id)) {
+      const element = document.getElementById(id);
+      if (element) {
+        cachedElements.set(id, element);
+      }
     }
-    return cachedElements[id];
+    return cachedElements.get(id);
   },
 
   // 创建loading遮罩
@@ -99,39 +117,53 @@ const utils = {
     overlay.className = 'absolute inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center z-10';
     overlay.innerHTML = `
       <div class="flex items-center justify-center">
-        <div class="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin inline-block"></div>
+        <div class="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></div>
         <span class="text-pink-500 ml-4">加载中...</span>
       </div>
     `;
     return overlay;
+  },
+
+  // 存储操作包装
+  storage: {
+    get(key, defaultValue = null) {
+      try {
+        const value = localStorage.getItem(key);
+        return value ? JSON.parse(value) : defaultValue;
+      } catch (e) {
+        console.error(`Error reading from localStorage: ${key}`, e);
+        return defaultValue;
+      }
+    },
+
+    set(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+      } catch (e) {
+        console.error(`Error writing to localStorage: ${key}`, e);
+        return false;
+      }
+    }
   }
 };
-
+  
 // 加载用户标签
 function loadUserTags() {
-  try {
-    const savedMovieTags = localStorage.getItem('userMovieTags');
-    const savedTvTags = localStorage.getItem('userTvTags');
-
-    movieTags = savedMovieTags ? JSON.parse(savedMovieTags) : [...defaultMovieTags];
-    tvTags = savedTvTags ? JSON.parse(savedTvTags) : [...defaultTvTags];
-  } catch (e) {
-    console.error('加载标签失败：', e);
-    movieTags = [...defaultMovieTags];
-    tvTags = [...defaultTvTags];
-  }
+  movieTags = utils.storage.get(CONFIG.STORAGE_KEYS.MOVIE_TAGS, [...defaultMovieTags]);
+  tvTags = utils.storage.get(CONFIG.STORAGE_KEYS.TV_TAGS, [...defaultTvTags]);
 }
 
 // 保存用户标签
 function saveUserTags() {
-  try {
-    localStorage.setItem('userMovieTags', JSON.stringify(movieTags));
-    localStorage.setItem('userTvTags', JSON.stringify(tvTags));
-  } catch (e) {
-    console.error('保存标签失败：', e);
+  const movieSaved = utils.storage.set(CONFIG.STORAGE_KEYS.MOVIE_TAGS, movieTags);
+  const tvSaved = utils.storage.set(CONFIG.STORAGE_KEYS.TV_TAGS, tvTags);
+  
+  if (!movieSaved || !tvSaved) {
     showToast('保存标签失败', 'error');
   }
 }
+
 
 // 初始化豆瓣功能
 function initDouban() {
