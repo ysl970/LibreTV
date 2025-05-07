@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('yellowFilterEnabled', 'true');
         localStorage.setItem(PLAYER_CONFIG.adFilteringStorage, 'true');
         
+        // 默认开启豆瓣热门推荐
+        localStorage.setItem('doubanToggle', 'true');
+        
         // 标记已初始化默认值
         localStorage.setItem('hasInitializedDefaults', 'true');
     }
@@ -49,6 +52,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const adFilterToggle = document.getElementById('adFilterToggle');
     if (adFilterToggle) {
         adFilterToggle.checked = localStorage.getItem(PLAYER_CONFIG.adFilteringStorage) !== 'false'; // 默认为true
+    }
+    
+    // 设置豆瓣热门推荐开关初始状态
+    const doubanToggle = document.getElementById('doubanToggle');
+    if (doubanToggle) {
+        doubanToggle.checked = localStorage.getItem('doubanToggle') !== 'false'; // 默认为true
+        
+        // 如果开关是开启状态，显示豆瓣热门区域
+        if (doubanToggle.checked) {
+            const doubanArea = document.getElementById('doubanArea');
+            if (doubanArea) {
+                doubanArea.classList.remove('hidden');
+            }
+        }
     }
     
     // 设置事件监听器
@@ -533,6 +550,24 @@ function setupEventListeners() {
     if (adFilterToggle) {
         adFilterToggle.addEventListener('change', function(e) {
             localStorage.setItem(PLAYER_CONFIG.adFilteringStorage, e.target.checked);
+        });
+    }
+    
+    // 豆瓣热门推荐开关事件绑定
+    const doubanToggle = document.getElementById('doubanToggle');
+    if (doubanToggle) {
+        doubanToggle.addEventListener('change', function(e) {
+            localStorage.setItem('doubanToggle', e.target.checked);
+            
+            // 根据开关状态显示或隐藏豆瓣热门区域
+            const doubanArea = document.getElementById('doubanArea');
+            if (doubanArea) {
+                if (e.target.checked) {
+                    doubanArea.classList.remove('hidden');
+                } else {
+                    doubanArea.classList.add('hidden');
+                }
+            }
         });
     }
 }
