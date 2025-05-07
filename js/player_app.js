@@ -678,39 +678,45 @@ function showMessage(text, type = 'info', duration = 3000) {
 }
 
 function renderEpisodes() {
-    const episodesContainer = document.getElementById('episodes-container');
     const episodeGrid = document.getElementById('episode-grid');
-    if (!episodesContainer || !episodeGrid) return;
-
-    if (!window.currentEpisodes || window.currentEpisodes.length <= 1) {
-        episodesContainer.classList.add('hidden');
+    const episodesContainer = document.getElementById('episodes-container');
+    
+    if (!episodeGrid || !currentEpisodes || currentEpisodes.length === 0) {
+        if (episodesContainer) episodesContainer.classList.add('hidden');
         return;
     }
     
     episodesContainer.classList.remove('hidden');
-    episodeGrid.innerHTML = ''; // Clear previous buttons
-    const displayEpisodes = episodesReversed ? [...window.currentEpisodes].reverse() : [...window.currentEpisodes];
+    episodeGrid.innerHTML = '';
     
-    displayEpisodes.forEach((url, idx) => {
-        const realIndex = episodesReversed ? (window.currentEpisodes.length - 1 - idx) : idx;
-        const episodeButton = document.createElement('button');
-        const isActive = realIndex === window.currentEpisodeIndex;
+    // Use a document fragment for better performance
+    const fragment = document.createDocumentFragment();
+    
+    // Get episodes in current order (normal or reversed)
+    const displayEpisodes = episodesReversed ? [...currentEpisodes].reverse() : [...currentEpisodes];
+    
+    displayEpisodes.forEach((episodeUrl, displayIndex) => {
+        // Calculate the real index in the original array
+        const realIndex = episodesReversed ? (currentEpisodes.length - 1 - displayIndex) : displayIndex;
         
+        // Use module-scoped currentEpisodeIndex for consistency
+        const isActive = realIndex === currentEpisodeIndex;
+        
+        const episodeButton = document.createElement('button');
         episodeButton.className = `episode-button py-2 px-3 text-xs sm:text-sm rounded transition-colors duration-200 ease-in-out truncate ${isActive ? 'bg-blue-600 text-white episode-active' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`;
-        episodeButton.textContent = `第 ${idx + 1} 集`; // Display 1-based index
-        episodeButton.title = `播放第 ${idx + 1} 集`;
-        episodeButton.setAttribute('data-index', realIndex.toString()); // Store 0-based index
-
-        // Use addEventListener instead of inline onclick
+        episodeButton.textContent = `第${displayIndex + 1}集`;
+        episodeButton.setAttribute('aria-label', `播放第${displayIndex + 1}集`);
+        episodeButton.setAttribute('data-index', realIndex);
+        
+        // Use window.playEpisode to ensure we're using the enhanced version
         episodeButton.addEventListener('click', () => {
-            if (typeof window.playEpisode === 'function') {
-                window.playEpisode(realIndex);
-            } else {
-                console.error('window.playEpisode function not found');
-            }
+            if (typeof window.playEpisode === 'function') window.playEpisode(realIndex);
         });
-        episodeGrid.appendChild(episodeButton);
+        
+        fragment.appendChild(episodeButton);
     });
+    
+    episodeGrid.appendChild(fragment);
 }
 
 function updateEpisodeInfo() {
@@ -735,10 +741,10 @@ function toggleEpisodeOrder() {
 function updateOrderButton() {
     const orderButton = document.getElementById('order-button');
     if (!orderButton) return;
-    const orderTextSpan = orderButton.querySelector('span');
-    const orderIconSvg = orderButton.querySelector('svg');
-    if (orderTextSpan) orderTextSpan.textContent = episodesReversed ? '正序排列' : '倒序排列';
-    if (orderIconSvg) orderIconSvg.style.transform = episodesReversed ? 'rotate(180deg)' : 'rotate(0deg)';
+    
+    // Update button text based on current order state
+    orderButton.textContent = episodesReversed ? '正序' : '倒序';
+    orderButton.setAttribute('aria-label', episodesReversed ? '切换为正序排列' : '切换为倒序排列');
 }
 
 function playPreviousEpisode() {
@@ -871,6 +877,7 @@ function playEpisode(index) {
     // Update UI
     updateEpisodeInfo();
     updateButtonStates();
+    renderEpisodes(); // Ensure episode list is re-rendered with correct highlighting
     
     // Play the episode
     if (dp) {
