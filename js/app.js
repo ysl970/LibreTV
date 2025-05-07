@@ -67,10 +67,13 @@ function initAPICheckboxes() {
     container.innerHTML = '';
 
     // 添加普通API组标题
+    const normaldiv = document.createElement('div');
+    normaldiv.id = 'normaldiv';
+    normaldiv.className = 'grid grid-cols-2 gap-2';
     const normalTitle = document.createElement('div');
     normalTitle.className = 'api-group-title';
     normalTitle.textContent = '普通资源';
-    container.appendChild(normalTitle);
+    normaldiv.appendChild(normalTitle);
     
     // 创建普通API源的复选框
     Object.keys(API_SITES).forEach(apiKey => {
@@ -88,7 +91,7 @@ function initAPICheckboxes() {
                    data-api="${apiKey}">
             <label for="api_${apiKey}" class="ml-1 text-xs text-gray-400 truncate">${api.name}</label>
         `;
-        container.appendChild(checkbox);
+        normaldiv.appendChild(checkbox);
         
         // 添加事件监听器
         checkbox.querySelector('input').addEventListener('change', function() {
@@ -96,10 +99,25 @@ function initAPICheckboxes() {
             checkAdultAPIsSelected();
         });
     });
-    
+    container.appendChild(normaldiv);
+
+    // 添加成人API列表
+    addAdultAPI();
+
+    // 初始检查成人内容状态
+    checkAdultAPIsSelected();
+}
+
+// 添加成人API列表
+function addAdultAPI() {
     // 仅在隐藏设置为false时添加成人API组
-    if (!HIDE_BUILTIN_ADULT_APIS) {
+    if (!HIDE_BUILTIN_ADULT_APIS && (localStorage.getItem('yellowFilterEnabled') === 'false')) {
+        const container = document.getElementById('apiCheckboxes');
+
         // 添加成人API组标题
+        const adultdiv = document.createElement('div');
+        adultdiv.id = 'adultdiv';
+        adultdiv.className = 'grid grid-cols-2 gap-2';
         const adultTitle = document.createElement('div');
         adultTitle.className = 'api-group-title adult';
         adultTitle.innerHTML = `黄色资源采集站 <span class="adult-warning">
@@ -107,7 +125,7 @@ function initAPICheckboxes() {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
         </span>`;
-        container.appendChild(adultTitle);
+        adultdiv.appendChild(adultTitle);
         
         // 创建成人API源的复选框
         Object.keys(API_SITES).forEach(apiKey => {
@@ -125,7 +143,7 @@ function initAPICheckboxes() {
                        data-api="${apiKey}">
                 <label for="api_${apiKey}" class="ml-1 text-xs text-pink-400 truncate">${api.name}</label>
             `;
-            container.appendChild(checkbox);
+            adultdiv.appendChild(checkbox);
             
             // 添加事件监听器
             checkbox.querySelector('input').addEventListener('change', function() {
@@ -133,10 +151,8 @@ function initAPICheckboxes() {
                 checkAdultAPIsSelected();
             });
         });
+        container.appendChild(adultdiv);
     }
-    
-    // 初始检查成人内容状态
-    checkAdultAPIsSelected();
 }
 
 // 检查是否有成人API被选中
@@ -528,6 +544,19 @@ function setupEventListeners() {
     if (yellowFilterToggle) {
         yellowFilterToggle.addEventListener('change', function(e) {
             localStorage.setItem('yellowFilterEnabled', e.target.checked);
+
+            // 控制黄色内容接口的显示状态
+            const adultdiv = document.getElementById('adultdiv');
+            if (adultdiv) {
+                if (e.target.checked === true) {
+                    adultdiv.style.display = 'none';
+                } else if (e.target.checked === false) {
+                    adultdiv.style.display = ''
+                }
+            } else {
+                // 添加成人API列表
+                addAdultAPI();
+            }
         });
     }
     
