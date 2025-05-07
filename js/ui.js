@@ -445,6 +445,56 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+/**
+ * Attaches all event listeners to UI elements
+ */
+function attachEventListeners() {
+    // History toggle
+    document.querySelector('button[aria-label="观看历史"]')?.addEventListener('click', toggleHistory);
+    document.querySelector('button[aria-label="关闭历史"]')?.addEventListener('click', toggleHistory);
+    
+    // Settings toggle
+    document.querySelector('button[aria-label="打开设置"]')?.addEventListener('click', toggleSettings);
+    document.querySelector('button[aria-label="关闭设置"]')?.addEventListener('click', toggleSettings);
+    
+    // API selection buttons
+    document.querySelectorAll('.px-2.py-1.bg-\[\#333\]').forEach(button => {
+        if (button.textContent.includes('全选')) {
+            button.addEventListener('click', () => selectAllAPIs(true));
+        } else if (button.textContent.includes('全不选')) {
+            button.addEventListener('click', () => selectAllAPIs(false));
+        } else if (button.textContent.includes('全选普通资源')) {
+            button.addEventListener('click', () => selectAllAPIs(true, true));
+        }
+    });
+    
+    // Custom API management
+    document.querySelector('button[aria-label="添加自定义API"]')?.addEventListener('click', showAddCustomApiForm);
+    document.querySelector('button[onclick="addCustomApi()"]')?.addEventListener('click', addCustomApi);
+    document.querySelector('button[onclick="cancelAddCustomApi()"]')?.addEventListener('click', cancelAddCustomApi);
+    
+    // Search functionality
+    document.querySelector('button[aria-label="搜索按钮"]')?.addEventListener('click', search);
+    document.querySelector('button[aria-label="返回首页"]')?.addEventListener('click', resetToHome);
+    
+    // History management
+    document.querySelector('button[onclick="clearViewingHistory()"]')?.addEventListener('click', clearViewingHistory);
+    
+    // Modal handling
+    document.querySelector('button[aria-label="关闭详情"]')?.addEventListener('click', closeModal);
+    
+    // Password form
+    const passwordForm = document.getElementById('passwordForm');
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            handlePasswordSubmit();
+        });
+    }
+}
+
+// Call this function when DOM is fully loaded
+document.addEventListener('DOMContentLoaded', attachEventListeners);
 window.renderSearchHistory = renderSearchHistory;
 window.showToast = showToast;
 window.showLoading = showLoading;
