@@ -67,10 +67,10 @@ function initializePageContent() {
             }
         } else if (episodesSource) {
             currentEpisodes = JSON.parse(episodesSource);
-            console.log("[PlayerApp] Episodes loaded from localStorage.");
+           // console.log("[PlayerApp] Episodes loaded from localStorage.");
         } else {
             currentEpisodes = [];
-            console.log("[PlayerApp] No episode data found in URL or localStorage.");
+         //   console.log("[PlayerApp] No episode data found in URL or localStorage.");
         }
         window.currentEpisodes = currentEpisodes; // Expose globally
 
@@ -191,7 +191,7 @@ class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
         }
 
         if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-            console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
+         //   console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
         }
 
         const lines = m3u8Content.split('\n');
@@ -202,7 +202,7 @@ class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
                 filteredLines.push(line);
             } else {
                 if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-                    console.log('[AdFilter-Legacy] Removing line:', line);
+                 //   console.log('[AdFilter-Legacy] Removing line:', line);
                 }
             }
         }
@@ -486,11 +486,11 @@ function setupPlayerControls() {
                 const errorEl = document.getElementById('error'); if(errorEl) errorEl.style.display = 'none';
                 const loadingEl = document.getElementById('loading'); if(loadingEl) loadingEl.style.display = 'flex';
                 if (dp && dp.video) {
-                    console.log("[PlayerApp] Retrying: Switching video.");
+                  //  console.log("[PlayerApp] Retrying: Switching video.");
                     dp.switchVideo({ url: videoUrlRetry, type: 'hls' });
                     dp.play();
                 } else {
-                     console.log("[PlayerApp] Retrying: Re-initializing player.");
+                   //  console.log("[PlayerApp] Retrying: Re-initializing player.");
                     initPlayer(videoUrlRetry, sourceCodeRetry);
                 }
             } else {
