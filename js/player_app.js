@@ -731,20 +731,371 @@ function updateEpisodeInfo() {
     }
 }
 
+// Add these functions to player_app.js
+
 function toggleEpisodeOrder() {
     episodesReversed = !episodesReversed;
     localStorage.setItem('episodesReversed', episodesReversed.toString());
     updateOrderButton();
-    renderEpisodes(); // Re-render episode list with new order
+    renderEpisodes();
 }
 
 function updateOrderButton() {
     const orderButton = document.getElementById('order-button');
-    if (!orderButton) return;
+    const episodesCount = document.getElementById('episodes-count');
     
-    // Update button text based on current order state
-    orderButton.textContent = episodesReversed ? '正序' : '倒序';
-    orderButton.setAttribute('aria-label', episodesReversed ? '切换为正序排列' : '切换为倒序排列');
+    if (orderButton) {
+        orderButton.textContent = episodesReversed ? '倒序' : '正序';
+        orderButton.setAttribute('aria-label', episodesReversed ? '切换为正序' : '切换为倒序');
+    }
+    
+    if (episodesCount) {
+        episodesCount.textContent = `共 ${currentEpisodes.length} 集`;
+    }
+}
+
+// Add event listener for the order button in the initializePageContent function
+function initializePageContent() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoUrl = urlParams.get('url');
+    const title = urlParams.get('title');
+    const sourceCode = urlParams.get('source_code');
+    let index = parseInt(urlParams.get('index') || '0', 10);
+    const episodesListParam = urlParams.get('episodes'); // Check if episodes are passed via URL
+
+    currentVideoTitle = title || localStorage.getItem('currentVideoTitle') || '未知视频';
+    window.currentVideoTitle = currentVideoTitle;
+
+    // Initialize episodes from localStorage or URL parameter
+    try {
+        let episodesSource = localStorage.getItem('currentEpisodes');
+        if (episodesListParam) {
+            try {
+                currentEpisodes = JSON.parse(decodeURIComponent(episodesListParam));
+                console.log("[PlayerApp] Episodes loaded from URL parameter.");
+            } catch (e) {
+                console.warn("[PlayerApp] Failed to parse episodes from URL, falling back to localStorage.", e);
+                currentEpisodes = episodesSource ? JSON.parse(episodesSource) : [];
+            }
+        } else if (episodesSource) {
+            currentEpisodes = JSON.parse(episodesSource);
+           // console.log("[PlayerApp] Episodes loaded from localStorage.");
+        } else {
+            currentEpisodes = [];
+         //   console.log("[PlayerApp] No episode data found in URL or localStorage.");
+        }
+        window.currentEpisodes = currentEpisodes; // Expose globally
+
+        // Validate index
+        if (currentEpisodes.length > 0 && (index < 0 || index >= currentEpisodes.length)) {
+            console.warn(`[PlayerApp] Invalid episode index ${index} for ${currentEpisodes.length} episodes. Resetting to 0.`);
+            index = 0;
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('index', index.toString());
+            window.history.replaceState({}, '', newUrl.toString());
+        }
+        currentEpisodeIndex = index;
+        window.currentEpisodeIndex = currentEpisodeIndex; // Expose globally
+
+        episodesReversed = localStorage.getItem('episodesReversed') === 'true';
+    } catch (e) {
+        console.error('[PlayerApp] Error initializing episode data:', e);
+        currentEpisodes = []; window.currentEpisodes = [];
+        currentEpisodeIndex = 0; window.currentEpisodeIndex = 0;
+        episodesReversed = false;
+    }
+
+    const siteName = (window.SITE_CONFIG && window.SITE_CONFIG.name) ? window.SITE_CONFIG.name : '播放器';
+    document.title = `${currentVideoTitle} - ${siteName}`;
+    const videoTitleElement = document.getElementById('video-title');
+    if (videoTitleElement) videoTitleElement.textContent = currentVideoTitle;
+    
+    autoplayEnabled = localStorage.getItem('autoplayEnabled') !== 'false';
+    const autoplayToggle = document.getElementById('autoplay-next');
+    if (autoplayToggle) {
+        autoplayToggle.checked = autoplayEnabled;
+        autoplayToggle.addEventListener('change', function(e) {
+            autoplayEnabled = e.target.checked;
+            localStorage.setItem('autoplayEnabled', autoplayEnabled.toString());
+        });
+    }
+
+    if (videoUrl) {
+        initPlayer(videoUrl, sourceCode);
+        const position = urlParams.get('position');
+        if (position) {
+            setTimeout(() => {
+                if (dp && dp.video) {
+                    const positionNum = parseInt(position, 10);
+                    if (!isNaN(positionNum) && positionNum > 0) {
+                        dp.seek(positionNum);
+                        if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(positionNum);
+                    }
+                }
+            }, 1500); // Delay seeking slightly
+        }
+    } else {
+        showError('无效的视频链接');
+    }
+
+    updateEpisodeInfo();
+    renderEpisodes();
+    updateButtonStates();
+    updateOrderButton();
+    
+    // Add event listener for order button
+    const orderButton = document.getElementById('order-button');
+    if (orderButton) {
+        orderButton.addEventListener('click', toggleEpisodeOrder);
+    }
+    
+    setTimeout(() => {
+        setupProgressBarPreciseClicks();
+    }, 1000); // Delay progress bar setup slightly
+
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+    window.addEventListener('beforeunload', saveCurrentProgress);
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            saveCurrentProgress();
+        }
+    });
+
+    // Ensure critical functions from ui.js are globally available
+    const checkUICounter = 0;
+    const checkUIInterval = setInterval(() => {
+         if (typeof window.addToViewingHistory === 'function' || checkUICounter > 20) { // Check for 2s
+            clearInterval(checkUIInterval);
+             if (typeof window.addToViewingHistory !== 'function') {
+                 console.error("UI functions like addToViewingHistory did not become available.");
+             }
+         }
+    }, 100);
+
+    // Bind custom control buttons after a slight delay
+    setTimeout(setupPlayerControls, 100);
+}
+
+function showError(message) {
+    const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
+    if (dp && dp.video && dp.video.currentTime > 1 && !debugMode) { // Show error even if playing if debug mode is on
+        console.warn('Ignoring error as video is playing:', message);
+        return;
+    }
+    const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'none';
+    const errorElement = document.getElementById('error');
+    if (errorElement) {
+        const errorTextElement = errorElement.querySelector('.text-xl.font-bold'); // More specific
+        if (errorTextElement) errorTextElement.textContent = message;
+        else errorElement.children[1].textContent = message; // Fallback
+        errorElement.style.display = 'flex';
+    }
+    if (typeof window.showMessage === 'function') window.showMessage(message, 'error'); // Use global showMessage from ui.js
+    else console.error("showMessage function not found. Error:", message);
+}
+
+function setupProgressBarPreciseClicks() {
+    if (!dp) return;
+    // Need to wait slightly for DPlayer to render its progress bar
+    setTimeout(() => {
+        const progressBar = document.querySelector('#dplayer .dplayer-bar-wrap');
+        if (!progressBar) { console.warn('DPlayer进度条元素未找到 (.dplayer-bar-wrap)'); return; }
+        progressBar.removeEventListener('click', handleProgressBarClick);
+        progressBar.removeEventListener('touchend', handleProgressBarTouch);
+        progressBar.addEventListener('click', handleProgressBarClick);
+        progressBar.addEventListener('touchend', handleProgressBarTouch);
+    }, 500); // Delay setup
+}
+
+function handleProgressBarClick(e) {
+    if (!dp || !dp.video || dp.video.duration <= 0 || !e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, offsetX / rect.width));
+    const clickTime = percentage * dp.video.duration;
+    userClickedPosition = clickTime; 
+    dp.seek(clickTime);
+}
+
+function handleProgressBarTouch(e) {
+    if (!dp || !dp.video || dp.video.duration <= 0 || !e.changedTouches || !e.changedTouches[0] || !e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touch = e.changedTouches[0];
+    const offsetX = touch.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, offsetX / rect.width));
+    const touchTime = percentage * dp.video.duration;
+    userClickedPosition = touchTime;
+    dp.seek(touchTime);
+}
+
+function handleKeyboardShortcuts(e) {
+    if (!dp || (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA'))) return;
+    let actionText = '', direction = '';
+    const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
+
+    switch (e.key) {
+        case 'ArrowLeft':
+            if (e.altKey) { if (typeof window.playPreviousEpisode === 'function') window.playPreviousEpisode(); actionText = '上一集'; direction = 'left'; }
+            else { dp.seek(Math.max(0, dp.video.currentTime - 5)); actionText = '后退 5s'; direction = 'left'; }
+            e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'ArrowRight':
+            if (e.altKey) { if (typeof window.playNextEpisode === 'function') window.playNextEpisode(); actionText = '下一集'; direction = 'right'; }
+            else { dp.seek(Math.min(dp.video.duration, dp.video.currentTime + 5)); actionText = '前进 5s'; direction = 'right'; }
+            e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'PageUp': if (typeof window.playPreviousEpisode === 'function') window.playPreviousEpisode(); actionText = '上一集'; direction = 'left'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'PageDown': if (typeof window.playNextEpisode === 'function') window.playNextEpisode(); actionText = '下一集'; direction = 'right'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case ' ': // Spacebar for play/pause
+             dp.toggle(); actionText = dp.video.paused ? '暂停' : '播放'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'ArrowUp': dp.volume(Math.min(1, dp.video.volume + 0.1)); actionText = `音量 ${Math.round(dp.video.volume*100)}%`; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'ArrowDown': dp.volume(Math.max(0, dp.video.volume - 0.1)); actionText = `音量 ${Math.round(dp.video.volume*100)}%`; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'f': dp.fullScreen.toggle(); actionText = '切换全屏'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break; // 'f' for fullscreen toggle
+    }
+    if (actionText && typeof showShortcutHint === 'function') showShortcutHint(actionText, direction);
+}
+
+function showShortcutHint(text, direction) {
+    const hintElement = document.getElementById('shortcut-hint');
+    if (!hintElement) return;
+    if (shortcutHintTimeout) clearTimeout(shortcutHintTimeout);
+    const keyElement = document.getElementById('shortcut-key');
+    const actionElement = document.getElementById('shortcut-action');
+    if (keyElement && actionElement) {
+        if (direction === 'left') keyElement.innerHTML = '◀';
+        else if (direction === 'right') keyElement.innerHTML = '▶';
+        else keyElement.innerHTML = '';
+        actionElement.textContent = text;
+    }
+    hintElement.classList.add('show');
+    shortcutHintTimeout = setTimeout(() => hintElement.classList.remove('show'), 1500);
+}
+
+function setupLongPressSpeedControl() {
+    if (!dp) return;
+    const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
+    if (!playerVideoWrap) { console.warn('DPlayer video wrap for long press not found.'); return; }
+    
+    let longPressTimer = null;
+    let originalSpeed = 1.0;
+    let speedChangedByLongPress = false;
+
+    playerVideoWrap.addEventListener('touchstart', function(e) {
+        if (dp.video.paused) return;
+        const touchX = e.touches[0].clientX;
+        const rect = playerVideoWrap.getBoundingClientRect();
+        if (touchX > rect.left + rect.width / 2) {
+            originalSpeed = dp.video.playbackRate;
+            longPressTimer = setTimeout(() => {
+                if (dp.video.paused) return;
+                dp.speed(2.0);
+                speedChangedByLongPress = true;
+                if(typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
+            }, 300);
+        }
+    }, { passive: true });
+
+    const endLongPress = function() {
+        if (longPressTimer) clearTimeout(longPressTimer);
+        longPressTimer = null;
+        if (speedChangedByLongPress) {
+            dp.speed(originalSpeed);
+            speedChangedByLongPress = false;
+            if(typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
+        }
+    };
+    playerVideoWrap.addEventListener('touchend', endLongPress);
+    playerVideoWrap.addEventListener('touchcancel', endLongPress);
+}
+
+
+function showPositionRestoreHint(position) {
+    if (typeof showMessage !== 'function' || !position || position < 10) return;
+    const minutes = Math.floor(position / 60);
+    const seconds = Math.floor(position % 60);
+    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    showMessage(`已从 ${formattedTime} 继续播放`, 'info');
+}
+
+// This function relies on the #message element in player.html
+function showMessage(text, type = 'info', duration = 3000) {
+    const messageElement = document.getElementById('message');
+    if (!messageElement) { console.warn("Message element not found"); return; }
+    
+    let bgColorClass = ({error:'bg-red-500', success:'bg-green-500', warning:'bg-yellow-500', info:'bg-blue-500'})[type] || 'bg-blue-500';
+    
+    // Reset classes and apply new ones
+    messageElement.className = `fixed top-4 right-4 p-3 rounded shadow-lg z-[10001] text-sm ${bgColorClass} text-white transition-opacity duration-300 opacity-0`;
+    messageElement.textContent = text;
+    
+    // Force reflow to apply initial opacity-0 before transitioning
+    void messageElement.offsetWidth; 
+    
+    messageElement.classList.remove('opacity-0');
+    messageElement.classList.add('opacity-100');
+
+    // Clear previous timeout if exists
+    if (messageElement._messageTimeout) {
+        clearTimeout(messageElement._messageTimeout);
+    }
+
+    messageElement._messageTimeout = setTimeout(() => {
+        messageElement.classList.remove('opacity-100');
+        messageElement.classList.add('opacity-0');
+        messageElement._messageTimeout = null;
+    }, duration);
+}
+
+function renderEpisodes() {
+    const episodeGrid = document.getElementById('episode-grid');
+    const episodesContainer = document.getElementById('episodes-container');
+    
+    if (!episodeGrid || !currentEpisodes || currentEpisodes.length === 0) {
+        if (episodesContainer) episodesContainer.classList.add('hidden');
+        return;
+    }
+    
+    episodesContainer.classList.remove('hidden');
+    episodeGrid.innerHTML = '';
+    
+    // Use a document fragment for better performance
+    const fragment = document.createDocumentFragment();
+    
+    // Get episodes in current order (normal or reversed)
+    const displayEpisodes = episodesReversed ? [...currentEpisodes].reverse() : [...currentEpisodes];
+    
+    displayEpisodes.forEach((episodeUrl, displayIndex) => {
+        // Calculate the real index in the original array
+        const realIndex = episodesReversed ? (currentEpisodes.length - 1 - displayIndex) : displayIndex;
+        
+        // Use module-scoped currentEpisodeIndex for consistency
+        const isActive = realIndex === currentEpisodeIndex;
+        
+        const episodeButton = document.createElement('button');
+        episodeButton.className = `episode-button py-2 px-3 text-xs sm:text-sm rounded transition-colors duration-200 ease-in-out truncate ${isActive ? 'bg-blue-600 text-white episode-active' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`;
+        episodeButton.textContent = `第${displayIndex + 1}集`;
+        episodeButton.setAttribute('aria-label', `播放第${displayIndex + 1}集`);
+        episodeButton.setAttribute('data-index', realIndex);
+        
+        // Use window.playEpisode to ensure we're using the enhanced version
+        episodeButton.addEventListener('click', () => {
+            if (typeof window.playEpisode === 'function') window.playEpisode(realIndex);
+        });
+        
+        fragment.appendChild(episodeButton);
+    });
+    
+    episodeGrid.appendChild(fragment);
+}
+
+function updateEpisodeInfo() {
+    const episodeInfoSpan = document.getElementById('episode-info-span');
+    if (!episodeInfoSpan) return;
+    if (window.currentEpisodes && window.currentEpisodes.length > 1) {
+        const totalEpisodes = window.currentEpisodes.length;
+        const currentNumber = window.currentEpisodeIndex + 1;
+        episodeInfoSpan.textContent = `第 ${currentNumber} 集 / 共 ${totalEpisodes} 集`;
+    } else {
+        episodeInfoSpan.textContent = '';
+    }
 }
 
 function playPreviousEpisode() {

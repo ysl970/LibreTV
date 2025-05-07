@@ -80,6 +80,12 @@
             <!-- 剧集选择区域 -->
             <div id="episodes-container" class="mt-4 hidden" role="navigation" aria-label="剧集选择">
                 <h2 class="text-xl font-bold mb-2">选集</h2>
+                <div class="flex justify-between items-center mb-2">
+                    <span id="episodes-count" class="text-gray-400"></span>
+                    <button id="order-button" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition-colors" aria-label="切换剧集顺序">
+                        正序
+                    </button>
+                </div>
                 <div id="episode-grid" class="episode-grid grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2"></div>
             </div>
             
