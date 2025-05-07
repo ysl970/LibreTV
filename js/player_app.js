@@ -165,28 +165,34 @@ class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
     }
 
     load(context, config, callbacks) {
+        // Ensure PLAYER_CONFIG and its properties are accessible and have default fallbacks
         const adFilteringEnabled = (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
             ? window.PLAYER_CONFIG.adFilteringEnabled
-            : true; // Default true if not configured
+            : true; // Default to true if not specified
 
         if ((context.type === 'manifest' || context.type === 'level') && adFilteringEnabled) {
             const origOnSuccess = callbacks.onSuccess;
             callbacks.onSuccess = (response, stats, context) => {
                 if (response.data && typeof response.data === 'string') {
-                    response.data = this.filterAdsFromM3U8Legacy(response.data);
+                    response.data = this.filterAdsLegacy(response.data); // Call the legacy filter
                 }
                 return origOnSuccess(response, stats, context);
             };
         }
-        super.load(context, config, callbacks); // Use super.load to call parent method
+        
+        // Call the original HLS.js loader's load method
+        super.load(context, config, callbacks);
     }
 
     // Legacy filter logic (removes lines with #EXT-X-DISCONTINUITY)
-    filterAdsFromM3U8Legacy(m3u8Content) {
-        if (typeof m3u8Content !== 'string' || !m3u8Content) return m3u8Content;
-        
-        const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
-        if (debugMode) console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
+    filterAdsLegacy(m3u8Content) {
+        if (typeof m3u8Content !== 'string' || !m3u8Content) {
+            return m3u8Content;
+        }
+
+        if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
+            console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
+        }
 
         const lines = m3u8Content.split('\n');
         const filteredLines = [];
@@ -195,10 +201,17 @@ class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
             if (!line.includes('#EXT-X-DISCONTINUITY')) {
                 filteredLines.push(line);
             } else {
-                if (debugMode) console.log('[AdFilter-Legacy] Removing line:', line);
+                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
+                    console.log('[AdFilter-Legacy] Removing line:', line);
+                }
             }
         }
         return filteredLines.join('\n');
+    }
+
+    // Keeping the old method name for backward compatibility, but redirecting to the legacy filter
+    filterAdsFromM3U8Legacy(m3u8Content) {
+        return this.filterAdsLegacy(m3u8Content);
     }
 }
 
@@ -216,7 +229,7 @@ function initPlayer(videoUrl, sourceCode) {
     const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
     const adFilteringEnabled = (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
         ? window.PLAYER_CONFIG.adFilteringEnabled
-        : true;
+        : true; // Default to true if not specified
 
     const hlsConfig = {
         debug: debugMode || false,
@@ -831,4 +844,50 @@ function getVideoId() {
 }
 
 // Expose playEpisode globally *after* it's defined
-window.playEpisode = playEpisode;
+function playEpisode(index) {
+    if (index < 0 || index >= currentEpisodes.length) {
+        console.warn(`[PlayerApp] Invalid episode index: ${index}`);
+        return;
+    }
+    
+    // Update global index immediately after validation
+    currentEpisodeIndex = index;
+    window.currentEpisodeIndex = index; // Ensure global variable is updated for preloading
+    
+    const episodeUrl = currentEpisodes[index];
+    if (!episodeUrl) {
+        console.warn(`[PlayerApp] No URL found for episode index: ${index}`);
+        return;
+    }
+    
+    // Update URL parameter without reloading
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('index', index.toString());
+    window.history.replaceState({}, '', newUrl.toString());
+    
+    // Update localStorage
+    localStorage.setItem('currentEpisodeIndex', index.toString());
+    
+    // Update UI
+    updateEpisodeInfo();
+    updateButtonStates();
+    
+    // Play the episode
+    if (dp) {
+        const loadingEl = document.getElementById('loading');
+        if (loadingEl) loadingEl.style.display = 'flex';
+        
+        // Clear any existing progress for the new episode
+        clearVideoProgress();
+        
+        // Switch video source
+        dp.switchVideo({ url: episodeUrl, type: 'hls' });
+        dp.play();
+    } else {
+        console.error('[PlayerApp] DPlayer instance not available for playEpisode');
+        initPlayer(episodeUrl);
+    }
+    
+    // Save to history
+    saveToHistory();
+}

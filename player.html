@@ -2,123 +2,120 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <meta name="description" content="LibreTV - 自由观影 播放器">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LibreTV - 自由观影">
     <title>播放器</title>
     
+    <!-- 外部样式表 -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/player_styles.css">
     
+    <!-- 字体和图标 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     
-    <style>
-        /* Prevent scrolling on the body when player is active */
-        html, body { overflow: hidden; height: 100%; }
-    </style>
+    <!-- 环境变量注入 -->
+    <script>window.__ENV__ = window.__ENV__ || {}; window.__ENV__.PASSWORD = "{{PASSWORD}}";</script>
     
-    <script>
-        window.__ENV__ = window.__ENV__ || {};
-        window.__ENV__.PASSWORD = "{{PASSWORD}}"; 
-    </script>
-    
+    <!-- 外部库 -->
     <script src="libs/tailwindcss.min.js" defer></script>
     <script src="libs/hls.min.js" defer></script>
     <script src="libs/DPlayer.min.js" defer></script>
     <script src="libs/sha256.min.js" defer></script>
-    <script>
-        if (typeof window.sha256 === 'function') { window._jsSha256 = window.sha256; }
-    </script>
     
+    <!-- 应用脚本 -->
     <script src="js/config.js" defer></script>
-    <script src="js/password.js" defer></script> 
-    <script src="js/sha256.js" defer></script> 
-    <script src="js/ui.js" defer></script> <script src="js/player_app.js" defer></script>
-    <script src="js/player_preload.js" defer></script> 
-
+    <script src="js/password.js" defer></script>
+    <script src="js/player_app.js" defer></script>
+    <script src="js/player_preload.js" defer></script>
 </head>
-<body class="bg-black text-white font-sans min-h-screen flex flex-col">
-    <div class="player-outer-container flex-grow flex flex-col relative"> <header class="player-header flex items-center justify-between p-2 sm:p-4 bg-gradient-to-b from-black/60 via-black/30 to-transparent absolute top-0 left-0 right-0 z-20 transition-opacity duration-300 opacity-100 hover:opacity-100">
-            <button id="back-button" class="flex items-center gap-1 sm:gap-2 text-white hover:text-blue-400 transition-colors px-2 py-1 rounded hover:bg-gray-700/50" aria-label="返回">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left" aria-hidden="true">
+<body class="bg-black text-white font-sans min-h-screen">
+    <div class="player-container relative">
+        <!-- 顶部导航栏 -->
+        <header class="flex items-center justify-between p-4">
+            <button id="back-button" class="flex items-center gap-2 text-white hover:text-blue-400 transition-colors" aria-label="返回">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left" aria-hidden="true">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
-                <span class="text-sm sm:text-base hidden md:inline">返回</span>
+                <span>返回</span>
             </button>
             
-            <h1 id="video-title" class="text-sm sm:text-lg font-semibold mx-2 text-center overflow-hidden whitespace-nowrap text-ellipsis flex-grow px-2">加载中...</h1>
-            
-            <div class="flex items-center gap-2 sm:gap-4">
-                <button id="fullscreen-button" class="text-white hover:text-blue-400 transition-colors px-2 py-1 rounded hover:bg-gray-700/50" aria-label="全屏">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-maximize" aria-hidden="true">
+            <div class="flex items-center gap-4">
+                <button id="fullscreen-button" class="text-white hover:text-blue-400 transition-colors" aria-label="全屏">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-maximize" aria-hidden="true">
                         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                     </svg>
                 </button>
             </div>
         </header>
         
-        <div id="player" class="relative flex-grow flex items-center justify-center bg-black" role="region" aria-label="视频播放区域">
+        <!-- 播放器区域 -->
+        <div id="player" class="relative" role="region" aria-label="视频播放区域">
             <div id="dplayer" class="w-full h-full"></div>
             
+            <!-- 加载中提示 -->
             <div id="loading" class="loading-container" aria-live="polite">
                 <div class="loading-spinner" aria-hidden="true"></div>
                 <div class="mt-4">加载中...</div>
             </div>
             
-            <div id="error" class="error-container hidden" aria-live="assertive">
-                <div class="error-icon text-4xl mb-4" aria-hidden="true">⚠️</div>
+            <!-- 错误提示 -->
+            <div id="error" class="error-container" aria-live="assertive">
+                <div class="error-icon" aria-hidden="true">⚠️</div>
                 <div class="text-xl font-bold">播放出错</div>
-                <div class="mt-2 text-gray-300 text-center px-4">请尝试重试或返回选择其他视频源</div>
+                <div class="mt-2">请尝试其他线路或刷新页面</div>
                 <button id="retry-button" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded transition-colors">重试</button>
             </div>
         </div>
         
-        <div class="player-controls-area p-2 sm:p-4 bg-gradient-to-t from-black/60 via-black/30 to-transparent absolute bottom-0 left-0 right-0 z-20 transition-opacity duration-300 opacity-100 hover:opacity-100">
-            <div id="episode-info" class="mb-2 text-center">
-                <span id="episode-info-span" class="text-gray-300 text-sm"></span>
-            </div>
-          
-            <div class="flex items-center justify-between mb-3 px-1">
-                <button id="prev-episode" class="px-3 py-1.5 bg-gray-700/80 hover:bg-gray-600/80 text-white rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 backdrop-blur-sm" aria-label="上一集">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    <span class="hidden sm:inline">上一集</span>
-                </button>
-                <button id="order-button" class="px-3 py-1.5 bg-gray-700/80 hover:bg-gray-600/80 text-white rounded-md text-sm flex items-center gap-1 backdrop-blur-sm" aria-label="切换排序">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" /></svg>
-                    <span>倒序排列</span>
-                </button>
-                <button id="next-episode" class="px-3 py-1.5 bg-gray-700/80 hover:bg-gray-600/80 text-white rounded-md text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 backdrop-blur-sm" aria-label="下一集">
-                    <span class="hidden sm:inline">下一集</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                </button>
+        <!-- 播放信息和控制区域 -->
+        <div class="p-4">
+            <h1 id="video-title" class="text-2xl font-bold mb-2">加载中...</h1>
+            <div id="episode-info" class="mb-4">
+                <span id="episode-title" class="text-gray-400"></span>
             </div>
             
-            <div id="episodes-container" class="mt-2 hidden max-w-full mx-auto px-1" role="navigation" aria-label="剧集选择">
-                <div id="episode-grid" class="episode-grid grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 max-h-32 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
+            <!-- 剧集选择区域 -->
+            <div id="episodes-container" class="mt-4 hidden" role="navigation" aria-label="剧集选择">
+                <h2 class="text-xl font-bold mb-2">选集</h2>
+                <div id="episode-grid" class="episode-grid grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2"></div>
+            </div>
+            
+            <!-- 播放设置区域 -->
+            <div class="mt-6" role="form" aria-label="播放设置">
+                <h2 class="text-xl font-bold mb-2">设置</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- 自动播放下一集 -->
+                    <div class="flex items-center justify-between p-3 bg-[#111] rounded">
+                        <span id="autoplay-label">自动播放下一集</span>
+                        <label class="switch">
+                            <input type="checkbox" id="autoplay-next" checked aria-labelledby="autoplay-label">
+                            <span class="slider"></span>
+                        </label>
                     </div>
-            </div>
-            
-            <div class="mt-4 pt-3 border-t border-gray-700/50" role="form" aria-label="播放设置">
-                <div class="flex items-center justify-center p-2 rounded">
-                    <span id="autoplay-label" class="text-sm text-gray-300 mr-3">自动连播</span>
-                    <label class="switch">
-                        <input type="checkbox" id="autoplay-next" checked aria-labelledby="autoplay-label">
-                        <span class="slider"></span>
-                    </label>
+                    
+                    <!-- 记住播放进度 -->
+                    <div class="flex items-center justify-between p-3 bg-[#111] rounded">
+                        <span id="remember-progress-label">记住播放进度</span>
+                        <label class="switch">
+                            <input type="checkbox" id="remember-progress" checked aria-labelledby="remember-progress-label">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
         
+        <!-- 快捷键提示 -->
         <div id="shortcut-hint" class="shortcut-hint" aria-live="polite" aria-atomic="true">
-            <span id="shortcut-key" class="text-lg font-bold"></span>
-            <span id="shortcut-action" class="ml-2"></span>
+            <span id="shortcut-key"></span>
+            <span id="shortcut-action"></span>
         </div>
         
-        <div id="message" class="fixed top-4 right-4 p-3 rounded shadow-lg z-[10001] text-sm text-white transition-opacity duration-300 opacity-0 pointer-events-none" 
-             aria-live="assertive">
-             </div>
+        <!-- 消息提示 -->
+        <div id="message" class="fixed top-4 right-4 p-4 rounded shadow-lg z-50 hidden" aria-live="polite"></div>
     </div>
 </body>
 </html>
