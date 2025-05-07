@@ -2,67 +2,44 @@
 
 /**
  * 集数预加载功能 (Episode Preloading Feature)
- * Relies on global variables:
- * - window.PLAYER_CONFIG (especially PLAYER_CONFIG.enablePreloading, PLAYER_CONFIG.preloadCount, PLAYER_CONFIG.debugMode)
- * - window.currentEpisodes (array of episode URLs, defined in player_app.js)
- * - window.currentEpisodeIndex (current episode index, defined in player_app.js)
- * - window.dp (DPlayer instance, defined in player_app.js)
- * - window.playEpisode (function to play an episode, defined in player_app.js)
  */
 (function() {
-    // Helper to get preload count from global PLAYER_CONFIG or use a default
     function getPreloadCount() {
         return (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.preloadCount !== 'undefined')
             ? parseInt(window.PLAYER_CONFIG.preloadCount, 10)
-            : 2; // Default to 2 if not specified
+            : 2;
     }
 
-    // Simple check for CacheStorage API support
     function supportsCacheStorage() {
         return 'caches' in window && typeof window.caches.open === 'function';
     }
 
-    // Helper to detect slow network conditions (very basic)
     function isSlowNetwork() {
         try {
             const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             return connection && connection.effectiveType && /2g|slow-2g/i.test(connection.effectiveType);
         } catch (e) {
-            return false; // Default to not slow if API is unavailable
+            return false;
         }
     }
 
-    // Ensure global episode variables are accessible if they are not already on window scope
-    // This function might be less necessary if player_app.js correctly manages these as true globals or on window object.
-    function syncGlobalEpisodes() {
-        if (typeof currentEpisodes !== "undefined" && typeof window.currentEpisodes === "undefined") {
-            window.currentEpisodes = currentEpisodes;
-        }
-        if (typeof currentEpisodeIndex !== "undefined" && typeof window.currentEpisodeIndex === "undefined") {
-            window.currentEpisodeIndex = currentEpisodeIndex;
-        }
-    }
-
-    /**
-     * Preloads the m3u8 and first few TS segments of the next N episodes.
-     */
     async function preloadNextEpisodeParts(count) {
         const preloadCount = typeof count === 'number' ? count : getPreloadCount();
 
         if (!(window.PLAYER_CONFIG && window.PLAYER_CONFIG.enablePreloading)) {
-            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Preloading disabled by PLAYER_CONFIG.enablePreloading.');
+            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Preloading disabled by config.');
             return;
         }
-
         if (isSlowNetwork()) {
             if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Skipping preloading due to slow network.');
             return;
         }
 
-        syncGlobalEpisodes(); // Ensure access to currentEpisodes and currentEpisodeIndex
-
-        if (!window.currentEpisodes || !Array.isArray(window.currentEpisodes) || typeof window.currentEpisodeIndex !== 'number') {
-            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Skipping, episode data or current index is missing or invalid.');
+        if (!window.currentEpisodes || !Array.isArray(window.currentEpisodes) || 
+            typeof window.currentEpisodeIndex !== 'number' || window.currentEpisodes.length === 0) {
+            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
+                console.log('[Preload] Skipping: currentEpisodes or currentEpisodeIndex not properly set on window or empty.');
+            }
             return;
         }
 
@@ -70,13 +47,19 @@
         const totalEpisodes = window.currentEpisodes.length;
         
         if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-            console.log(`[Preload] Starting preload. Current index: ${currentIndex}, Total episodes: ${totalEpisodes}, Preload count: ${preloadCount}`);
+            const fromLog = currentIndex + 1 + 1; 
+            const toLog = Math.min(currentIndex + 1 + preloadCount, totalEpisodes);
+             if (fromLog <= toLog) {
+                console.log(`[Preload] WILL PRELOAD episodes for current display index ${currentIndex + 1}. Targets (display index): ${fromLog} to ${toLog}.`);
+            } else {
+                console.log(`[Preload] NO episodes to preload for current display index ${currentIndex + 1}.`);
+            }
         }
 
         for (let offset = 1; offset <= preloadCount; offset++) {
             const episodeIdxToPreload = currentIndex + offset;
             if (episodeIdxToPreload >= totalEpisodes) {
-                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] Reached end of playlist. No more episodes to preload after index ${episodeIdxToPreload -1}.`);
+                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] Reached end of playlist at offset ${offset}. Index to preload: ${episodeIdxToPreload}`);
                 break;
             }
 
@@ -87,11 +70,11 @@
             }
             
             if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-                 console.log(`[Preload] Attempting to preload episode ${episodeIdxToPreload + 1}: ${nextEpisodeUrl}`);
+                 console.log(`[Preload] Attempting to preload M3U8 for episode index ${episodeIdxToPreload} (Display ${episodeIdxToPreload + 1}): ${nextEpisodeUrl}`);
             }
 
             try {
-                const m3u8Response = await fetch(nextEpisodeUrl, { method: "GET" });
+                const m3u8Response = await fetch(nextEpisodeUrl, { method: "GET", cache: "force-cache" });
                 if (!m3u8Response.ok) {
                     if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] Failed to fetch M3U8 for ${nextEpisodeUrl}. Status: ${m3u8Response.status}`);
                     continue;
@@ -102,83 +85,74 @@
                 
                 m3u8Text.split('\n').forEach(line => {
                     const trimmedLine = line.trim();
-                    // Basic TS segment detection, might need refinement for more complex M3U8s
                     if (trimmedLine && !trimmedLine.startsWith("#") && (trimmedLine.endsWith(".ts") || trimmedLine.includes(".ts?")) && tsUrls.length < 3) {
                         tsUrls.push(trimmedLine.startsWith("http") ? trimmedLine : baseUrlForSegments + trimmedLine);
                     }
                 });
 
                 if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-                    console.log(`[Preload] M3U8 for episode ${episodeIdxToPreload + 1} parsed. Found ${tsUrls.length} TS segments to preload.`);
+                    console.log(`[Preload] M3U8 for episode ${episodeIdxToPreload + 1} parsed. Found ${tsUrls.length} TS segments to preload:`, tsUrls);
                 }
 
                 for (const tsUrl of tsUrls) {
-                    if (supportsCacheStorage()) {
+                     if (supportsCacheStorage()) {
                         try {
-                            const cache = await caches.open('libretv-preload-segments'); // Cache name
+                            const cache = await caches.open('libretv-preload-segments-v1');
                             const cachedResponse = await cache.match(tsUrl);
                             if (!cachedResponse) {
                                 const segmentResponse = await fetch(tsUrl, { method: "GET" });
                                 if (segmentResponse.ok) {
                                     await cache.put(tsUrl, segmentResponse.clone());
-                                    if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] TS segment cached: ${tsUrl}`);
+                                    if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] TS segment CACHED: ${tsUrl}`);
                                 } else if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-                                    console.log(`[Preload] Failed to fetch TS segment: ${tsUrl}`);
+                                    console.log(`[Preload] Failed to FETCH TS segment: ${tsUrl}`);
                                 }
                             } else {
-                                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] TS segment already in cache: ${tsUrl}`);
+                                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] TS segment ALREADY IN CACHE: ${tsUrl}`);
                             }
                         } catch (cacheEx) {
-                            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] TS caching failed for ${tsUrl}: ${cacheEx}`);
+                            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] TS caching FAILED for ${tsUrl}: ${cacheEx.message}`);
                         }
-                    } else { // Fallback if Cache API is not supported - just fetch
+                    } else { 
                         try {
                             const segmentResponse = await fetch(tsUrl, { method: "GET" });
                              if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-                                if (segmentResponse.ok) console.log(`[Preload] TS segment fetched (no cache): ${tsUrl}`);
-                                else console.log(`[Preload] Failed to fetch TS segment (no cache): ${tsUrl}`);
+                                if (segmentResponse.ok) console.log(`[Preload] TS segment fetched (no cache support): ${tsUrl}`);
+                                else console.log(`[Preload] Failed to fetch TS segment (no cache support): ${tsUrl}`);
                             }
                         } catch (fetchEx) {
-                             if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] TS fetch exception (no cache) for ${tsUrl}: ${fetchEx}`);
+                             if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] TS fetch exception (no cache support) for ${tsUrl}: ${fetchEx.message}`);
                         }
                     }
                 }
             } catch (e) {
-                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] Error preloading M3U8 for ${nextEpisodeUrl}: ${e}`);
+                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] Error preloading M3U8 for ${nextEpisodeUrl}: ${e.message}`);
             }
         }
     }
-    // Expose to global scope for direct calls if needed, or for other scripts
     window.preloadNextEpisodeParts = preloadNextEpisodeParts;
 
-    /** Setup event listeners for automatic preloading triggers **/
     function safeRegisterPreloadEvents() {
-        syncGlobalEpisodes(); // Ensure globals are up-to-date
-
         if (!(window.PLAYER_CONFIG && window.PLAYER_CONFIG.enablePreloading)) {
-            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Preloading event registration skipped: disabled by PLAYER_CONFIG.enablePreloading.');
             return;
         }
-
-        // Check if dependent variables are ready
         if (!window.currentEpisodes || !Array.isArray(window.currentEpisodes) || typeof window.currentEpisodeIndex !== 'number') {
-             if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Preloading event registration deferred: episode data not ready.');
-            setTimeout(safeRegisterPreloadEvents, 500); // Retry after a short delay
+            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Deferring event registration, waiting for episode data.');
+            setTimeout(safeRegisterPreloadEvents, 500);
             return;
         }
-        
-        if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Registering preload events.');
 
-        // Preload on next episode button mouseenter/touchstart
-        const nextBtn = document.getElementById('next-episode'); // Assuming ID from your player_app.js
+        const nextBtn = document.getElementById('next-episode');
         if (nextBtn && !nextBtn._preloadHooked_mouseenter_touchstart) {
             nextBtn._preloadHooked_mouseenter_touchstart = true;
             nextBtn.addEventListener('mouseenter', () => preloadNextEpisodeParts(getPreloadCount()), { passive: true });
             nextBtn.addEventListener('touchstart', () => preloadNextEpisodeParts(getPreloadCount()), { passive: true });
             if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Next button hover/touch events registered.');
+        } else if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode && !nextBtn) {
+             console.warn('[Preload] Next button with ID "next-episode" not found for event registration.');
         }
 
-        // Preload when video is nearing its end
+
         function setupTimeUpdatePreloadListener() {
             if (window.dp && window.dp.video && typeof window.dp.video.addEventListener === 'function' && !window.dp._preloadHooked_timeupdate) {
                 window.dp._preloadHooked_timeupdate = true;
@@ -200,82 +174,72 @@
                     setupTimeUpdatePreloadListener();
                     clearInterval(timer);
                 }
-                if (++tries > 50) { // Try for ~10 seconds
+                if (++tries > 50) {
+                     if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.warn('[Preload] DPlayer instance (dp.video) not found after 10s for timeupdate listener.');
                     clearInterval(timer);
-                    if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.warn('[Preload] DPlayer instance not found after 10s for timeupdate listener.');
                 }
             }, 200);
         }
 
-        // Preload when clicking on an episode in the grid
-        const episodesListContainer = document.getElementById('episode-grid'); // Assuming ID from your player_app.js
+        const episodesListContainer = document.getElementById('episode-grid');
         if (episodesListContainer && !episodesListContainer._preloadHooked_click) {
             episodesListContainer._preloadHooked_click = true;
-            episodesListContainer.addEventListener('click', function(e) {
-                const button = e.target.closest('button.episode-button'); // Assuming class from your player_app.js
-                if (button) {
-                    setTimeout(() => preloadNextEpisodeParts(getPreloadCount()), 200); // Delay slightly to allow main click action
-                }
-            });
-             if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Episode grid click event registered.');
+            // Event delegation for episode clicks is handled in player_app.js now, which calls playEpisode.
+            // The enhanced playEpisode will trigger preloading.
+            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Episode grid click preloading will be handled by enhanced playEpisode.');
+        } else if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode && !episodesListContainer) {
+            console.warn('[Preload] Episode grid with ID "episode-grid" not found for event registration.');
         }
     }
 
-    // Trigger initial preload after a short delay to allow player_app.js to initialize episodes
     function triggerFirstPreload(retryCount = 0) {
-        syncGlobalEpisodes();
         if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.enablePreloading &&
             window.currentEpisodes && Array.isArray(window.currentEpisodes) && window.currentEpisodes.length > 0 &&
             typeof window.currentEpisodeIndex === 'number') {
-            
             if (window.PLAYER_CONFIG.debugMode) console.log('[Preload] Triggering initial preload.');
             preloadNextEpisodeParts();
-        } else if (retryCount < 20) { // Retry for ~10 seconds
-            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] Initial preload deferred, try ${retryCount + 1}. Episode data not ready.`);
+        } else if (retryCount < 20) {
+            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] Initial preload deferred (try ${retryCount + 1}), episode data not ready on window.`);
             setTimeout(() => triggerFirstPreload(retryCount + 1), 500);
         } else {
-            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.warn('[Preload] Initial preload failed after multiple retries: episode data not available.');
+            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.warn('[Preload] Initial preload failed: episode data not available on window after multiple retries.');
         }
     }
-
-    // Hook into playEpisode function from player_app.js
-    // This requires playEpisode to be globally accessible or for this script to load after player_app.js
-    // and for player_app.js to make playEpisode assignable on window.
+    
+    let enhancePlayEpisodeRetries = 0;
     function enhancePlayEpisodeForPreloading() {
         if (typeof window.playEpisode === 'function') {
             const originalPlayEpisode = window.playEpisode;
             if (!originalPlayEpisode._preloadEnhanced) {
                 window.playEpisode = function(...args) {
-                    // Call original function
+                    if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log(`[Preload] Wrapped playEpisode called. Original will run. New index: ${args[0]}`);
                     originalPlayEpisode.apply(this, args);
-                    // After switching episode, trigger preload
-                    if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] Preloading after episode switch.');
-                    setTimeout(() => preloadNextEpisodeParts(getPreloadCount()), 250);
+                    
+                    // After originalPlayEpisode has (hopefully) updated window.currentEpisodeIndex
+                    if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
+                         console.log(`[Preload] Triggering preload after episode switch. Current window.currentEpisodeIndex: ${window.currentEpisodeIndex}`);
+                    }
+                    setTimeout(() => preloadNextEpisodeParts(getPreloadCount()), 250); // 250ms delay
                 };
-                window.playEpisode._preloadEnhanced = true; // Mark as enhanced
-                 if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] playEpisode function enhanced for preloading.');
+                window.playEpisode._preloadEnhanced = true;
+                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] playEpisode function enhanced for preloading.');
             }
-        } else if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-            console.warn('[Preload] window.playEpisode not found for enhancing. Preload on episode switch might not work.');
+        } else if (enhancePlayEpisodeRetries < 20) { // Retry up to 10 seconds
+            enhancePlayEpisodeRetries++;
+            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.warn(`[Preload] window.playEpisode not found for enhancing (attempt ${enhancePlayEpisodeRetries}), will retry.`);
+            setTimeout(enhancePlayEpisodeForPreloading, 500);
+        } else {
+            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.error('[Preload] Failed to enhance window.playEpisode after multiple retries.');
         }
     }
 
-
-    // DOMContentLoaded is used to ensure that PLAYER_CONFIG and other necessary elements/scripts might be loaded.
-    // player_app.js also uses DOMContentLoaded, so order might matter or use a more robust ready check.
     document.addEventListener('DOMContentLoaded', function() {
-        if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-            console.log('[Preload] DOMContentLoaded, initializing preload features.');
-        }
-        
-        // Make sure player_app.js has had a chance to define its globals
-        // This timeout helps, but a more robust event system would be better
+        // Delay slightly to give player_app.js a chance to initialize its globals
         setTimeout(() => {
-            syncGlobalEpisodes(); // Sync global vars
-            safeRegisterPreloadEvents(); // Setup event-based preloads
-            triggerFirstPreload(); // Initial preload
-            enhancePlayEpisodeForPreloading(); // Hook into playEpisode
-        }, 500); // Delay to allow player_app.js to potentially set up currentEpisodes etc.
+            if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('[Preload] DOMContentLoaded - Initializing preload systems.');
+            safeRegisterPreloadEvents();
+            triggerFirstPreload();
+            enhancePlayEpisodeForPreloading();
+        }, 800); // Increased delay slightly for player_app.js global setup
     });
-
 })();
