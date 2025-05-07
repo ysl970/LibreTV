@@ -59,11 +59,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (doubanToggle) {
         doubanToggle.checked = localStorage.getItem('doubanToggle') !== 'false'; // 默认为true
         
-        // 如果开关是开启状态，显示豆瓣热门区域
-        if (doubanToggle.checked) {
-            const doubanArea = document.getElementById('doubanArea');
-            if (doubanArea) {
+        // 默认显示豆瓣热门区域，除非明确设置为false
+        const doubanArea = document.getElementById('doubanArea');
+        if (doubanArea) {
+            if (doubanToggle.checked) {
                 doubanArea.classList.remove('hidden');
+            } else {
+                doubanArea.classList.add('hidden');
             }
         }
     }
