@@ -20,7 +20,7 @@
 <body class="page-bg text-white">
     <!-- 顶部功能按钮区：历史 -->
     <nav aria-label="主要功能" class="fixed top-4 left-4 z-50">
-        <button onclick="toggleHistory(event)" 
+        <button id="historyButton" 
                 class="bg-[#222] hover:bg-[#333] border border-[#333] hover:border-white rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors"
                 aria-label="观看历史" 
                 type="button">
@@ -52,7 +52,7 @@
         </a>
         
         <!-- 原有设置按钮 -->
-        <button onclick="toggleSettings(event)"
+        <button id="settingsButton"
                 class="bg-[#222] hover:bg-[#333] border border-[#333] hover:border-white rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors"
                 aria-label="打开设置" 
                 type="button">
@@ -74,7 +74,7 @@
         tabindex="-1"
     >
         <div class="flex justify-between items-center mb-6">
-            <button onclick="toggleHistory()" 
+            <button id="closeHistoryPanelButton" 
                     class="text-gray-400 hover:text-white" 
                     aria-label="关闭历史"
                     type="button">&times;</button>
@@ -102,7 +102,7 @@
     >
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl font-bold gradient-text">设置</h3>
-            <button onclick="toggleSettings()" 
+            <button id="closeSettingsPanelButton" 
                     class="text-gray-400 hover:text-white" 
                     aria-label="关闭设置"
                     type="button">&times;</button>
@@ -189,10 +189,14 @@
                             </label>
                             <p class="text-xs text-gray-500 mt-1 filter-description">过滤"伦理片"等黄色内容</p>
                         </div>
+                        <!-- Example of improved toggle switch -->
+                        <!-- Example of improved toggle switch -->
                         <div class="relative inline-block w-12 align-middle select-none">
                             <input type="checkbox" id="yellowFilterToggle" 
                                    class="opacity-0 absolute w-full h-full cursor-pointer z-10"
-                                   aria-checked="false">
+                                   aria-checked="false"
+                                   role="switch"
+                                   aria-labelledby="yellowFilterLabel">
                             <div class="toggle-bg bg-[#333] w-12 h-6 rounded-full transition-colors duration-300 ease-in-out"></div>
                             <div class="toggle-dot absolute w-5 h-5 bg-white rounded-full top-0.5 left-0.5 transition-transform duration-300 ease-in-out"></div>
                         </div>
@@ -283,8 +287,7 @@
                     <div class="flex items-stretch mb-3 h-14 shadow-lg rounded-lg overflow-hidden">
                         <button onclick="resetToHome()"
                                 class="w-20 sm:w-24 flex items-center justify-center bg-white text-black font-medium hover:bg-gray-200 transition-colors"
-                                aria-label="返回首页"
-                                title="返回首页"
+                                aria-label="返回首页" title="返回首页"
                                 type="button">
                             首页
                         </button>
@@ -362,25 +365,23 @@
     </main>
 
     <!-- 详情模态框 -->
+    <!-- Example of improved modal dialog -->
     <div id="modal"
          class="fixed inset-0 bg-black/95 hidden flex items-center justify-center transition-opacity duration-300"
          role="dialog"
          aria-modal="true"
          aria-labelledby="modalTitle"
          aria-hidden="true"
-         tabindex="-1"
-    >
-        <div class="bg-[#111] p-8 rounded-lg w-11/12 max-w-4xl border border-[#333] max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center mb-6 flex-none">
-                <h2 id="modalTitle" class="text-2xl font-bold gradient-text break-words pr-4 max-w-[80%]"></h2>
-                <button onclick="closeModal()" 
-                        class="text-gray-400 hover:text-white text-2xl transition-colors flex-shrink-0" 
-                        aria-label="关闭详情"
-                        type="button">&times;</button>
-            </div>
-            <div id="modalContent" class="overflow-auto flex-1 min-h-0">
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2"></div>
-            </div>
+         tabindex="-1">
+        <div class="bg-[#111] p-8 rounded-lg w-11/12 max-w-4xl border border-[#333] max-h-[90vh] flex flex-col"> 
+            <div class="flex justify-between items-center mb-6 flex-none"> 
+                <h2 id="modalTitle" class="text-2xl font-bold gradient-text break-words pr-4 max-w-[80%]"></h2> 
+                <button id="closeModalButton" class="text-gray-400 hover:text-white text-2xl transition-colors flex-shrink-0" 
+                        aria-label="关闭详情" 
+                        type="button">&times;</button> 
+            </div> 
+            <div id="modalContent" class="overflow-auto flex-1 min-h-0"> 
+            </div> 
         </div>
     </div>
 
@@ -442,7 +443,7 @@
     </div>
 
     <!-- SHA-256库与初始化，避免全局冲突 -->
-    <script src="libs/sha256.min.js"></script>
+    <script src="libs/sha256.min.js" defer></script>
     <script>
         // 避免 password.js 覆盖全局 js‑sha256 实现
         window._jsSha256 = window.sha256;
@@ -453,6 +454,7 @@
     <script src="js/ui.js" defer></script>
     <script src="js/api.js" defer></script>
     <script src="js/douban.js" defer></script>
+    <script src="js/sha256.js" defer></script>
     <script src="js/password.js" defer></script>
     <script src="js/app.js" defer></script>
 

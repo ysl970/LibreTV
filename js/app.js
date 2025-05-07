@@ -725,6 +725,13 @@ async function showDetails(id, vod_name, sourceCode) {
         const modalTitle = document.getElementById('modalTitle');
         const modalContent = document.getElementById('modalContent');
         
+        if (!modal || !modalTitle || !modalContent) { // ADD THIS CHECK
+            console.error('Modal UI elements missing!');
+            showToast('详情界面加载失败，请刷新页面。', 'error');
+            hideLoading();
+            return;
+        }
+        
         // 显示来源信息
         const sourceName = data.videoInfo?.source_name ? 
             ` <span class="text-sm font-normal text-gray-400">(${data.videoInfo.source_name})</span>` : '';
@@ -791,17 +798,22 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0) {
     
     // 获取当前视频来源名称
     let sourceName = '';
-    const modalTitle = document.getElementById('modalTitle');
-    if (modalTitle) {
-        const sourceSpan = modalTitle.querySelector('span.text-gray-400');
-        if (sourceSpan) {
-            // 提取括号内的来源名称
-            const sourceText = sourceSpan.textContent;
-            const match = sourceText.match(/\(([^)]+)\)/);
-            if (match && match[1]) {
-                sourceName = match[1].trim();
+    try {
+        const modalTitle = document.getElementById('modalTitle');
+        if (modalTitle) {
+            const sourceSpan = modalTitle.querySelector('span.text-gray-400');
+            if (sourceSpan) {
+                // 提取括号内的来源名称
+                const sourceText = sourceSpan.textContent;
+                const match = sourceText.match(/\(([^)]+)\)/);
+                if (match && match[1]) {
+                    sourceName = match[1].trim();
+                }
             }
         }
+    } catch (e) {
+        console.warn('获取来源名称失败:', e);
+        // 继续执行，不阻止播放
     }
     
     // 保存当前状态到localStorage，让播放页面可以获取
@@ -891,4 +903,19 @@ function toggleEpisodeOrder(sourceCode) {
         if (svg) svg.style.transform = episodesReversed ? 'rotate(180deg)' : 'rotate(0deg)';
     }
 }
+// AT THE VERY END OF js/app.js
+window.search = search;
+window.showDetails = showDetails;
+window.playVideo = playVideo;
+// initAPICheckboxes, renderCustomAPIsList etc. are called internally by app.js, so no need to expose unless called from HTML
+window.selectAllAPIs = selectAllAPIs; // If settings panel buttons for this are still onclick
+window.showAddCustomApiForm = showAddCustomApiForm; // If button is onclick
+window.addCustomApi = addCustomApi; // If button is onclick
+window.cancelAddCustomApi = cancelAddCustomApi; // If button is onclick
+window.editCustomApi = editCustomApi; // If button is onclick in dynamic list
+window.updateCustomApi = updateCustomApi; // If button is onclick in dynamic list
+window.cancelEditCustomApi = cancelEditCustomApi; // If button is onclick in dynamic list
+window.removeCustomApi = removeCustomApi; // If button is onclick in dynamic list
+window.resetToHome = resetToHome;
+window.toggleEpisodeOrder = toggleEpisodeOrder; // Called from dynamically generated HTML in modal
 
