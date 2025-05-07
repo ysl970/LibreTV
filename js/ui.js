@@ -445,51 +445,135 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-/**
- * Attaches all event listeners to UI elements
- */
-function attachEventListeners() {
-    // History toggle
-    document.querySelector('button[aria-label="观看历史"]')?.addEventListener('click', toggleHistory);
-    document.querySelector('button[aria-label="关闭历史"]')?.addEventListener('click', toggleHistory);
+/** 
+ * Attaches all event listeners to UI elements 
+ */ 
+function attachEventListeners() { 
+    // History toggle 
+    const historyButton = document.getElementById('historyButton'); 
+    if (historyButton) { 
+        historyButton.addEventListener('click', toggleHistory); // toggleHistory is defined in this file 
+    } 
+    const closeHistoryButton = document.getElementById('closeHistoryPanelButton'); 
+    if (closeHistoryButton) { 
+        closeHistoryButton.addEventListener('click', toggleHistory); 
+    } 
     
-    // Settings toggle
-    document.querySelector('button[aria-label="打开设置"]')?.addEventListener('click', toggleSettings);
-    document.querySelector('button[aria-label="关闭设置"]')?.addEventListener('click', toggleSettings);
+    // Settings toggle 
+    const settingsButton = document.getElementById('settingsButton'); 
+    if (settingsButton) { 
+        settingsButton.addEventListener('click', toggleSettings); // toggleSettings is defined in this file 
+    } 
+    const closeSettingsButton = document.getElementById('closeSettingsPanelButton'); 
+    if (closeSettingsButton) { 
+        closeSettingsButton.addEventListener('click', toggleSettings); 
+    } 
     
-    // API selection buttons
-    // 修复：使用类名或属性选择器替代包含方括号的选择器
-    document.querySelectorAll('button[onclick^="selectAllAPIs"]').forEach(button => {
-        if (button.textContent.includes('全选') && !button.textContent.includes('全选普通资源')) {
-            button.addEventListener('click', () => selectAllAPIs(true));
-        } else if (button.textContent.includes('全不选')) {
-            button.addEventListener('click', () => selectAllAPIs(false));
-        } else if (button.textContent.includes('全选普通资源')) {
-            button.addEventListener('click', () => selectAllAPIs(true, true));
-        }
-    });
+    // API selection buttons 
+    // Ensure buttons for selectAllAPIs have unique IDs or more specific selectors if not removing onclick 
+    // Example for one "全选" button if it had id="selectAllNormalApisButton" 
+    // document.getElementById('selectAllNormalApisButton')?.addEventListener('click', () => selectAllAPIs(true)); 
+    // It's better to give each of those buttons in settings panel unique IDs and bind them here. 
+    // The current querySelectorAll('button[onclick^="selectAllAPIs"]') is okay if you KEEP their onclicks and ensure selectAllAPIs is global. 
+    // If you remove their onclicks, you MUST bind them individually here by ID or more specific selectors. 
+
+    // For demonstration, assuming you give the "全选" button an ID: 
+    // HTML: <button id="selectAllButton" ...>全选</button> 
+    // JS: document.getElementById('selectAllButton')?.addEventListener('click', () => window.selectAllAPIs(true)); 
+    // (window.selectAllAPIs because selectAllAPIs is defined in app.js) 
+
+    // Custom API management - Assuming these functions are made global from app.js or ui.js 
+    // HTML: <button id="showAddCustomApiFormButton" ...>+</button> 
+    document.querySelector('button[aria-label="添加自定义API"]')?.addEventListener('click', () => { 
+        if(typeof showAddCustomApiForm === 'function') showAddCustomApiForm(); 
+    }); 
+
+    // Search functionality 
+    const performSearchButton = document.getElementById('performSearchButton'); // Using ID added above 
+    if (performSearchButton) { 
+        performSearchButton.addEventListener('click', () => { 
+             if(typeof search === 'function') search(); 
+             else console.error('search function not defined globally from app.js'); 
+        }); 
+    } 
+    const resetToHomeSearchButton = document.getElementById('resetToHomeSearchButton'); 
+    if (resetToHomeSearchButton) { 
+        resetToHomeSearchButton.addEventListener('click', () => { 
+            if(typeof resetToHome === 'function') resetToHome(); 
+             else console.error('resetToHome function not defined globally from app.js'); 
+        }); 
+    } 
+     // For the header logo link 
+    const headerHomeLink = document.querySelector('header a[onclick*="resetToHome"]'); 
+    if (headerHomeLink) { 
+        headerHomeLink.removeAttribute('onclick'); // Remove existing inline 
+        headerHomeLink.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            if(typeof resetToHome === 'function') resetToHome(); 
+            else console.error('resetToHome function not defined globally from app.js'); 
+        }); 
+    } 
     
-    // Custom API management
-    document.querySelector('button[aria-label="添加自定义API"]')?.addEventListener('click', showAddCustomApiForm);
-    document.querySelector('button[onclick="addCustomApi()"]')?.addEventListener('click', addCustomApi);
-    document.querySelector('button[onclick="cancelAddCustomApi()"]')?.addEventListener('click', cancelAddCustomApi);
+    // History management 
+    const clearViewingHistoryButton = document.querySelector('#historyPanel button[onclick="clearViewingHistory()"]'); 
+    if (clearViewingHistoryButton) { 
+        clearViewingHistoryButton.removeAttribute('onclick'); 
+        clearViewingHistoryButton.addEventListener('click', clearViewingHistory); 
+    } 
     
-    // Search functionality
-    document.querySelector('button[aria-label="搜索按钮"]')?.addEventListener('click', search);
-    document.querySelector('button[aria-label="返回首页"]')?.addEventListener('click', resetToHome);
+    // Modal handling (close button) 
+    const closeModalButton = document.getElementById('closeModalButton'); 
+    if (closeModalButton) { 
+        closeModalButton.addEventListener('click', closeModal); 
+    } 
     
-    // History management
-    document.querySelector('button[onclick="clearViewingHistory()"]')?.addEventListener('click', clearViewingHistory);
-    
-    // Modal handling
-    document.querySelector('button[aria-label="关闭详情"]')?.addEventListener('click', closeModal);
-    
-    // Password form
-    const passwordForm = document.getElementById('passwordForm');
-    if (passwordForm) {
-        passwordForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            handlePasswordSubmit();
+    // Password form submission 
+    const passwordForm = document.getElementById('passwordForm'); 
+    if (passwordForm) { 
+        // The form already has onsubmit="handlePasswordSubmit(); return false;" 
+        // This is acceptable. If you want to move it here: 
+        // passwordForm.removeAttribute('onsubmit'); 
+        // passwordForm.addEventListener('submit', (e) => { 
+        //     e.preventDefault(); 
+        //     if (typeof handlePasswordSubmit === 'function') handlePasswordSubmit(); 
+        //     else console.error('handlePasswordSubmit function not defined globally from password.js'); 
+        // }); 
+    } 
+
+    // Event Delegation for dynamically created Search History Tags 
+    const recentSearchesContainer = document.getElementById('recentSearches'); 
+    if (recentSearchesContainer) { 
+        recentSearchesContainer.addEventListener('click', function(event) { 
+            const targetElement = event.target; 
+            if (targetElement.classList.contains('search-tag')) { 
+                const searchInput = document.getElementById('searchInput'); 
+                if (searchInput) { 
+                    searchInput.value = targetElement.textContent; 
+                    if (typeof search === 'function') search(); 
+                    else console.error('Search function not found'); 
+                } 
+            } else if (targetElement.id === 'clearHistoryBtn' || targetElement.closest('#clearHistoryBtn')) { 
+                 if (typeof clearSearchHistory === 'function') clearSearchHistory(); 
+                 else console.error('clearSearchHistory function not found'); 
+            } 
+        }); 
+    } 
+
+    // Event Delegation for dynamically created Viewing History items
+    const historyList = document.getElementById('historyList');
+    if (historyList) {
+        historyList.addEventListener('click', function(event) {
+            // Handle delete buttons in history items
+            if (event.target.closest('button[title="删除记录"]')) {
+                event.stopPropagation();
+                const button = event.target.closest('button[title="删除记录"]');
+                const encodedUrl = button.getAttribute('onclick')?.match(/deleteHistoryItem\('([^']+)'\)/)?.[1];
+                if (encodedUrl && typeof deleteHistoryItem === 'function') {
+                    deleteHistoryItem(encodedUrl);
+                }
+            }
+            // The history item click to play is still handled by the onclick attribute
+            // If you want to move that here too, you'd need to extract the parameters
         });
     }
 }

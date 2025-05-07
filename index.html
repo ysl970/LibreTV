@@ -20,7 +20,7 @@
 <body class="page-bg text-white">
     <!-- 顶部功能按钮区：历史 -->
     <nav aria-label="主要功能" class="fixed top-4 left-4 z-50">
-        <button onclick="toggleHistory(event)" 
+        <button id="historyButton" 
                 class="bg-[#222] hover:bg-[#333] border border-[#333] hover:border-white rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors"
                 aria-label="观看历史" 
                 type="button">
@@ -52,7 +52,7 @@
         </a>
         
         <!-- 原有设置按钮 -->
-        <button onclick="toggleSettings(event)"
+        <button id="settingsButton"
                 class="bg-[#222] hover:bg-[#333] border border-[#333] hover:border-white rounded-lg px-3 py-1.5 flex items-center gap-1 transition-colors"
                 aria-label="打开设置" 
                 type="button">
@@ -74,7 +74,7 @@
         tabindex="-1"
     >
         <div class="flex justify-between items-center mb-6">
-            <button onclick="toggleHistory()" 
+            <button id="closeHistoryPanelButton" 
                     class="text-gray-400 hover:text-white" 
                     aria-label="关闭历史"
                     type="button">&times;</button>
@@ -102,7 +102,7 @@
     >
         <div class="flex justify-between items-center mb-6">
             <h3 class="text-xl font-bold gradient-text">设置</h3>
-            <button onclick="toggleSettings()" 
+            <button id="closeSettingsPanelButton" 
                     class="text-gray-400 hover:text-white" 
                     aria-label="关闭设置"
                     type="button">&times;</button>
@@ -287,8 +287,7 @@
                     <div class="flex items-stretch mb-3 h-14 shadow-lg rounded-lg overflow-hidden">
                         <button onclick="resetToHome()"
                                 class="w-20 sm:w-24 flex items-center justify-center bg-white text-black font-medium hover:bg-gray-200 transition-colors"
-                                aria-label="返回首页"
-                                title="返回首页"
+                                aria-label="返回首页" title="返回首页"
                                 type="button">
                             首页
                         </button>
@@ -374,7 +373,16 @@
          aria-labelledby="modalTitle"
          aria-hidden="true"
          tabindex="-1">
-        <!-- Modal content -->
+        <div class="bg-[#111] p-8 rounded-lg w-11/12 max-w-4xl border border-[#333] max-h-[90vh] flex flex-col"> 
+            <div class="flex justify-between items-center mb-6 flex-none"> 
+                <h2 id="modalTitle" class="text-2xl font-bold gradient-text break-words pr-4 max-w-[80%]"></h2> 
+                <button id="closeModalButton" class="text-gray-400 hover:text-white text-2xl transition-colors flex-shrink-0" 
+                        aria-label="关闭详情" 
+                        type="button">&times;</button> 
+            </div> 
+            <div id="modalContent" class="overflow-auto flex-1 min-h-0"> 
+            </div> 
+        </div>
     </div>
 
     <!-- 密码验证弹窗 -->
