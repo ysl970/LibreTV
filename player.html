@@ -81,7 +81,7 @@
         }
         .switch {
             position: relative;
-            display: 在line-block;
+            display: inline-block;
             width: 46px;
             height: 24px;
         }
@@ -399,7 +399,7 @@
             }
 
             // 设置页面标题
-            document.title = currentVideoTitle + ' - 奇异TV播放器';
+            document.title = currentVideoTitle + ' - LibreTV播放器';
             document.getElementById('videoTitle').textContent = currentVideoTitle;
 
             // 初始化播放器
@@ -577,7 +577,7 @@
                 chromecast: true,                // 启用Chromecast投屏功能
                 contextmenu: [                   // 自定义右键菜单
                     {
-                        text: '关于 LibreTV'，
+                        text: '关于 LibreTV',
                         link: 'https://github.com/bestzwei/LibreTV'
                     },
                     {
