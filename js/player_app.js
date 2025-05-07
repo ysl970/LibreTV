@@ -449,6 +449,54 @@ function addDPlayerEventListeners(){
     })();
 }
 
+// ... existing code ...
+
+// Add this variable with other state variables at the top
+let isScreenLocked = false;
+
+// Add this function to handle lock button functionality
+function toggleLockScreen() {
+    isScreenLocked = !isScreenLocked;
+    const playerContainer = document.querySelector('.player-container');
+    const lockButton = document.getElementById('lock-button');
+    
+    if (isScreenLocked) {
+        // Lock the screen
+        playerContainer.classList.add('player-locked');
+        if (lockButton) {
+            lockButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-unlock">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                </svg>
+                <span>解锁</span>
+            `;
+            lockButton.setAttribute('aria-label', '解锁屏幕');
+        }
+    } else {
+        // Unlock the screen
+        playerContainer.classList.remove('player-locked');
+        if (lockButton) {
+            lockButton.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>锁定</span>
+            `;
+            lockButton.setAttribute('aria-label', '锁定屏幕');
+        }
+    }
+}
+
+function setupPlayerControls() {
+    
+    const lockButton = document.getElementById('lock-button');
+    if (lockButton) lockButton.addEventListener('click', toggleLockScreen);
+    
+    const orderBtn = document.getElementById('order-button');
+    if (orderBtn) orderBtn.addEventListener('click', toggleEpisodeOrder); // toggleEpisodeOrder is local
+}
 
 function setupPlayerControls() {
     const backButton = document.getElementById('back-button');
@@ -679,14 +727,13 @@ function showMessage(text, type = 'info', duration = 3000) {
 
 function renderEpisodes() {
     const episodeGrid = document.getElementById('episode-grid');
+    if (!episodeGrid) return;
+
+    // Show episodes container
     const episodesContainer = document.getElementById('episodes-container');
-    
-    if (!episodeGrid || !currentEpisodes || currentEpisodes.length === 0) {
-        if (episodesContainer) episodesContainer.classList.add('hidden');
-        return;
-    }
-    
-    episodesContainer.classList.remove('hidden');
+    if (episodesContainer) episodesContainer.classList.remove('hidden');
+
+
     episodeGrid.innerHTML = '';
     
     // Use a document fragment for better performance
@@ -1046,44 +1093,42 @@ function showMessage(text, type = 'info', duration = 3000) {
 
 function renderEpisodes() {
     const episodeGrid = document.getElementById('episode-grid');
-    const episodesContainer = document.getElementById('episodes-container');
+    if (!episodeGrid) return;
     
-    if (!episodeGrid || !currentEpisodes || currentEpisodes.length === 0) {
-        if (episodesContainer) episodesContainer.classList.add('hidden');
+    // Show episodes container
+    const episodesContainer = document.getElementById('episodes-container');
+    if (episodesContainer) episodesContainer.classList.remove('hidden');
+    
+    // Clear existing episodes
+    episodeGrid.innerHTML = '';
+    
+    if (!currentEpisodes || currentEpisodes.length === 0) {
+        episodeGrid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">没有可用的剧集</div>';
         return;
     }
     
-    episodesContainer.classList.remove('hidden');
-    episodeGrid.innerHTML = '';
+    // Create a copy of episodes array to avoid modifying the original
+    let episodes = [...currentEpisodes];
     
-    // Use a document fragment for better performance
-    const fragment = document.createDocumentFragment();
+    // Reverse if needed
+    if (episodesReversed) {
+        episodes = episodes.reverse();
+    }
     
-    // Get episodes in current order (normal or reversed)
-    const displayEpisodes = episodesReversed ? [...currentEpisodes].reverse() : [...currentEpisodes];
-    
-    displayEpisodes.forEach((episodeUrl, displayIndex) => {
-        // Calculate the real index in the original array
-        const realIndex = episodesReversed ? (currentEpisodes.length - 1 - displayIndex) : displayIndex;
+    // Render each episode button
+    episodes.forEach((_, idx) => {
+        const episodeIndex = episodesReversed ? currentEpisodes.length - 1 - idx : idx;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = episodeIndex === currentEpisodeIndex 
+            ? 'p-2 rounded bg-blue-600 text-white episode-active' 
+            : 'p-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-300';
+        button.textContent = `${idx + 1}`;
+        button.setAttribute('aria-label', `第 ${idx + 1} 集`);
+        button.addEventListener('click', () => playEpisode(episodeIndex));
         
-        // Use module-scoped currentEpisodeIndex for consistency
-        const isActive = realIndex === currentEpisodeIndex;
-        
-        const episodeButton = document.createElement('button');
-        episodeButton.className = `episode-button py-2 px-3 text-xs sm:text-sm rounded transition-colors duration-200 ease-in-out truncate ${isActive ? 'bg-blue-600 text-white episode-active' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'}`;
-        episodeButton.textContent = `第${displayIndex + 1}集`;
-        episodeButton.setAttribute('aria-label', `播放第${displayIndex + 1}集`);
-        episodeButton.setAttribute('data-index', realIndex);
-        
-        // Use window.playEpisode to ensure we're using the enhanced version
-        episodeButton.addEventListener('click', () => {
-            if (typeof window.playEpisode === 'function') window.playEpisode(realIndex);
-        });
-        
-        fragment.appendChild(episodeButton);
+        episodeGrid.appendChild(button);
     });
-    
-    episodeGrid.appendChild(fragment);
 }
 
 function updateEpisodeInfo() {
