@@ -458,8 +458,9 @@ function attachEventListeners() {
     document.querySelector('button[aria-label="关闭设置"]')?.addEventListener('click', toggleSettings);
     
     // API selection buttons
-    document.querySelectorAll('.px-2.py-1.bg-\[\#333\]').forEach(button => {
-        if (button.textContent.includes('全选')) {
+    // 修复：使用类名或属性选择器替代包含方括号的选择器
+    document.querySelectorAll('button[onclick^="selectAllAPIs"]').forEach(button => {
+        if (button.textContent.includes('全选') && !button.textContent.includes('全选普通资源')) {
             button.addEventListener('click', () => selectAllAPIs(true));
         } else if (button.textContent.includes('全不选')) {
             button.addEventListener('click', () => selectAllAPIs(false));

@@ -791,17 +791,22 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0) {
     
     // 获取当前视频来源名称
     let sourceName = '';
-    const modalTitle = document.getElementById('modalTitle');
-    if (modalTitle) {
-        const sourceSpan = modalTitle.querySelector('span.text-gray-400');
-        if (sourceSpan) {
-            // 提取括号内的来源名称
-            const sourceText = sourceSpan.textContent;
-            const match = sourceText.match(/\(([^)]+)\)/);
-            if (match && match[1]) {
-                sourceName = match[1].trim();
+    try {
+        const modalTitle = document.getElementById('modalTitle');
+        if (modalTitle) {
+            const sourceSpan = modalTitle.querySelector('span.text-gray-400');
+            if (sourceSpan) {
+                // 提取括号内的来源名称
+                const sourceText = sourceSpan.textContent;
+                const match = sourceText.match(/\(([^)]+)\)/);
+                if (match && match[1]) {
+                    sourceName = match[1].trim();
+                }
             }
         }
+    } catch (e) {
+        console.warn('获取来源名称失败:', e);
+        // 继续执行，不阻止播放
     }
     
     // 保存当前状态到localStorage，让播放页面可以获取
