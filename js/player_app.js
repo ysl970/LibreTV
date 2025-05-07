@@ -60,6 +60,9 @@ function initializePageContent() {
         autoplayEnabled = e.target.checked;
         localStorage.setItem('autoplayEnabled', autoplayEnabled);
     });
+    
+    // 设置自定义播放器控制按钮
+    setupCustomPlayerControls();
 
     // 尝试获取剧集列表
     try {
@@ -133,6 +136,9 @@ function initializePageContent() {
     setTimeout(() => {
         setupProgressBarPreciseClicks();
     }, 1000);
+    
+    // 设置自定义播放器控制按钮
+    setupCustomPlayerControls();
 
     // 添加键盘快捷键事件监听器
     document.addEventListener('keydown', handleKeyboardShortcuts);
@@ -987,6 +993,100 @@ function updateButtonStates() {
     }
 }
 
+/**
+ * Sets up custom player control buttons
+ * Handles back button, fullscreen button, and episode navigation buttons
+ */
+function setupCustomPlayerControls() {
+    // Back Button
+    const backButton = document.getElementById('back-button');
+    if (backButton) {
+        backButton.addEventListener('click', function() {
+            // Navigate back to index page
+            window.location.href = 'index.html';
+        });
+    }
+    
+    // Fullscreen Button
+    const fullscreenButton = document.getElementById('fullscreen-button');
+    if (fullscreenButton) {
+        fullscreenButton.addEventListener('click', function() {
+            if (dp && dp.fullScreen && typeof dp.fullScreen.toggle === 'function') {
+                dp.fullScreen.toggle();
+            } else {
+                console.warn('DPlayer instance (dp) or its fullScreen API is not available for custom fullscreen button.');
+                // Fallback to native browser fullscreen API for the main player container
+                const playerDplayerContainer = document.getElementById('dplayer'); // DPlayer's direct container
+                const playerOuterContainer = document.getElementById('player'); // The overall player section
+                const fullscreenTarget = playerDplayerContainer || playerOuterContainer;
+
+                if (fullscreenTarget) {
+                    if (!document.fullscreenElement && 
+                        !document.webkitFullscreenElement && 
+                        !document.mozFullScreenElement && 
+                        !document.msFullscreenElement) {
+                        if (fullscreenTarget.requestFullscreen) {
+                            fullscreenTarget.requestFullscreen().catch(err => console.error('Error attempting to enable full-screen mode:', err.message));
+                        } else if (fullscreenTarget.webkitRequestFullscreen) {
+                            fullscreenTarget.webkitRequestFullscreen().catch(err => console.error('Error attempting to enable full-screen mode (webkit):', err.message));
+                        } // Add other vendor prefixes if needed (moz, ms)
+                    } else {
+                        if (document.exitFullscreen) {
+                            document.exitFullscreen().catch(err => console.error('Error attempting to disable full-screen mode:', err.message));
+                        } else if (document.webkitExitFullscreen) {
+                            document.webkitExitFullscreen().catch(err => console.error('Error attempting to disable full-screen mode (webkit):', err.message));
+                        } // Add other vendor prefixes
+                    }
+                }
+            }
+        });
+    }
+    
+    // Episode Navigation Buttons
+    const prevEpisodeButton = document.getElementById('prev-episode');
+    if (prevEpisodeButton) {
+        prevEpisodeButton.addEventListener('click', playPreviousEpisode);
+    }
+    
+    const nextEpisodeButton = document.getElementById('next-episode');
+    if (nextEpisodeButton) {
+        nextEpisodeButton.addEventListener('click', playNextEpisode);
+    }
+    
+    // Episode Order Button
+    const orderButton = document.getElementById('order-button');
+    if (orderButton) {
+        orderButton.addEventListener('click', toggleEpisodeOrder);
+    }
+    
+    // Retry Button for Error Container
+    const retryButton = document.getElementById('retry-button');
+    if (retryButton) {
+        retryButton.addEventListener('click', function() {
+            // Reload the current video
+            if (dp) {
+                dp.pause();
+                dp.notice('正在重新加载视频...');
+                
+                // Get current video URL
+                const currentUrl = currentEpisodes[currentEpisodeIndex];
+                if (currentUrl) {
+                    // Hide error message
+                    document.getElementById('error').style.display = 'none';
+                    // Show loading indicator
+                    document.getElementById('loading').style.display = 'flex';
+                    
+                    // Reinitialize player with current URL
+                    const sourceCode = new URLSearchParams(window.location.search).get('source_code') || '';
+                    setTimeout(() => {
+                        initPlayer(currentUrl, sourceCode);
+                    }, 500);
+                }
+            }
+        });
+    }
+}
+
 // 保存当前播放进度
 function saveCurrentProgress() {
     if (!dp || !dp.video || isUserSeeking || videoHasEnded) return;
@@ -1340,5 +1440,99 @@ function updateButtonStates() {
     if (nextButton) {
         nextButton.disabled = currentEpisodeIndex >= currentEpisodes.length - 1;
         nextButton.classList.toggle('opacity-50', currentEpisodeIndex >= currentEpisodes.length - 1);
+    }
+}
+
+/**
+ * Sets up custom player control buttons
+ * Handles back button, fullscreen button, and episode navigation buttons
+ */
+function setupCustomPlayerControls() {
+    // Back Button
+    const backButton = document.getElementById('back-button');
+    if (backButton) {
+        backButton.addEventListener('click', function() {
+            // Navigate back to index page
+            window.location.href = 'index.html';
+        });
+    }
+    
+    // Fullscreen Button
+    const fullscreenButton = document.getElementById('fullscreen-button');
+    if (fullscreenButton) {
+        fullscreenButton.addEventListener('click', function() {
+            if (dp && dp.fullScreen && typeof dp.fullScreen.toggle === 'function') {
+                dp.fullScreen.toggle();
+            } else {
+                console.warn('DPlayer instance (dp) or its fullScreen API is not available for custom fullscreen button.');
+                // Fallback to native browser fullscreen API for the main player container
+                const playerDplayerContainer = document.getElementById('dplayer'); // DPlayer's direct container
+                const playerOuterContainer = document.getElementById('player'); // The overall player section
+                const fullscreenTarget = playerDplayerContainer || playerOuterContainer;
+
+                if (fullscreenTarget) {
+                    if (!document.fullscreenElement && 
+                        !document.webkitFullscreenElement && 
+                        !document.mozFullScreenElement && 
+                        !document.msFullscreenElement) {
+                        if (fullscreenTarget.requestFullscreen) {
+                            fullscreenTarget.requestFullscreen().catch(err => console.error('Error attempting to enable full-screen mode:', err.message));
+                        } else if (fullscreenTarget.webkitRequestFullscreen) {
+                            fullscreenTarget.webkitRequestFullscreen().catch(err => console.error('Error attempting to enable full-screen mode (webkit):', err.message));
+                        } // Add other vendor prefixes if needed (moz, ms)
+                    } else {
+                        if (document.exitFullscreen) {
+                            document.exitFullscreen().catch(err => console.error('Error attempting to disable full-screen mode:', err.message));
+                        } else if (document.webkitExitFullscreen) {
+                            document.webkitExitFullscreen().catch(err => console.error('Error attempting to disable full-screen mode (webkit):', err.message));
+                        } // Add other vendor prefixes
+                    }
+                }
+            }
+        });
+    }
+    
+    // Episode Navigation Buttons
+    const prevEpisodeButton = document.getElementById('prev-episode');
+    if (prevEpisodeButton) {
+        prevEpisodeButton.addEventListener('click', playPreviousEpisode);
+    }
+    
+    const nextEpisodeButton = document.getElementById('next-episode');
+    if (nextEpisodeButton) {
+        nextEpisodeButton.addEventListener('click', playNextEpisode);
+    }
+    
+    // Episode Order Button
+    const orderButton = document.getElementById('order-button');
+    if (orderButton) {
+        orderButton.addEventListener('click', toggleEpisodeOrder);
+    }
+    
+    // Retry Button for Error Container
+    const retryButton = document.getElementById('retry-button');
+    if (retryButton) {
+        retryButton.addEventListener('click', function() {
+            // Reload the current video
+            if (dp) {
+                dp.pause();
+                dp.notice('正在重新加载视频...');
+                
+                // Get current video URL
+                const currentUrl = currentEpisodes[currentEpisodeIndex];
+                if (currentUrl) {
+                    // Hide error message
+                    document.getElementById('error').style.display = 'none';
+                    // Show loading indicator
+                    document.getElementById('loading').style.display = 'flex';
+                    
+                    // Reinitialize player with current URL
+                    const sourceCode = new URLSearchParams(window.location.search).get('source_code') || '';
+                    setTimeout(() => {
+                        initPlayer(currentUrl, sourceCode);
+                    }, 500);
+                }
+            }
+        });
     }
 }
