@@ -42,6 +42,10 @@ async function handleSpecialSourceDetail(id, sourceCode) {
             return idx > -1 ? link.slice(0, idx) : link;
         });
 
+        if (matches.length === 0) {
+            throw new Error(`未能从${API_SITES[sourceCode].name}源获取到有效的播放地址`);
+        }
+
         const title = (result.html.match(/<h1[^>]*>([^<]+)<\/h1>/) || [, ''])[1].trim();
         const desc = (result.html.match(/<div[^>]*class=["']sketch["'][^>]*>([\s\S]*?)<\/div>/) || [, ''])[1]
             .replace(/<[^>]+>/g, ' ').trim();
@@ -56,8 +60,8 @@ async function handleSpecialSourceDetail(id, sourceCode) {
             }
         });
     } catch (e) {
-        console.error(`${API_SITES[sourceCode].name}详情获取失败:`, e);
-        throw e;
+        console.error(`${API_SITES[sourceCode]?.name || sourceCode}详情获取失败:`, e);
+        throw new Error(`获取${API_SITES[sourceCode]?.name || sourceCode}详情失败: ${e.message}`);
     }
 }
 
@@ -71,12 +75,16 @@ async function handleCustomApiSpecialDetail(id, customApi) {
         );
 
         // 通用m3u8匹配
-        const matches = (result.html && result.html.match(/\$https?:\/\/[^"'\s]+?\.m3u8/g) || [])
+        const matches = (result.html && result.html.match(M3U8_PATTERN) || [])
             .map(link => {
                 link = link.slice(1);
                 const idx = link.indexOf('(');
                 return idx > -1 ? link.slice(0, idx) : link;
             });
+
+        if (matches.length === 0) {
+            throw new Error('未能从自定义API源获取到有效的播放地址');
+        }
 
         const title = (result.html.match(/<h1[^>]*>([^<]+)<\/h1>/) || [, ''])[1].trim();
         const desc = (result.html.match(/<div[^>]*class=["']sketch["'][^>]*>([\s\S]*?)<\/div>/) || [, ''])[1]
@@ -92,7 +100,7 @@ async function handleCustomApiSpecialDetail(id, customApi) {
         });
     } catch (e) {
         console.error('自定义API详情获取失败:', e);
-        throw e;
+        throw new Error(`获取自定义API详情失败: ${e.message}`);
     }
 }
 
@@ -234,19 +242,30 @@ async function handleApiRequest(url) {
                 ? `${customApi}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`
                 : `${API_SITES[source].api}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`;
 
-            const result = await fetchWithTimeout(
-                PROXY_URL + encodeURIComponent(apiUrl),
-                { headers: API_CONFIG.search.headers }
-            );
-            if (!result || !Array.isArray(result.list)) throw new Error('API返回的数据格式无效');
+            try {
+                const result = await fetchWithTimeout(
+                    PROXY_URL + encodeURIComponent(apiUrl),
+                    { headers: API_CONFIG.search.headers }
+                );
+                if (!result || !Array.isArray(result.list)) throw new Error('API返回的数据格式无效');
 
-            // 合并源信息
-            result.list.forEach(item => {
-                item.source_name = source === 'custom' ? '自定义源' : API_SITES[source].name;
-                item.source_code = source;
-                if (source === 'custom') item.api_url = customApi;
-            });
-            return JSON.stringify({ code: 200, list: result.list });
+                // 合并源信息
+                result.list.forEach(item => {
+                    item.source_name = source === 'custom' ? '自定义源' : API_SITES[source].name;
+                    item.source_code = source;
+                    if (source === 'custom') item.api_url = customApi;
+                });
+                return JSON.stringify({ code: 200, list: result.list });
+            } catch (error) {
+                // 区分网络错误和解析错误
+                const errorMsg = error.name === 'AbortError' ? '搜索请求超时' :
+                    error.name === 'SyntaxError' ? 'API返回的数据格式无效' : error.message;
+                return JSON.stringify({
+                    code: 400,
+                    msg: `搜索失败: ${errorMsg}`,
+                    list: []
+                });
+            }
         }
 
         if (url.pathname === '/api/detail') {
@@ -255,63 +274,74 @@ async function handleApiRequest(url) {
             if (!id) throw new Error('缺少视频ID参数');
             if (!/^[\w-]+$/.test(id)) throw new Error('无效的视频ID格式');
 
-            // 特殊片源
-            if ((['ffzy', 'jisu', 'huangcang'].includes(sourceCode)) &&
-                API_SITES[sourceCode]?.detail) {
-                return await handleSpecialSourceDetail(id, sourceCode);
-            }
-            // 自定义API特殊
-            if (sourceCode === 'custom' && url.searchParams.get('useDetail') === 'true') {
-                return await handleCustomApiSpecialDetail(id, customApi);
-            }
-            // 标准API详情
-            const detailUrl = sourceCode.startsWith('custom_')
-                ? `${customApi}${API_CONFIG.detail.path}${id}`
-                : `${API_SITES[sourceCode].api}${API_CONFIG.detail.path}${id}`;
-            const result = await fetchWithTimeout(
-                PROXY_URL + encodeURIComponent(detailUrl),
-                { headers: API_CONFIG.detail.headers }
-            );
-            if (!result || !Array.isArray(result.list) || !result.list.length)
-                throw new Error('获取到的详情内容无效');
-
-            const videoDetail = result.list[0];
-            let episodes = [];
-
-            // 分集地址解析
-            if (videoDetail.vod_play_url) {
-                const mainSource = videoDetail.vod_play_url.split('$$$')[0] || '';
-                episodes = mainSource.split('#')
-                    .map(ep => {
-                        const [, link] = ep.split('$');
-                        return link && (link.startsWith('http://') || link.startsWith('https://')) ? link : '';
-                    })
-                    .filter(Boolean);
-            }
-            // m3u8兜底
-            if (!episodes.length && videoDetail.vod_content) {
-                const matches = videoDetail.vod_content.match(M3U8_PATTERN) || [];
-                episodes = matches.map(link => link.replace(/^\$/, ''));
-            }
-
-            return JSON.stringify({
-                code: 200,
-                episodes,
-                detailUrl,
-                videoInfo: {
-                    title: videoDetail.vod_name,
-                    cover: videoDetail.vod_pic,
-                    desc: videoDetail.vod_content,
-                    type: videoDetail.type_name,
-                    year: videoDetail.vod_year,
-                    area: videoDetail.vod_area,
-                    director: videoDetail.vod_director,
-                    actor: videoDetail.vod_actor,
-                    remarks: videoDetail.vod_remarks,
-                    source_name: sourceCode === 'custom' ? '自定义源' : API_SITES[sourceCode].name,
-                    source_code: sourceCode
+            try {
+                // 特殊片源
+                if ((['ffzy', 'jisu', 'huangcang'].includes(sourceCode)) &&
+                    API_SITES[sourceCode]?.detail) {
+                    return await handleSpecialSourceDetail(id, sourceCode);
                 }
-            });
+                // 自定义API特殊
+                if (sourceCode === 'custom' && url.searchParams.get('useDetail') === 'true') {
+                    return await handleCustomApiSpecialDetail(id, customApi);
+                }
+                // 标准API详情
+                const detailUrl = sourceCode.startsWith('custom_')
+                    ? `${customApi}${API_CONFIG.detail.path}${id}`
+                    : `${API_SITES[sourceCode].api}${API_CONFIG.detail.path}${id}`;
+                const result = await fetchWithTimeout(
+                    PROXY_URL + encodeURIComponent(detailUrl),
+                    { headers: API_CONFIG.detail.headers }
+                );
+                if (!result || !Array.isArray(result.list) || !result.list.length)
+                    throw new Error('获取到的详情内容无效');
+
+                const videoDetail = result.list[0];
+                let episodes = [];
+
+                // 分集地址解析
+                if (videoDetail.vod_play_url) {
+                    const mainSource = videoDetail.vod_play_url.split('$$$')[0] || '';
+                    episodes = mainSource.split('#')
+                        .map(ep => {
+                            const [, link] = ep.split('$');
+                            return link && (link.startsWith('http://') || link.startsWith('https://')) ? link : '';
+                        })
+                        .filter(Boolean);
+                }
+                // m3u8兜底
+                if (!episodes.length && videoDetail.vod_content) {
+                    const matches = videoDetail.vod_content.match(M3U8_PATTERN) || [];
+                    episodes = matches.map(link => link.replace(/^\$/, ''));
+                }
+
+                return JSON.stringify({
+                    code: 200,
+                    episodes,
+                    detailUrl,
+                    videoInfo: {
+                        title: videoDetail.vod_name,
+                        cover: videoDetail.vod_pic,
+                        desc: videoDetail.vod_content,
+                        type: videoDetail.type_name,
+                        year: videoDetail.vod_year,
+                        area: videoDetail.vod_area,
+                        director: videoDetail.vod_director,
+                        actor: videoDetail.vod_actor,
+                        remarks: videoDetail.vod_remarks,
+                        source_name: sourceCode === 'custom' ? '自定义源' : API_SITES[sourceCode].name,
+                        source_code: sourceCode
+                    }
+                });
+            } catch (error) {
+                // 区分网络错误和解析错误
+                const errorMsg = error.name === 'AbortError' ? '详情请求超时' :
+                    error.name === 'SyntaxError' ? '详情数据格式无效' : error.message;
+                return JSON.stringify({
+                    code: 400,
+                    msg: `获取详情失败: ${errorMsg}`,
+                    episodes: []
+                });
+            }
         }
         throw new Error('未知的API路径');
     } catch (error) {
@@ -325,41 +355,54 @@ async function handleApiRequest(url) {
     }
 }
 
-// 初始化 API 请求拦截（fetch patch）
-(function () {
-    const originalFetch = window.fetch;
-    window.fetch = async function (input, init) {
-        let requestUrl;
-        if (typeof input === 'string') {
-            requestUrl = new URL(input, window.location.origin);
-        } else if (input && input.url) {
-            requestUrl = new URL(input.url, window.location.origin);
-        }
-        if (requestUrl && requestUrl.pathname.startsWith('/api/')) {
-            if (window.isPasswordProtected && window.isPasswordVerified) {
-                if (window.isPasswordProtected() && !window.isPasswordVerified()) return;
-            }
-            try {
-                const data = await handleApiRequest(requestUrl);
-                return new Response(data, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*',
-                    }
-                });
-            } catch (err) {
-                return new Response(JSON.stringify({
-                    code: 500,
-                    msg: '服务器内部错误',
-                }), {
-                    status: 500,
-                    headers: { 'Content-Type': 'application/json' }
+// 原始fetch函数
+const originalFetch = window.fetch;
+
+// 拦截全局fetch，处理API请求
+window.fetch = async function (input, init) {
+    let requestUrl;
+    if (typeof input === 'string') {
+        requestUrl = new URL(input, window.location.origin);
+    } else if (input && input.url) {
+        requestUrl = new URL(input.url, window.location.origin);
+    }
+    if (requestUrl && requestUrl.pathname.startsWith('/api/')) {
+        if (window.isPasswordProtected && window.isPasswordVerified) {
+            if (window.isPasswordProtected() && !window.isPasswordVerified()) {
+                // 返回401未授权响应，而不是undefined
+                return new Response(JSON.stringify({ 
+                    code: 401, 
+                    msg: 'Unauthorized: 需要密码验证', 
+                    list: [], 
+                    episodes: [] 
+                }), { 
+                    status: 401, 
+                    headers: { 'Content-Type': 'application/json' } 
                 });
             }
         }
-        return originalFetch.apply(this, arguments);
-    };
-})();
+        try {
+            const data = await handleApiRequest(requestUrl);
+            return new Response(data, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                }
+            });
+        } catch (err) {
+            return new Response(JSON.stringify({
+                code: 500,
+                msg: '服务器内部错误: ' + (err.message || '未知错误'),
+                list: [],
+                episodes: []
+            }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+    }
+    return originalFetch.apply(this, arguments);
+};
 
 // 站点可用性测试
 async function testSiteAvailability(apiUrl) {
