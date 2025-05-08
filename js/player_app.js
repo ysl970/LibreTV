@@ -5,7 +5,7 @@ function SQuery(selector, callback, timeout = 5000, interval = 100) {
     const check = () => {
         const element = document.querySelector(selector); // Using querySelector
         if (element) {
-           // console.log(`[SQuery] Element '${selector}' found by SQuery.`);
+            // console.log(`[SQuery] Element '${selector}' found by SQuery.`);
             callback(element);
         } else {
             elapsedTime += interval;
@@ -43,11 +43,11 @@ window.currentEpisodeIndex = 0;
 // window.playEpisode will be set later
 
 // In js/player_app.js
-document.addEventListener('DOMContentLoaded', function() {
-  //  console.log('[PlayerApp Debug] DOMContentLoaded event fired.');
+document.addEventListener('DOMContentLoaded', function () {
+    //  console.log('[PlayerApp Debug] DOMContentLoaded event fired.');
     const testGridElement = document.getElementById('episode-grid');
     if (testGridElement) {
-     //   console.log('[PlayerApp Debug] SUCCESS: episode-grid was FOUND immediately on DOMContentLoaded.');
+        //   console.log('[PlayerApp Debug] SUCCESS: episode-grid was FOUND immediately on DOMContentLoaded.');
     } else {
         console.error('[PlayerApp Debug] FAILURE: episode-grid was NOT FOUND immediately on DOMContentLoaded.');
     }
@@ -74,7 +74,7 @@ document.addEventListener('passwordVerified', () => {
 });
 
 function initializePageContent() {
-  //  console.log('[PlayerApp Debug] initializePageContent starting...');
+    //  console.log('[PlayerApp Debug] initializePageContent starting...');
     const urlParams = new URLSearchParams(window.location.search);
     const videoUrl = urlParams.get('url');
     const title = urlParams.get('title');
@@ -91,17 +91,17 @@ function initializePageContent() {
         if (episodesListParam) {
             try {
                 currentEpisodes = JSON.parse(decodeURIComponent(episodesListParam));
-              //  console.log("[PlayerApp] Episodes loaded from URL parameter.");
+                //  console.log("[PlayerApp] Episodes loaded from URL parameter.");
             } catch (e) {
                 console.warn("[PlayerApp] Failed to parse episodes from URL, falling back to localStorage.", e);
                 currentEpisodes = episodesSource ? JSON.parse(episodesSource) : [];
             }
         } else if (episodesSource) {
             currentEpisodes = JSON.parse(episodesSource);
-          //  console.log("[PlayerApp] Episodes loaded from localStorage.");
+            //  console.log("[PlayerApp] Episodes loaded from localStorage.");
         } else {
             currentEpisodes = [];
-          //  console.log("[PlayerApp] No episode data found in URL or localStorage.");
+            //  console.log("[PlayerApp] No episode data found in URL or localStorage.");
         }
         window.currentEpisodes = currentEpisodes; // Expose globally
 
@@ -131,11 +131,11 @@ function initializePageContent() {
 
     autoplayEnabled = localStorage.getItem('autoplayEnabled') !== 'false';
     const autoplayToggle =
-            document.getElementById('autoplay-next') ||
-            document.getElementById('autoplayToggle');
+        document.getElementById('autoplay-next') ||
+        document.getElementById('autoplayToggle');
     if (autoplayToggle) {
         autoplayToggle.checked = autoplayEnabled;
-        autoplayToggle.addEventListener('change', function(e) {
+        autoplayToggle.addEventListener('change', function (e) {
             autoplayEnabled = e.target.checked;
             localStorage.setItem('autoplayEnabled', autoplayEnabled.toString());
         });
@@ -163,7 +163,7 @@ function initializePageContent() {
     // Use requestAnimationFrame for initial render to ensure DOM is ready
     requestAnimationFrame(() => {
         renderEpisodes();
-     //   console.log('[PlayerApp] renderEpisodes called via requestAnimationFrame in initializePageContent');
+        //   console.log('[PlayerApp] renderEpisodes called via requestAnimationFrame in initializePageContent');
     });
     updateButtonStates();
     updateOrderButton();
@@ -174,7 +174,7 @@ function initializePageContent() {
 
     document.addEventListener('keydown', handleKeyboardShortcuts);
     window.addEventListener('beforeunload', saveCurrentProgress);
-    document.addEventListener('visibilitychange', function() {
+    document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'hidden') {
             saveCurrentProgress();
         }
@@ -183,13 +183,13 @@ function initializePageContent() {
     // Ensure critical functions from ui.js are globally available
     let checkUICounter = 0; // Declared with let
     const checkUIInterval = setInterval(() => {
-         if (typeof window.addToViewingHistory === 'function' || checkUICounter > 20) { // Check for 2s
+        if (typeof window.addToViewingHistory === 'function' || checkUICounter > 20) { // Check for 2s
             clearInterval(checkUIInterval);
-             if (typeof window.addToViewingHistory !== 'function') {
-                 console.error("UI functions like addToViewingHistory did not become available.");
-             }
-         }
-         checkUICounter++; // Increment counter
+            if (typeof window.addToViewingHistory !== 'function') {
+                console.error("UI functions like addToViewingHistory did not become available.");
+            }
+        }
+        checkUICounter++; // Increment counter
     }, 100);
 
     // Bind custom control buttons after a slight delay
@@ -229,7 +229,7 @@ class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
         }
 
         if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-         //   console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
+            //   console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
         }
 
         const lines = m3u8Content.split('\n');
@@ -240,7 +240,7 @@ class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
                 filteredLines.push(line);
             } else {
                 if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-               //     console.log('[AdFilter-Legacy] Removing line:', line);
+                    //     console.log('[AdFilter-Legacy] Removing line:', line);
                 }
             }
         }
@@ -292,7 +292,7 @@ function initPlayer(videoUrl, sourceCode) {
                 url: videoUrl, type: 'hls',
                 pic: (window.SITE_CONFIG && window.SITE_CONFIG.logo) || 'https://img.picgo.net/2025/04/12/image362e7d38b4af4a74.png',
                 customType: {
-                    hls: function(video, player) {
+                    hls: function (video, player) {
                         if (currentHls && currentHls.destroy) {
                             try { currentHls.destroy(); } catch (e) { console.warn('销毁旧HLS实例时出错:', e); }
                         }
@@ -303,36 +303,36 @@ function initPlayer(videoUrl, sourceCode) {
 
                         video.addEventListener('playing', function onPlaying() {
                             playbackStarted = true;
-                             const loadingEl = document.getElementById('loading'); if(loadingEl) loadingEl.style.display = 'none';
-                             const errorEl = document.getElementById('error'); if(errorEl) errorEl.style.display = 'none';
-                             // video.removeEventListener('playing', onPlaying); // Maybe keep listening?
+                            const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'none';
+                            const errorEl = document.getElementById('error'); if (errorEl) errorEl.style.display = 'none';
+                            // video.removeEventListener('playing', onPlaying); // Maybe keep listening?
                         });
 
                         video.disableRemotePlayback = false;
-                                // ★ 先拿到“正确的新地址”
+                        // ★ 先拿到“正确的新地址”
                         const src = player.options && player.options.video
-                                       ? player.options.video.url
-                                       : '';           // 理论上一定有
-                        
-                              // ★ 然后再去清理旧 DOM，避免把新地址弄丢
+                            ? player.options.video.url
+                            : '';           // 理论上一定有
+
+                        // ★ 然后再去清理旧 DOM，避免把新地址弄丢
                         const existingSource = video.querySelector('source');
-                             if (existingSource) existingSource.remove();
-                             if (video.hasAttribute('src')) video.removeAttribute('src');
+                        if (existingSource) existingSource.remove();
+                        if (video.hasAttribute('src')) video.removeAttribute('src');
                         hls.loadSource(src);
                         hls.attachMedia(video);
 
-                        hls.on(Hls.Events.MEDIA_ATTACHED, function() {
-                             if (debugMode) console.log("[PlayerApp] HLS Media Attached");
-                             // DPlayer usually handles play(), but ensure it happens
-                             // setTimeout(() => { player.play().catch(e => console.warn("Autoplay prevented:", e)); }, 100);
+                        hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+                            if (debugMode) console.log("[PlayerApp] HLS Media Attached");
+                            // DPlayer usually handles play(), but ensure it happens
+                            // setTimeout(() => { player.play().catch(e => console.warn("Autoplay prevented:", e)); }, 100);
                         });
 
-                        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                             if (debugMode) console.log("[PlayerApp] HLS Manifest Parsed");
-                             // Don't call video.play() here, let DPlayer handle it after MEDIA_ATTACHED/MANIFEST_PARSED
+                        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                            if (debugMode) console.log("[PlayerApp] HLS Manifest Parsed");
+                            // Don't call video.play() here, let DPlayer handle it after MEDIA_ATTACHED/MANIFEST_PARSED
                         });
 
-                        hls.on(Hls.Events.ERROR, function(event, data) {
+                        hls.on(Hls.Events.ERROR, function (event, data) {
                             if (debugMode) console.log('[HLS Event] Error:', event, data);
                             errorCount++;
                             if (data.details === 'bufferAppendError') {
@@ -343,7 +343,7 @@ function initPlayer(videoUrl, sourceCode) {
                             }
                             if (data.fatal && !playbackStarted) {
                                 console.error('Fatal HLS Error:', data);
-                                switch(data.type) {
+                                switch (data.type) {
                                     case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
                                     case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
                                     default:
@@ -353,8 +353,8 @@ function initPlayer(videoUrl, sourceCode) {
                             }
                         });
                         const loadingElement = document.getElementById('loading');
-                        hls.on(Hls.Events.FRAG_LOADED, () => { if(loadingElement) loadingElement.style.display = 'none'; });
-                        hls.on(Hls.Events.LEVEL_LOADED, () => { if(loadingElement) loadingElement.style.display = 'none'; });
+                        hls.on(Hls.Events.FRAG_LOADED, () => { if (loadingElement) loadingElement.style.display = 'none'; });
+                        hls.on(Hls.Events.LEVEL_LOADED, () => { if (loadingElement) loadingElement.style.display = 'none'; });
                     }
                 }
             }
@@ -371,11 +371,11 @@ function initPlayer(videoUrl, sourceCode) {
     }
 }
 
-function addDPlayerEventListeners(){
+function addDPlayerEventListeners() {
     if (!dp) return;
     const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
 
-     dp.on('fullscreen', () => {
+    dp.on('fullscreen', () => {
         if (debugMode) console.log("[PlayerApp] DPlayer event: fullscreen");
         if (window.screen.orientation && window.screen.orientation.lock) {
             window.screen.orientation.lock('landscape').catch(err => console.warn('屏幕方向锁定失败:', err));
@@ -388,30 +388,30 @@ function addDPlayerEventListeners(){
     });
 
     dp.on('fullscreen_cancel', () => {
-         if (debugMode) console.log("[PlayerApp] DPlayer event: fullscreen_cancel");
+        if (debugMode) console.log("[PlayerApp] DPlayer event: fullscreen_cancel");
         if (window.screen.orientation && window.screen.orientation.unlock) {
             window.screen.orientation.unlock();
         }
         const fsButton = document.getElementById('fullscreen-button');
-         if (fsButton && fsButton.querySelector('svg')) {
+        if (fsButton && fsButton.querySelector('svg')) {
             fsButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-maximize"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`;
             fsButton.setAttribute('aria-label', '全屏');
         }
     });
 
-    dp.on('loadedmetadata', function() {
-         if (debugMode) console.log("[PlayerApp] DPlayer event: loadedmetadata");
-        const el = document.getElementById('loading'); if(el) el.style.display = 'none';
+    dp.on('loadedmetadata', function () {
+        if (debugMode) console.log("[PlayerApp] DPlayer event: loadedmetadata");
+        const el = document.getElementById('loading'); if (el) el.style.display = 'none';
         videoHasEnded = false;
         setupProgressBarPreciseClicks();
         setTimeout(saveToHistory, 3000); // Save initial state to history
         startProgressSaveInterval(); // Start periodic saving
     });
 
-    dp.on('error', function(e) {
+    dp.on('error', function (e) {
         console.error("DPlayer error event:", e);
         if (dp.video && dp.video.currentTime > 1) { // Allow errors if playing for >1s
-             if (debugMode) console.log('DPlayer error ignored as video was playing.');
+            if (debugMode) console.log('DPlayer error ignored as video was playing.');
             return;
         }
         showError('播放器遇到错误，请检查视频源');
@@ -419,9 +419,9 @@ function addDPlayerEventListeners(){
 
     setupLongPressSpeedControl(); // Setup long press after dp is initialized
 
-    dp.on('seeking', function() { if (debugMode) console.log("[PlayerApp] DPlayer event: seeking"); isUserSeeking = true; videoHasEnded = false; });
-    dp.on('seeked', function() {
-         if (debugMode) console.log("[PlayerApp] DPlayer event: seeked");
+    dp.on('seeking', function () { if (debugMode) console.log("[PlayerApp] DPlayer event: seeking"); isUserSeeking = true; videoHasEnded = false; });
+    dp.on('seeked', function () {
+        if (debugMode) console.log("[PlayerApp] DPlayer event: seeked");
         // Adjust if seeked very close to the end
         if (dp.video && dp.video.duration > 0) {
             const timeFromEnd = dp.video.duration - dp.video.currentTime;
@@ -432,23 +432,23 @@ function addDPlayerEventListeners(){
         setTimeout(() => { isUserSeeking = false; }, 200); // Reset seeking flag after a short delay
     });
 
-    dp.on('ended', function() {
+    dp.on('ended', function () {
         videoHasEnded = true;
         saveCurrentProgress(); // Ensure final progress is saved
         clearVideoProgress(); // Clear progress for *this specific video*
         if (!autoplayEnabled) return;       // 用户关掉了自动连播
-            const nextIdx = currentEpisodeIndex + 1;   // 始终 +1（上一条回复已统一）
-            if (nextIdx < currentEpisodes.length) {
-                setTimeout(() => {
-                    // 再确认一下确实播完 & 没有人在拖动
-                    if (videoHasEnded && !isUserSeeking) playEpisode(nextIdx);
-                }, 1000);                       // 1 s 延迟，防误触
-            } else {
-                if (debugMode) console.log('[PlayerApp] 已到最后一集，自动连播停止');
-            }
+        const nextIdx = currentEpisodeIndex + 1;   // 始终 +1（上一条回复已统一）
+        if (nextIdx < currentEpisodes.length) {
+            setTimeout(() => {
+                // 再确认一下确实播完 & 没有人在拖动
+                if (videoHasEnded && !isUserSeeking) playEpisode(nextIdx);
+            }, 1000);                       // 1 s 延迟，防误触
+        } else {
+            if (debugMode) console.log('[PlayerApp] 已到最后一集，自动连播停止');
+        }
     });
 
-    dp.on('timeupdate', function() {
+    dp.on('timeupdate', function () {
         // Reset ended flag if user seeks back after video ended
         if (dp.video && dp.video.duration > 0) {
             if (isUserSeeking && dp.video.currentTime > dp.video.duration * 0.95) {
@@ -458,29 +458,29 @@ function addDPlayerEventListeners(){
         // Throttled progress save is handled by initializePageContent interval now
     });
 
-     // Add a timeout to show a message if loading takes too long
-    setTimeout(function() {
+    // Add a timeout to show a message if loading takes too long
+    setTimeout(function () {
         // Check if player exists, video exists, AND readyState suggests still loading/not enough data
         if (dp && dp.video && dp.video.readyState < 3 && !videoHasEnded) {
             const loadingEl = document.getElementById('loading');
             if (loadingEl && loadingEl.style.display !== 'none') {
                 loadingEl.innerHTML = `<div class="loading-spinner"></div><div>视频加载时间较长...</div><div style="font-size: 12px; color: #aaa; margin-top: 10px;">如长时间无响应，请尝试其他视频源或刷新</div>`;
-                 if (debugMode) console.warn("[PlayerApp] Loading timeout reached.");
+                if (debugMode) console.warn("[PlayerApp] Loading timeout reached.");
             }
         }
     }, 15000); // Increased timeout to 15s
 
     // Native fullscreen integration for DPlayer's *internal* button actions
-    (function(){
+    (function () {
         const dplayerElement = document.getElementById('dplayer');
-        if(dplayerElement) {
+        if (dplayerElement) {
             dp.on('fullscreen', () => { // DPlayer *enters* its fullscreen mode
-                 if (document.fullscreenElement || document.webkitFullscreenElement) return; // Already native FS
-                 if (dplayerElement.requestFullscreen) dplayerElement.requestFullscreen().catch(err => console.warn('DPlayer internal FS to native failed:', err));
-                 else if (dplayerElement.webkitRequestFullscreen) dplayerElement.webkitRequestFullscreen().catch(err => console.warn('DPlayer internal FS to native failed (webkit):', err));
+                if (document.fullscreenElement || document.webkitFullscreenElement) return; // Already native FS
+                if (dplayerElement.requestFullscreen) dplayerElement.requestFullscreen().catch(err => console.warn('DPlayer internal FS to native failed:', err));
+                else if (dplayerElement.webkitRequestFullscreen) dplayerElement.webkitRequestFullscreen().catch(err => console.warn('DPlayer internal FS to native failed (webkit):', err));
             });
             dp.on('fullscreen_cancel', () => { // DPlayer *exits* its fullscreen mode
-                 if (!document.fullscreenElement && !document.webkitFullscreenElement) return; // Not in native FS
+                if (!document.fullscreenElement && !document.webkitFullscreenElement) return; // Not in native FS
                 if (document.exitFullscreen) document.exitFullscreen().catch(err => console.warn('DPlayer internal exit FS from native failed:', err));
                 else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(err => console.warn('DPlayer internal exit FS from native failed (webkit):', err));
             });
@@ -503,11 +503,11 @@ function setupPlayerControls() {
                 const playerContainer = document.getElementById('dplayer');
                 if (playerContainer) {
                     if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                        if (playerContainer.requestFullscreen) playerContainer.requestFullscreen().catch(err => console.error("Fallback FS error:",err));
-                        else if (playerContainer.webkitRequestFullscreen) playerContainer.webkitRequestFullscreen().catch(err => console.error("Fallback FS error (webkit):",err));
+                        if (playerContainer.requestFullscreen) playerContainer.requestFullscreen().catch(err => console.error("Fallback FS error:", err));
+                        else if (playerContainer.webkitRequestFullscreen) playerContainer.webkitRequestFullscreen().catch(err => console.error("Fallback FS error (webkit):", err));
                     } else {
-                        if (document.exitFullscreen) document.exitFullscreen().catch(err => console.error("Fallback exit FS error:",err));
-                        else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(err => console.error("Fallback exit FS error (webkit):",err));
+                        if (document.exitFullscreen) document.exitFullscreen().catch(err => console.error("Fallback exit FS error:", err));
+                        else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(err => console.error("Fallback exit FS error (webkit):", err));
                     }
                 }
             }
@@ -521,14 +521,14 @@ function setupPlayerControls() {
             const videoUrlRetry = urlParamsRetry.get('url');
             const sourceCodeRetry = urlParamsRetry.get('source_code');
             if (videoUrlRetry) {
-                const errorEl = document.getElementById('error'); if(errorEl) errorEl.style.display = 'none';
-                const loadingEl = document.getElementById('loading'); if(loadingEl) loadingEl.style.display = 'flex';
+                const errorEl = document.getElementById('error'); if (errorEl) errorEl.style.display = 'none';
+                const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'flex';
                 if (dp && dp.video) {
-                  //  console.log("[PlayerApp] Retrying: Switching video.");
+                    //  console.log("[PlayerApp] Retrying: Switching video.");
                     dp.switchVideo({ url: videoUrlRetry, type: 'hls' });
                     dp.play();
                 } else {
-                 //    console.log("[PlayerApp] Retrying: Re-initializing player.");
+                    //    console.log("[PlayerApp] Retrying: Re-initializing player.");
                     initPlayer(videoUrlRetry, sourceCodeRetry);
                 }
             } else {
@@ -621,9 +621,9 @@ function handleKeyboardShortcuts(e) {
         case 'PageUp': if (typeof window.playPreviousEpisode === 'function') window.playPreviousEpisode(); actionText = '上一集'; direction = 'left'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
         case 'PageDown': if (typeof window.playNextEpisode === 'function') window.playNextEpisode(); actionText = '下一集'; direction = 'right'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
         case ' ': // Spacebar for play/pause
-             dp.toggle(); actionText = dp.video.paused ? '暂停' : '播放'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
-        case 'ArrowUp': dp.volume(Math.min(1, dp.video.volume + 0.1)); actionText = `音量 ${Math.round(dp.video.volume*100)}%`; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
-        case 'ArrowDown': dp.volume(Math.max(0, dp.video.volume - 0.1)); actionText = `音量 ${Math.round(dp.video.volume*100)}%`; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+            dp.toggle(); actionText = dp.video.paused ? '暂停' : '播放'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'ArrowUp': dp.volume(Math.min(1, dp.video.volume + 0.1)); actionText = `音量 ${Math.round(dp.video.volume * 100)}%`; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'ArrowDown': dp.volume(Math.max(0, dp.video.volume - 0.1)); actionText = `音量 ${Math.round(dp.video.volume * 100)}%`; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
         case 'f': dp.fullScreen.toggle(); actionText = '切换全屏'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break; // 'f' for fullscreen toggle
     }
     if (actionText && typeof showShortcutHint === 'function') showShortcutHint(actionText, direction);
@@ -654,7 +654,7 @@ function setupLongPressSpeedControl() {
     let originalSpeed = 1.0;
     let speedChangedByLongPress = false;
 
-    playerVideoWrap.addEventListener('touchstart', function(e) {
+    playerVideoWrap.addEventListener('touchstart', function (e) {
         if (isScreenLocked || dp.video.paused) return; // Ignore if screen locked or paused
         const touchX = e.touches[0].clientX;
         const rect = playerVideoWrap.getBoundingClientRect();
@@ -665,18 +665,18 @@ function setupLongPressSpeedControl() {
                 if (isScreenLocked || dp.video.paused) return; // Double check
                 dp.speed(2.0);
                 speedChangedByLongPress = true;
-                if(typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
+                if (typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
             }, 300); // 300ms delay for long press
         }
     }, { passive: true });
 
-    const endLongPress = function() {
+    const endLongPress = function () {
         if (longPressTimer) clearTimeout(longPressTimer);
         longPressTimer = null;
         if (speedChangedByLongPress) {
             dp.speed(originalSpeed);
             speedChangedByLongPress = false;
-            if(typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
+            if (typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
         }
     };
     playerVideoWrap.addEventListener('touchend', endLongPress);
@@ -695,7 +695,7 @@ function showMessage(text, type = 'info', duration = 3000) {
     const messageElement = document.getElementById('message');
     if (!messageElement) { console.warn("Message element not found"); return; }
 
-    let bgColorClass = ({error:'bg-red-500', success:'bg-green-500', warning:'bg-yellow-500', info:'bg-blue-500'})[type] || 'bg-blue-500';
+    let bgColorClass = ({ error: 'bg-red-500', success: 'bg-green-500', warning: 'bg-yellow-500', info: 'bg-blue-500' })[type] || 'bg-blue-500';
 
     // Reset classes and apply new ones
     messageElement.className = `fixed top-4 right-4 p-3 rounded shadow-lg z-[10001] text-sm ${bgColorClass} text-white transition-opacity duration-300 opacity-0`;
@@ -746,19 +746,19 @@ function toggleLockScreen() {
 function renderEpisodes() {
     const grid = document.getElementById('episode-grid');
     if (!grid) { setTimeout(renderEpisodes, 100); return; }
-       // ★ 让选集区域可见 / 隐藏
-       const container = document.getElementById('episodes-container');
-       if (container) {
-           if (currentEpisodes.length > 1) {
-               container.classList.remove('hidden');
-           } else {
-               container.classList.add('hidden');
-           }
-       }
-    
-       // ★ 更新“共 x 集”文字
-       const countSpan = document.getElementById('episodes-count');
-       if (countSpan) countSpan.textContent = `共 ${currentEpisodes.length} 集`;
+    // ★ 让选集区域可见 / 隐藏
+    const container = document.getElementById('episodes-container');
+    if (container) {
+        if (currentEpisodes.length > 1) {
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+        }
+    }
+
+    // ★ 更新“共 x 集”文字
+    const countSpan = document.getElementById('episodes-count');
+    if (countSpan) countSpan.textContent = `共 ${currentEpisodes.length} 集`;
 
     grid.innerHTML = '';
 
@@ -775,10 +775,10 @@ function renderEpisodes() {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = idx === currentEpisodeIndex
-              ? 'p-2 rounded episode-active'
-              : 'p-2 rounded bg-[#222] hover:bg-[#333] text-gray-300';
-        btn.textContent     = idx + 1;
-        btn.dataset.index   = idx;                  // 关键：把真实下标写到 data 上
+            ? 'p-2 rounded episode-active'
+            : 'p-2 rounded bg-[#222] hover:bg-[#333] text-gray-300';
+        btn.textContent = idx + 1;
+        btn.dataset.index = idx;                  // 关键：把真实下标写到 data 上
         grid.appendChild(btn);
     });
 
@@ -816,14 +816,14 @@ function updateEpisodeInfo() {
 function toggleEpisodeOrder() {
     episodesReversed = !episodesReversed;
     localStorage.setItem('episodesReversed', episodesReversed.toString());
- //   console.log('[PlayerApp] Episode order toggled. New state:', episodesReversed ? 'Reversed' : 'Normal');
+    //   console.log('[PlayerApp] Episode order toggled. New state:', episodesReversed ? 'Reversed' : 'Normal');
     updateOrderButton();
     renderEpisodes();
 }
 
-function updateOrderButton(){
+function updateOrderButton() {
     const icon = document.getElementById('order-icon');
-    if(!icon)return;
+    if (!icon) return;
     // 清空原 path 后填充新图标
     icon.innerHTML = episodesReversed
         ? '<polyline points="18 15 12 9 6 15"></polyline>'  // ⬆️  倒序
@@ -832,18 +832,18 @@ function updateOrderButton(){
 
 function playPreviousEpisode() {
     if (!currentEpisodes.length) return;
-        const prevIdx = currentEpisodeIndex - 1;          // 无论正序 / 倒序都减 1
-        if (prevIdx >= 0) {
-            playEpisode(prevIdx);
+    const prevIdx = currentEpisodeIndex - 1;          // 无论正序 / 倒序都减 1
+    if (prevIdx >= 0) {
+        playEpisode(prevIdx);
     } else showMessage('已经是第一集了', 'info');
 }
 window.playPreviousEpisode = playPreviousEpisode;
 
 function playNextEpisode() {
     if (!currentEpisodes.length) return;
-        const nextIdx = currentEpisodeIndex + 1;          // 始终加 1
-        if (nextIdx < currentEpisodes.length) {
-            playEpisode(nextIdx);
+    const nextIdx = currentEpisodeIndex + 1;          // 始终加 1
+    if (nextIdx < currentEpisodes.length) {
+        playEpisode(nextIdx);
     } else showMessage('已经是最后一集了', 'info');
 }
 window.playNextEpisode = playNextEpisode;
@@ -946,20 +946,20 @@ function playEpisode(index) {
         return;
     }
 
-         //------------------------------------------------------------------
-         // 新的方法：直接用 location.href 带 index/url 重新加载 player.html
-         //------------------------------------------------------------------
-         const playerUrl = new URL(window.location.origin + window.location.pathname);
-         playerUrl.searchParams.set('url', episodeUrl);
-         playerUrl.searchParams.set('title', encodeURIComponent(currentVideoTitle));
-         playerUrl.searchParams.set('index', index.toString());
-         // 如果你还想保 source_code，也可以加：
-         const sourceCode = new URLSearchParams(window.location.search).get('source_code');
-         if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
-    
-         // 如果你确实需要在 URL 里带整个剧集列表（不依赖 localStorage），也可以加：
-         // playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(currentEpisodes)));
-    
-         window.location.href = playerUrl.toString();
+    //------------------------------------------------------------------
+    // 新的方法：直接用 location.href 带 index/url 重新加载 player.html
+    //------------------------------------------------------------------
+    const playerUrl = new URL(window.location.origin + window.location.pathname);
+    playerUrl.searchParams.set('url', episodeUrl);
+    playerUrl.searchParams.set('title', encodeURIComponent(currentVideoTitle));
+    playerUrl.searchParams.set('index', index.toString());
+    // 如果你还想保 source_code，也可以加：
+    const sourceCode = new URLSearchParams(window.location.search).get('source_code');
+    if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
+
+    // 如果你确实需要在 URL 里带整个剧集列表（不依赖 localStorage），也可以加：
+    // playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(currentEpisodes)));
+
+    window.location.href = playerUrl.toString();
 }
 window.playEpisode = playEpisode; // Expose globally
