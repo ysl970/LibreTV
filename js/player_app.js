@@ -1,494 +1,983 @@
-// ==========================  js/player_app.js  ==========================
-/* ---------------------------------------------------------------------- */
-/*  1. 工具函数                                                           */
-/* ---------------------------------------------------------------------- */
+// File: js/player_app.js
+// Add this helper function at the top of js/player_app.js
 function SQuery(selector, callback, timeout = 5000, interval = 100) {
-    let elapsed = 0;
-    (function check () {
-        const el = document.querySelector(selector);
-        if (el) { callback(el); return; }
-        elapsed += interval;
-        if (elapsed < timeout) setTimeout(check, interval);
-        else console.error(`[SQuery] '${selector}' NOT found in ${timeout} ms`);
-    })();
+    let elapsedTime = 0;
+    const check = () => {
+        const element = document.querySelector(selector); // Using querySelector
+        if (element) {
+           // console.log(`[SQuery] Element '${selector}' found by SQuery.`);
+            callback(element);
+        } else {
+            elapsedTime += interval;
+            if (elapsedTime < timeout) {
+                setTimeout(check, interval);
+            } else {
+                console.error(`[SQuery] Element '${selector}' NOT FOUND by SQuery after ${timeout}ms.`);
+                // You could call your global showError or showToast here
+                // Example: if (typeof showError === 'function') showError(`关键UI元素 '${selector}' 未找到`);
+            }
+        }
+    };
+    check();
 }
-console.log('[DEBUG] player_app.js loaded at', location.href);
-
-/* ---------------------------------------------------------------------- */
-/*  2. 全局状态                                                           */
-/* ---------------------------------------------------------------------- */
+// --- 模块内变量 ---
 let currentVideoTitle = '';
 let currentEpisodeIndex = 0;
-let currentEpisodes     = [];
-let episodesReversed    = false;
-
-let dp           = null;        // DPlayer 实例
-let currentHls   = null;
-let autoplayEnabled     = true;
-let isUserSeeking       = false;
-let videoHasEnded       = false;
+let currentEpisodes = [];
+let episodesReversed = false;
+let dp = null; // DPlayer instance
+let currentHls = null;
+let autoplayEnabled = true;
+let isUserSeeking = false;
+let videoHasEnded = false;
+let userClickedPosition = null;
 let shortcutHintTimeout = null;
 let progressSaveInterval = null;
-let isScreenLocked      = false;
+let isScreenLocked = false;
 
-/* 需要在其他脚本访问的挂到 window */
-window.currentEpisodes      = [];
-window.currentEpisodeIndex  = 0;
-window.playPreviousEpisode  = playPreviousEpisode;
-window.playNextEpisode      = playNextEpisode;
+// 将需要在 player_preload.js 中访问的变量挂载到 window
+window.currentEpisodes = [];
+window.currentEpisodeIndex = 0;
+// window.PLAYER_CONFIG is set by config.js
+// window.dp will be set after DPlayer initialization
+// window.playEpisode will be set later
 
-/* ---------------------------------------------------------------------- */
-/*  3. 启动入口                                                           */
-/* ---------------------------------------------------------------------- */
-document.addEventListener('DOMContentLoaded', () => {
-    // 密码校验（如果有）
-    if (typeof window.isPasswordProtected === 'function' &&
-        typeof window.isPasswordVerified  === 'function' &&
-        window.isPasswordProtected() && !window.isPasswordVerified()) {
+// In js/player_app.js
+document.addEventListener('DOMContentLoaded', function() {
+  //  console.log('[PlayerApp Debug] DOMContentLoaded event fired.');
+    const testGridElement = document.getElementById('episode-grid');
+    if (testGridElement) {
+     //   console.log('[PlayerApp Debug] SUCCESS: episode-grid was FOUND immediately on DOMContentLoaded.');
+    } else {
+        console.error('[PlayerApp Debug] FAILURE: episode-grid was NOT FOUND immediately on DOMContentLoaded.');
+    }
 
-        if (typeof window.showPasswordModal === 'function') window.showPasswordModal();
-        SQuery('#loading', el => el.style.display = 'none');
-        return;
+    // Existing password check and initializePageContent call
+    if (typeof window.isPasswordVerified === 'function' && typeof window.isPasswordProtected === 'function') {
+        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
+            if (typeof window.showPasswordModal === 'function') window.showPasswordModal();
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl) loadingEl.style.display = 'none';
+            return;
+        }
+    } else {
+        console.warn("Password functions (isPasswordProtected/isPasswordVerified) not found. Assuming no password protection.");
     }
     initializePageContent();
 });
 
+// Listen for password verification success event
 document.addEventListener('passwordVerified', () => {
-    SQuery('#loading', el => el.style.display = 'flex');
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) loadingEl.style.display = 'flex'; // Show loading after password
     initializePageContent();
 });
 
-/* ---------------------------------------------------------------------- */
-/*  4. 页面初始化                                                          */
-/* ---------------------------------------------------------------------- */
-function initializePageContent () {
-    const params      = new URLSearchParams(location.search);
-    const videoUrl    = params.get('url');
-    const title       = params.get('title');
-    const sourceCode  = params.get('source_code');
-    const indexParam  = parseInt(params.get('index') || '0', 10);
-    const episodesStr = params.get('episodes');
+function initializePageContent() {
+  //  console.log('[PlayerApp Debug] initializePageContent starting...');
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoUrl = urlParams.get('url');
+    const title = urlParams.get('title');
+    const sourceCode = urlParams.get('source_code');
+    let index = parseInt(urlParams.get('index') || '0', 10);
+    const episodesListParam = urlParams.get('episodes'); // Check if episodes are passed via URL
 
     currentVideoTitle = title || localStorage.getItem('currentVideoTitle') || '未知视频';
-    document.title    = `${currentVideoTitle} - ${(window.SITE_CONFIG && SITE_CONFIG.name) || '播放器'}`;
-    SQuery('#video-title', el => el.textContent = currentVideoTitle);
+    window.currentVideoTitle = currentVideoTitle;
 
-    /* ---------- 取剧集列表 ---------- */
+    // Initialize episodes from localStorage or URL parameter
     try {
-        const localEp = localStorage.getItem('currentEpisodes');
-        if (episodesStr) {
-            currentEpisodes = JSON.parse(decodeURIComponent(episodesStr));
-        } else if (localEp) {
-            currentEpisodes = JSON.parse(localEp);
-        } else currentEpisodes = [];
+        let episodesSource = localStorage.getItem('currentEpisodes');
+        if (episodesListParam) {
+            try {
+                currentEpisodes = JSON.parse(decodeURIComponent(episodesListParam));
+              //  console.log("[PlayerApp] Episodes loaded from URL parameter.");
+            } catch (e) {
+                console.warn("[PlayerApp] Failed to parse episodes from URL, falling back to localStorage.", e);
+                currentEpisodes = episodesSource ? JSON.parse(episodesSource) : [];
+            }
+        } else if (episodesSource) {
+            currentEpisodes = JSON.parse(episodesSource);
+          //  console.log("[PlayerApp] Episodes loaded from localStorage.");
+        } else {
+            currentEpisodes = [];
+          //  console.log("[PlayerApp] No episode data found in URL or localStorage.");
+        }
+        window.currentEpisodes = currentEpisodes; // Expose globally
+
+        // Validate index
+        if (currentEpisodes.length > 0 && (index < 0 || index >= currentEpisodes.length)) {
+            console.warn(`[PlayerApp] Invalid episode index ${index} for ${currentEpisodes.length} episodes. Resetting to 0.`);
+            index = 0;
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('index', index.toString());
+            window.history.replaceState({}, '', newUrl.toString());
+        }
+        currentEpisodeIndex = index;
+        window.currentEpisodeIndex = currentEpisodeIndex; // Expose globally
+
+        episodesReversed = localStorage.getItem('episodesReversed') === 'true';
     } catch (e) {
-        console.error('[PlayerApp] 解析剧集失败:', e);
-        currentEpisodes = [];
+        console.error('[PlayerApp] Error initializing episode data:', e);
+        currentEpisodes = []; window.currentEpisodes = [];
+        currentEpisodeIndex = 0; window.currentEpisodeIndex = 0;
+        episodesReversed = false;
     }
-    window.currentEpisodes = currentEpisodes;
 
-    /* ---------- 当前集 ---------- */
-    currentEpisodeIndex = (currentEpisodes.length &&
-                           indexParam >= 0 &&
-                           indexParam < currentEpisodes.length) ? indexParam : 0;
-    window.currentEpisodeIndex = currentEpisodeIndex;
+    const siteName = (window.SITE_CONFIG && window.SITE_CONFIG.name) ? window.SITE_CONFIG.name : '播放器';
+    document.title = `${currentVideoTitle} - ${siteName}`;
+    const videoTitleElement = document.getElementById('video-title');
+    if (videoTitleElement) videoTitleElement.textContent = currentVideoTitle;
 
-    episodesReversed  = localStorage.getItem('episodesReversed') === 'true';
-    autoplayEnabled   = localStorage.getItem('autoplayEnabled') !== 'false';
-    SQuery('#autoplay-next', el => {
-        el.checked = autoplayEnabled;
-        el.onchange = e => {
+    autoplayEnabled = localStorage.getItem('autoplayEnabled') !== 'false';
+    const autoplayToggle = document.getElementById('autoplay-next');
+    if (autoplayToggle) {
+        autoplayToggle.checked = autoplayEnabled;
+        autoplayToggle.addEventListener('change', function(e) {
             autoplayEnabled = e.target.checked;
-            localStorage.setItem('autoplayEnabled', autoplayEnabled);
-        };
-    });
+            localStorage.setItem('autoplayEnabled', autoplayEnabled.toString());
+        });
+    }
 
-    /* ---------- 播放器 ---------- */
     if (videoUrl) {
         initPlayer(videoUrl, sourceCode);
-        const resumePos = parseInt(params.get('position') || '0', 10);
-        if (resumePos > 0) setTimeout(() => { dp && dp.seek(resumePos); showPositionRestoreHint(resumePos); }, 1500);
-    } else showError('无效的视频链接');
+        const position = urlParams.get('position');
+        if (position) {
+            setTimeout(() => {
+                if (dp && dp.video) {
+                    const positionNum = parseInt(position, 10);
+                    if (!isNaN(positionNum) && positionNum > 0) {
+                        dp.seek(positionNum);
+                        if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(positionNum);
+                    }
+                }
+            }, 1500); // Delay seeking slightly
+        }
+    } else {
+        showError('无效的视频链接');
+    }
 
-    /* ---------- UI ---------- */
     updateEpisodeInfo();
-    requestAnimationFrame(renderEpisodes);
+    // Use requestAnimationFrame for initial render to ensure DOM is ready
+    requestAnimationFrame(() => {
+        renderEpisodes();
+     //   console.log('[PlayerApp] renderEpisodes called via requestAnimationFrame in initializePageContent');
+    });
     updateButtonStates();
     updateOrderButton();
-    setTimeout(setupPlayerControls, 100);
-    setTimeout(setupProgressBarPreciseClicks, 1000);
 
-    /* ---------- 事件 ---------- */
+    setTimeout(() => {
+        setupProgressBarPreciseClicks();
+    }, 1000); // Delay progress bar setup slightly
+
     document.addEventListener('keydown', handleKeyboardShortcuts);
     window.addEventListener('beforeunload', saveCurrentProgress);
-    window.addEventListener('error', e => console.error('GLOBAL ERR', e.message, e.filename, e.lineno));
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') {
+            saveCurrentProgress();
+        }
+    });
 
-    document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && saveCurrentProgress());
+    // Ensure critical functions from ui.js are globally available
+    let checkUICounter = 0; // Declared with let
+    const checkUIInterval = setInterval(() => {
+         if (typeof window.addToViewingHistory === 'function' || checkUICounter > 20) { // Check for 2s
+            clearInterval(checkUIInterval);
+             if (typeof window.addToViewingHistory !== 'function') {
+                 console.error("UI functions like addToViewingHistory did not become available.");
+             }
+         }
+         checkUICounter++; // Increment counter
+    }, 100);
+
+    // Bind custom control buttons after a slight delay
+    setTimeout(setupPlayerControls, 100);
 }
 
-/* ---------------------------------------------------------------------- */
-/*  5. 自定义 HLS Loader（可过滤广告）                                     */
-/* ---------------------------------------------------------------------- */
+// --- Ad Filtering Loader (Using Legacy Logic) ---
 class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
-    constructor (cfg) { super(cfg); }
-    load (context, cfg, cbs) {
-        const adFilter = (window.PLAYER_CONFIG?.adFilteringEnabled) ?? true;
-        if (adFilter && (context.type === 'manifest' || context.type === 'level')) {
-            const orig = cbs.onSuccess;
-            cbs.onSuccess = (res, stats, ctx) => {
-                if (typeof res.data === 'string')
-                    res.data = res.data.split('\n').filter(l => !l.includes('#EXT-X-DISCONTINUITY')).join('\n');
-                orig(res, stats, ctx);
+    constructor(config) {
+        super(config);
+    }
+
+    load(context, config, callbacks) {
+        // Ensure PLAYER_CONFIG and its properties are accessible and have default fallbacks
+        const adFilteringEnabled = (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
+            ? window.PLAYER_CONFIG.adFilteringEnabled
+            : true; // Default to true if not specified
+
+        if ((context.type === 'manifest' || context.type === 'level') && adFilteringEnabled) {
+            const origOnSuccess = callbacks.onSuccess;
+            callbacks.onSuccess = (response, stats, context) => {
+                if (response.data && typeof response.data === 'string') {
+                    response.data = this.filterAdsLegacy(response.data); // Call the legacy filter
+                }
+                return origOnSuccess(response, stats, context);
             };
         }
-        super.load(context, cfg, cbs);
+
+        // Call the original HLS.js loader's load method
+        super.load(context, config, callbacks);
+    }
+
+    // Legacy filter logic (removes lines with #EXT-X-DISCONTINUITY)
+    filterAdsLegacy(m3u8Content) {
+        if (typeof m3u8Content !== 'string' || !m3u8Content) {
+            return m3u8Content;
+        }
+
+        if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
+         //   console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
+        }
+
+        const lines = m3u8Content.split('\n');
+        const filteredLines = [];
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line.includes('#EXT-X-DISCONTINUITY')) {
+                filteredLines.push(line);
+            } else {
+                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
+               //     console.log('[AdFilter-Legacy] Removing line:', line);
+                }
+            }
+        }
+        return filteredLines.join('\n');
+    }
+
+    // Keeping the old method name for backward compatibility, but redirecting to the legacy filter
+    filterAdsFromM3U8Legacy(m3u8Content) {
+        return this.filterAdsLegacy(m3u8Content);
     }
 }
 
-/* ---------------------------------------------------------------------- */
-/*  6. 初始化 DPlayer                                                     */
-/* ---------------------------------------------------------------------- */
-function initPlayer (videoUrl, sourceCode) {
-    if (!Hls || !DPlayer) return showError('播放器组件加载失败，请刷新');
+// --- Player Initialization ---
+function initPlayer(videoUrl, sourceCode) {
+    if (!videoUrl) {
+        showError("视频链接无效");
+        return;
+    }
+    if (!Hls || !DPlayer) {
+        showError("播放器组件加载失败，请刷新");
+        return;
+    }
 
-    const debug = window.PLAYER_CONFIG?.debugMode;
-    const hlsCfg = {
-        debug: debug || false,
-        loader: (window.PLAYER_CONFIG?.adFilteringEnabled) ? CustomHlsJsLoader : Hls.DefaultConfig.loader,
-        enableWorker: true
+    const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
+    const adFilteringEnabled = (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
+        ? window.PLAYER_CONFIG.adFilteringEnabled
+        : true; // Default to true if not specified
+
+    const hlsConfig = {
+        debug: debugMode || false,
+        loader: adFilteringEnabled ? CustomHlsJsLoader : Hls.DefaultConfig.loader,
+        enableWorker: true, lowLatencyMode: false, backBufferLength: 90, maxBufferLength: 30,
+        maxMaxBufferLength: 60, maxBufferSize: 30 * 1000 * 1000, maxBufferHole: 0.5,
+        fragLoadingMaxRetry: 6, fragLoadingMaxRetryTimeout: 64000, fragLoadingRetryDelay: 1000,
+        manifestLoadingMaxRetry: 3, manifestLoadingRetryDelay: 1000, levelLoadingMaxRetry: 4,
+        levelLoadingRetryDelay: 1000, startLevel: -1, abrEwmaDefaultEstimate: 500000,
+        abrBandWidthFactor: 0.95, abrBandWidthUpFactor: 0.7, abrMaxWithRealBitrate: true,
+        stretchShortVideoTrack: true, appendErrorMaxRetry: 5, liveSyncDurationCount: 3,
+        liveDurationInfinity: false
     };
 
     try {
         dp = new DPlayer({
             container: document.getElementById('dplayer'),
-            autoplay: true,
-            theme: '#00ccff',
-            preload: 'auto',
+            autoplay: true, theme: '#00ccff', preload: 'auto', loop: false, lang: 'zh-cn',
+            hotkey: true, mutex: true, volume: 0.7, screenshot: true, preventClickToggle: false,
+            airplay: true, chromecast: true,
             video: {
-                url: videoUrl,
-                type: 'hls',
-                pic: window.SITE_CONFIG?.logo || '',
+                url: videoUrl, type: 'hls',
+                pic: (window.SITE_CONFIG && window.SITE_CONFIG.logo) || 'https://img.picgo.net/2025/04/12/image362e7d38b4af4a74.png',
                 customType: {
-                    hls (video, player) {
-                        currentHls?.destroy?.();
-                        currentHls = new Hls(hlsCfg);
-                        currentHls.loadSource(videoUrl);
-                        currentHls.attachMedia(video);
+                    hls: function(video, player) {
+                        if (currentHls && currentHls.destroy) {
+                            try { currentHls.destroy(); } catch (e) { console.warn('销毁旧HLS实例时出错:', e); }
+                        }
+                        const hls = new Hls(hlsConfig);
+                        currentHls = hls; window.currentHls = currentHls; // Expose if needed
+
+                        let errorDisplayed = false, errorCount = 0, playbackStarted = false, bufferAppendErrorCount = 0;
+
+                        // Clear previous source element if exists, before attaching HLS
+                        const existingSource = video.querySelector('source');
+                        if (existingSource) existingSource.remove();
+                        // Remove src attribute if set, HLS will manage it
+                        if (video.hasAttribute('src')) video.removeAttribute('src');
+
+                        video.addEventListener('playing', function onPlaying() {
+                            playbackStarted = true;
+                             const loadingEl = document.getElementById('loading'); if(loadingEl) loadingEl.style.display = 'none';
+                             const errorEl = document.getElementById('error'); if(errorEl) errorEl.style.display = 'none';
+                             // video.removeEventListener('playing', onPlaying); // Maybe keep listening?
+                        });
+
+                        video.disableRemotePlayback = false;
+
+                        hls.loadSource(videoUrl); // Load source using the URL passed to initPlayer
+                        hls.attachMedia(video);
+
+                        hls.on(Hls.Events.MEDIA_ATTACHED, function() {
+                             if (debugMode) console.log("[PlayerApp] HLS Media Attached");
+                             // DPlayer usually handles play(), but ensure it happens
+                             // setTimeout(() => { player.play().catch(e => console.warn("Autoplay prevented:", e)); }, 100);
+                        });
+
+                        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                             if (debugMode) console.log("[PlayerApp] HLS Manifest Parsed");
+                             // Don't call video.play() here, let DPlayer handle it after MEDIA_ATTACHED/MANIFEST_PARSED
+                        });
+
+                        hls.on(Hls.Events.ERROR, function(event, data) {
+                            if (debugMode) console.log('[HLS Event] Error:', event, data);
+                            errorCount++;
+                            if (data.details === 'bufferAppendError') {
+                                bufferAppendErrorCount++;
+                                if (debugMode) console.warn(`bufferAppendError occurred ${bufferAppendErrorCount} times`);
+                                if (playbackStarted) return;
+                                if (bufferAppendErrorCount >= 3) hls.recoverMediaError();
+                            }
+                            if (data.fatal && !playbackStarted) {
+                                console.error('Fatal HLS Error:', data);
+                                switch(data.type) {
+                                    case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                                    case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                                    default:
+                                        if (errorCount > 3 && !errorDisplayed) { errorDisplayed = true; showError('视频加载失败 (HLS)'); }
+                                        break;
+                                }
+                            }
+                        });
+                        const loadingElement = document.getElementById('loading');
+                        hls.on(Hls.Events.FRAG_LOADED, () => { if(loadingElement) loadingElement.style.display = 'none'; });
+                        hls.on(Hls.Events.LEVEL_LOADED, () => { if(loadingElement) loadingElement.style.display = 'none'; });
                     }
                 }
             }
         });
-        window.dp = dp;
+        window.dp = dp; // Expose DPlayer instance globally
+        if (debugMode) console.log("[PlayerApp] DPlayer instance created.");
+
+        // Add DPlayer event listeners
         addDPlayerEventListeners();
-    } catch (e) {
-        console.error('DPlayer 初始化失败:', e);
-        showError('播放器初始化失败');
+
+    } catch (playerError) {
+        console.error("Failed to initialize DPlayer:", playerError);
+        showError("播放器初始化失败");
     }
 }
 
-/* ---------------------------------------------------------------------- */
-/*  7. DPlayer 事件                                                       */
-/* ---------------------------------------------------------------------- */
-function addDPlayerEventListeners () {
+function addDPlayerEventListeners(){
     if (!dp) return;
-    const debug = window.PLAYER_CONFIG?.debugMode;
+    const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
 
-    dp.on('loadedmetadata', () => {
-        SQuery('#loading', el => el.style.display = 'none');
+     dp.on('fullscreen', () => {
+        if (debugMode) console.log("[PlayerApp] DPlayer event: fullscreen");
+        if (window.screen.orientation && window.screen.orientation.lock) {
+            window.screen.orientation.lock('landscape').catch(err => console.warn('屏幕方向锁定失败:', err));
+        }
+        const fsButton = document.getElementById('fullscreen-button');
+        if (fsButton && fsButton.querySelector('svg')) {
+            fsButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-minimize"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>`;
+            fsButton.setAttribute('aria-label', '退出全屏');
+        }
+    });
+
+    dp.on('fullscreen_cancel', () => {
+         if (debugMode) console.log("[PlayerApp] DPlayer event: fullscreen_cancel");
+        if (window.screen.orientation && window.screen.orientation.unlock) {
+            window.screen.orientation.unlock();
+        }
+        const fsButton = document.getElementById('fullscreen-button');
+         if (fsButton && fsButton.querySelector('svg')) {
+            fsButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-maximize"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`;
+            fsButton.setAttribute('aria-label', '全屏');
+        }
+    });
+
+    dp.on('loadedmetadata', function() {
+         if (debugMode) console.log("[PlayerApp] DPlayer event: loadedmetadata");
+        const el = document.getElementById('loading'); if(el) el.style.display = 'none';
         videoHasEnded = false;
         setupProgressBarPreciseClicks();
-        setTimeout(saveToHistory, 3000);
-        startProgressSaveInterval();
+        setTimeout(saveToHistory, 3000); // Save initial state to history
+        startProgressSaveInterval(); // Start periodic saving
     });
 
-    dp.on('error', e => { console.error('DPlayer error:', e); showError('播放器遇到错误'); });
-
-    dp.on('ended', () => {
-        videoHasEnded = true;
-        saveCurrentProgress();
-        clearVideoProgress();
-        const hasNext = episodesReversed
-            ? currentEpisodeIndex > 0
-            : currentEpisodeIndex < currentEpisodes.length - 1;
-        if (autoplayEnabled && hasNext) setTimeout(() => !isUserSeeking && playNextEpisode(), 1000);
-    });
-
-    dp.on('seeking', () => { isUserSeeking = true; });
-    dp.on('seeked',  () => setTimeout(() => { isUserSeeking = false; }, 200));
-
-    setupLongPressSpeedControl();
-}
-
-/* ---------------------------------------------------------------------- */
-/*  8. 控制条按钮                                                         */
-/* ---------------------------------------------------------------------- */
-function setupPlayerControls () {
-    SQuery('#fullscreen-button', btn => btn.onclick = () => dp.fullScreen.toggle());
-    SQuery('#prev-episode',  btn => btn.onclick = playPreviousEpisode);
-    SQuery('#next-episode',  btn => btn.onclick = playNextEpisode);
-    SQuery('#order-button',  btn => btn.onclick = toggleEpisodeOrder);
-    SQuery('#lock-button',   btn => btn.onclick = toggleLockScreen);
-    SQuery('#retry-button',  btn => location.reload());
-    SQuery('#back-button',   btn => location.href = 'index.html');
-}
-
-/* ---------------------------------------------------------------------- */
-/*  9. 错误提示 / 全局消息                                                */
-/* ---------------------------------------------------------------------- */
-function showError (msg) {
-    SQuery('#loading', el => el.style.display = 'none');
-    SQuery('#error',   el => { el.style.display = 'flex'; el.children[1].textContent = msg; });
-    showMessage(msg, 'error');
-}
-function showMessage (text, type = 'info', ms = 3000) {
-    const el = document.getElementById('message');
-    if (!el) return;
-    const colors = { error:'bg-red-500', success:'bg-green-500', warning:'bg-yellow-500', info:'bg-blue-500' };
-    el.className = `fixed top-4 right-4 p-3 rounded shadow-lg z-[10001] text-sm text-white transition-opacity duration-300 opacity-0 ${colors[type]||colors.info}`;
-    el.textContent = text;
-    void el.offsetWidth;
-    el.classList.replace('opacity-0', 'opacity-100');
-    clearTimeout(el._timer);
-    el._timer = setTimeout(() => el.classList.replace('opacity-100', 'opacity-0'), ms);
-}
-
-/* ---------------------------------------------------------------------- */
-/* 10. 进度条精确点击                                                     */
-/* ---------------------------------------------------------------------- */
-function setupProgressBarPreciseClicks () {
-    setTimeout(() => {
-        const bar = document.querySelector('#dplayer .dplayer-bar-wrap');
-        if (!bar) return;
-        bar.onclick      = handleProgressBarClick;
-        bar.ontouchend   = handleProgressBarTouch;
-    }, 500);
-}
-function handleProgressBarClick(e){ seekByClientX(e.clientX, e.currentTarget); }
-function handleProgressBarTouch(e){ seekByClientX(e.changedTouches[0].clientX, e.currentTarget); }
-function seekByClientX (x, target) {
-    if (!dp?.video?.duration) return;
-    const rect = target.getBoundingClientRect();
-    const perc = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
-    dp.seek(perc * dp.video.duration);
-}
-
-/* ---------------------------------------------------------------------- */
-/* 11. 键盘 / 长按加速                                                    */
-/* ---------------------------------------------------------------------- */
-function handleKeyboardShortcuts (e) {
-    if (!dp || ['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
-    const k = e.key;
-    const withAlt = e.altKey;
-    if (k === 'ArrowLeft'  && withAlt) return playPreviousEpisode();
-    if (k === 'ArrowRight' && withAlt) return playNextEpisode();
-    if (k === 'PageUp')  return playPreviousEpisode();
-    if (k === 'PageDown') return playNextEpisode();
-    if (k === 'ArrowLeft') { dp.seek(Math.max(0, dp.video.currentTime - 5)); }
-    if (k === 'ArrowRight'){ dp.seek(Math.min(dp.video.duration, dp.video.currentTime + 5)); }
-    if (k === ' ')         { dp.toggle(); }
-    if (k === 'ArrowUp')   { dp.volume(Math.min(1, dp.video.volume + 0.1)); }
-    if (k === 'ArrowDown') { dp.volume(Math.max(0, dp.video.volume - 0.1)); }
-    if (k === 'f')         { dp.fullScreen.toggle(); }
-    e.preventDefault();
-}
-function setupLongPressSpeedControl () {
-    const wrap = document.querySelector('#dplayer .dplayer-video-wrap');
-    if (!wrap) return;
-    let timer = null, sped = false, origin = 1;
-    wrap.addEventListener('touchstart', e => {
-        if (dp.video.paused) return;
-        const x = e.touches[0].clientX;
-        if (x > wrap.getBoundingClientRect().left + wrap.clientWidth / 2) {
-            origin = dp.video.playbackRate;
-            timer = setTimeout(() => { dp.speed(2); sped = true; showMessage('2.0x', 'info', 800); }, 300);
+    dp.on('error', function(e) {
+        console.error("DPlayer error event:", e);
+        if (dp.video && dp.video.currentTime > 1) { // Allow errors if playing for >1s
+             if (debugMode) console.log('DPlayer error ignored as video was playing.');
+            return;
         }
-    }, { passive:true });
-    const clear = () => { clearTimeout(timer); if (sped) dp.speed(origin); sped = false; };
-    wrap.addEventListener('touchend',   clear);
-    wrap.addEventListener('touchcancel',clear);
+        showError('播放器遇到错误，请检查视频源');
+    });
+
+    setupLongPressSpeedControl(); // Setup long press after dp is initialized
+
+    dp.on('seeking', function() { if (debugMode) console.log("[PlayerApp] DPlayer event: seeking"); isUserSeeking = true; videoHasEnded = false; });
+    dp.on('seeked', function() {
+         if (debugMode) console.log("[PlayerApp] DPlayer event: seeked");
+        // Adjust if seeked very close to the end
+        if (dp.video && dp.video.duration > 0) {
+            const timeFromEnd = dp.video.duration - dp.video.currentTime;
+            if (timeFromEnd < 0.3 && isUserSeeking) {
+                dp.video.currentTime = Math.max(0, dp.video.currentTime - 1);
+            }
+        }
+        setTimeout(() => { isUserSeeking = false; }, 200); // Reset seeking flag after a short delay
+    });
+
+    dp.on('ended', function() {
+        videoHasEnded = true;
+        saveCurrentProgress(); // Ensure final progress is saved
+        clearVideoProgress(); // Clear progress for *this specific video*
+        const hasNext = episodesReversed ? currentEpisodeIndex < currentEpisodes.length - 1 // This logic might be tricky with reversed, check playNextEpisode
+                                         : currentEpisodeIndex < currentEpisodes.length - 1;
+        if (autoplayEnabled && hasNext) {
+
+            setTimeout(() => {
+                if (videoHasEnded && !isUserSeeking) { // Ensure it really ended and user isn't seeking
+                     if(typeof window.playNextEpisode === 'function') window.playNextEpisode();
+                }
+            }, 1000); // 1 second delay before playing next
+        } else {
+             if (debugMode) console.log('[PlayerApp] Video ended, no next episode or autoplay disabled.');
+        }
+    });
+
+    dp.on('timeupdate', function() {
+        // Reset ended flag if user seeks back after video ended
+        if (dp.video && dp.video.duration > 0) {
+            if (isUserSeeking && dp.video.currentTime > dp.video.duration * 0.95) {
+                videoHasEnded = false;
+            }
+        }
+        // Throttled progress save is handled by initializePageContent interval now
+    });
+
+     // Add a timeout to show a message if loading takes too long
+    setTimeout(function() {
+        // Check if player exists, video exists, AND readyState suggests still loading/not enough data
+        if (dp && dp.video && dp.video.readyState < 3 && !videoHasEnded) {
+            const loadingEl = document.getElementById('loading');
+            if (loadingEl && loadingEl.style.display !== 'none') {
+                loadingEl.innerHTML = `<div class="loading-spinner"></div><div>视频加载时间较长...</div><div style="font-size: 12px; color: #aaa; margin-top: 10px;">如长时间无响应，请尝试其他视频源或刷新</div>`;
+                 if (debugMode) console.warn("[PlayerApp] Loading timeout reached.");
+            }
+        }
+    }, 15000); // Increased timeout to 15s
+
+    // Native fullscreen integration for DPlayer's *internal* button actions
+    (function(){
+        const dplayerElement = document.getElementById('dplayer');
+        if(dplayerElement) {
+            dp.on('fullscreen', () => { // DPlayer *enters* its fullscreen mode
+                 if (document.fullscreenElement || document.webkitFullscreenElement) return; // Already native FS
+                 if (dplayerElement.requestFullscreen) dplayerElement.requestFullscreen().catch(err => console.warn('DPlayer internal FS to native failed:', err));
+                 else if (dplayerElement.webkitRequestFullscreen) dplayerElement.webkitRequestFullscreen().catch(err => console.warn('DPlayer internal FS to native failed (webkit):', err));
+            });
+            dp.on('fullscreen_cancel', () => { // DPlayer *exits* its fullscreen mode
+                 if (!document.fullscreenElement && !document.webkitFullscreenElement) return; // Not in native FS
+                if (document.exitFullscreen) document.exitFullscreen().catch(err => console.warn('DPlayer internal exit FS from native failed:', err));
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(err => console.warn('DPlayer internal exit FS from native failed (webkit):', err));
+            });
+        }
+    })();
 }
 
-/* ---------------------------------------------------------------------- */
-/* 12. 屏幕锁定                                                           */
-/* ---------------------------------------------------------------------- */
-function toggleLockScreen () {
+function setupPlayerControls() {
+    const backButton = document.getElementById('back-button');
+    if (backButton) {
+        backButton.addEventListener('click', () => { window.location.href = 'index.html'; });
+    }
+
+    const fullscreenButton = document.getElementById('fullscreen-button');
+    if (fullscreenButton) {
+        fullscreenButton.addEventListener('click', () => {
+            if (dp && dp.fullScreen && typeof dp.fullScreen.toggle === 'function') {
+                dp.fullScreen.toggle();
+            } else {
+                const playerContainer = document.getElementById('dplayer');
+                if (playerContainer) {
+                    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                        if (playerContainer.requestFullscreen) playerContainer.requestFullscreen().catch(err => console.error("Fallback FS error:",err));
+                        else if (playerContainer.webkitRequestFullscreen) playerContainer.webkitRequestFullscreen().catch(err => console.error("Fallback FS error (webkit):",err));
+                    } else {
+                        if (document.exitFullscreen) document.exitFullscreen().catch(err => console.error("Fallback exit FS error:",err));
+                        else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(err => console.error("Fallback exit FS error (webkit):",err));
+                    }
+                }
+            }
+        });
+    }
+
+    const retryButton = document.getElementById('retry-button');
+    if (retryButton) {
+        retryButton.addEventListener('click', () => {
+            const urlParamsRetry = new URLSearchParams(window.location.search);
+            const videoUrlRetry = urlParamsRetry.get('url');
+            const sourceCodeRetry = urlParamsRetry.get('source_code');
+            if (videoUrlRetry) {
+                const errorEl = document.getElementById('error'); if(errorEl) errorEl.style.display = 'none';
+                const loadingEl = document.getElementById('loading'); if(loadingEl) loadingEl.style.display = 'flex';
+                if (dp && dp.video) {
+                  //  console.log("[PlayerApp] Retrying: Switching video.");
+                    dp.switchVideo({ url: videoUrlRetry, type: 'hls' });
+                    dp.play();
+                } else {
+                 //    console.log("[PlayerApp] Retrying: Re-initializing player.");
+                    initPlayer(videoUrlRetry, sourceCodeRetry);
+                }
+            } else {
+                showError('无法重试，视频链接无效');
+            }
+        });
+    }
+
+    const prevEpisodeBtn = document.getElementById('prev-episode');
+    if (prevEpisodeBtn) prevEpisodeBtn.addEventListener('click', window.playPreviousEpisode); // Use global
+
+    const nextEpisodeBtn = document.getElementById('next-episode');
+    if (nextEpisodeBtn) nextEpisodeBtn.addEventListener('click', window.playNextEpisode); // Use global
+
+    const orderBtn = document.getElementById('order-button');
+    if (orderBtn) orderBtn.addEventListener('click', toggleEpisodeOrder); // toggleEpisodeOrder is local
+
+    // Add lock button event listener
+    const lockButton = document.getElementById('lock-button');
+    if (lockButton) lockButton.addEventListener('click', toggleLockScreen);
+}
+
+function showError(message) {
+    const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
+    if (dp && dp.video && dp.video.currentTime > 1 && !debugMode) { // Show error even if playing if debug mode is on
+        console.warn('Ignoring error as video is playing:', message);
+        return;
+    }
+    const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'none';
+    const errorElement = document.getElementById('error');
+    if (errorElement) {
+        const errorTextElement = errorElement.querySelector('.text-xl.font-bold'); // More specific
+        if (errorTextElement) errorTextElement.textContent = message;
+        else errorElement.children[1].textContent = message; // Fallback
+        errorElement.style.display = 'flex';
+    }
+    if (typeof window.showMessage === 'function') window.showMessage(message, 'error'); // Use global showMessage from ui.js
+    else console.error("showMessage function not found. Error:", message);
+}
+
+function setupProgressBarPreciseClicks() {
+    if (!dp) return;
+    // Need to wait slightly for DPlayer to render its progress bar
+    setTimeout(() => {
+        const progressBar = document.querySelector('#dplayer .dplayer-bar-wrap');
+        if (!progressBar) { console.warn('DPlayer进度条元素未找到 (.dplayer-bar-wrap)'); return; }
+        progressBar.removeEventListener('click', handleProgressBarClick);
+        progressBar.removeEventListener('touchend', handleProgressBarTouch);
+        progressBar.addEventListener('click', handleProgressBarClick);
+        progressBar.addEventListener('touchend', handleProgressBarTouch);
+    }, 500); // Delay setup
+}
+
+function handleProgressBarClick(e) {
+    if (!dp || !dp.video || dp.video.duration <= 0 || !e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, offsetX / rect.width));
+    const clickTime = percentage * dp.video.duration;
+    userClickedPosition = clickTime;
+    dp.seek(clickTime);
+}
+
+function handleProgressBarTouch(e) {
+    if (!dp || !dp.video || dp.video.duration <= 0 || !e.changedTouches || !e.changedTouches[0] || !e.currentTarget) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touch = e.changedTouches[0];
+    const offsetX = touch.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, offsetX / rect.width));
+    const touchTime = percentage * dp.video.duration;
+    userClickedPosition = touchTime;
+    dp.seek(touchTime);
+}
+
+function handleKeyboardShortcuts(e) {
+    if (!dp || (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA'))) return;
+    if (isScreenLocked) return; // Ignore shortcuts if screen is locked
+    let actionText = '', direction = '';
+    const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
+
+    switch (e.key) {
+        case 'ArrowLeft':
+            if (e.altKey) { if (typeof window.playPreviousEpisode === 'function') window.playPreviousEpisode(); actionText = '上一集'; direction = 'left'; }
+            else { dp.seek(Math.max(0, dp.video.currentTime - 5)); actionText = '后退 5s'; direction = 'left'; }
+            e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'ArrowRight':
+            if (e.altKey) { if (typeof window.playNextEpisode === 'function') window.playNextEpisode(); actionText = '下一集'; direction = 'right'; }
+            else { dp.seek(Math.min(dp.video.duration, dp.video.currentTime + 5)); actionText = '前进 5s'; direction = 'right'; }
+            e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'PageUp': if (typeof window.playPreviousEpisode === 'function') window.playPreviousEpisode(); actionText = '上一集'; direction = 'left'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'PageDown': if (typeof window.playNextEpisode === 'function') window.playNextEpisode(); actionText = '下一集'; direction = 'right'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case ' ': // Spacebar for play/pause
+             dp.toggle(); actionText = dp.video.paused ? '暂停' : '播放'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'ArrowUp': dp.volume(Math.min(1, dp.video.volume + 0.1)); actionText = `音量 ${Math.round(dp.video.volume*100)}%`; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'ArrowDown': dp.volume(Math.max(0, dp.video.volume - 0.1)); actionText = `音量 ${Math.round(dp.video.volume*100)}%`; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break;
+        case 'f': dp.fullScreen.toggle(); actionText = '切换全屏'; e.preventDefault(); if (debugMode) console.log(`Keyboard: ${actionText}`); break; // 'f' for fullscreen toggle
+    }
+    if (actionText && typeof showShortcutHint === 'function') showShortcutHint(actionText, direction);
+}
+
+function showShortcutHint(text, direction) {
+    const hintElement = document.getElementById('shortcut-hint');
+    if (!hintElement) return;
+    if (shortcutHintTimeout) clearTimeout(shortcutHintTimeout);
+    const keyElement = document.getElementById('shortcut-key');
+    const actionElement = document.getElementById('shortcut-action');
+    if (keyElement && actionElement) {
+        if (direction === 'left') keyElement.innerHTML = '◀';
+        else if (direction === 'right') keyElement.innerHTML = '▶';
+        else keyElement.innerHTML = ''; // Clear for actions like play/pause/volume
+        actionElement.textContent = text;
+    }
+    hintElement.classList.add('show');
+    shortcutHintTimeout = setTimeout(() => hintElement.classList.remove('show'), 1500);
+}
+
+function setupLongPressSpeedControl() {
+    if (!dp) return;
+    const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
+    if (!playerVideoWrap) { console.warn('DPlayer video wrap for long press not found.'); return; }
+
+    let longPressTimer = null;
+    let originalSpeed = 1.0;
+    let speedChangedByLongPress = false;
+
+    playerVideoWrap.addEventListener('touchstart', function(e) {
+        if (isScreenLocked || dp.video.paused) return; // Ignore if screen locked or paused
+        const touchX = e.touches[0].clientX;
+        const rect = playerVideoWrap.getBoundingClientRect();
+        // Only trigger if touch is on the right half of the player
+        if (touchX > rect.left + rect.width / 2) {
+            originalSpeed = dp.video.playbackRate;
+            longPressTimer = setTimeout(() => {
+                if (isScreenLocked || dp.video.paused) return; // Double check
+                dp.speed(2.0);
+                speedChangedByLongPress = true;
+                if(typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
+            }, 300); // 300ms delay for long press
+        }
+    }, { passive: true });
+
+    const endLongPress = function() {
+        if (longPressTimer) clearTimeout(longPressTimer);
+        longPressTimer = null;
+        if (speedChangedByLongPress) {
+            dp.speed(originalSpeed);
+            speedChangedByLongPress = false;
+            if(typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
+        }
+    };
+    playerVideoWrap.addEventListener('touchend', endLongPress);
+    playerVideoWrap.addEventListener('touchcancel', endLongPress);
+}
+
+function showPositionRestoreHint(position) {
+    if (typeof showMessage !== 'function' || !position || position < 10) return;
+    const minutes = Math.floor(position / 60);
+    const seconds = Math.floor(position % 60);
+    const formattedTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    showMessage(`已从 ${formattedTime} 继续播放`, 'info');
+}
+
+function showMessage(text, type = 'info', duration = 3000) {
+    const messageElement = document.getElementById('message');
+    if (!messageElement) { console.warn("Message element not found"); return; }
+
+    let bgColorClass = ({error:'bg-red-500', success:'bg-green-500', warning:'bg-yellow-500', info:'bg-blue-500'})[type] || 'bg-blue-500';
+
+    // Reset classes and apply new ones
+    messageElement.className = `fixed top-4 right-4 p-3 rounded shadow-lg z-[10001] text-sm ${bgColorClass} text-white transition-opacity duration-300 opacity-0`;
+    messageElement.textContent = text;
+
+    // Force reflow to apply initial opacity-0 before transitioning
+    void messageElement.offsetWidth;
+
+    messageElement.classList.remove('opacity-0');
+    messageElement.classList.add('opacity-100');
+
+    // Clear previous timeout if exists
+    if (messageElement._messageTimeout) {
+        clearTimeout(messageElement._messageTimeout);
+    }
+
+    messageElement._messageTimeout = setTimeout(() => {
+        messageElement.classList.remove('opacity-100');
+        messageElement.classList.add('opacity-0');
+        messageElement._messageTimeout = null;
+    }, duration);
+}
+
+function toggleLockScreen() {
     isScreenLocked = !isScreenLocked;
-    document.querySelector('.player-container')?.classList.toggle('player-locked', isScreenLocked);
-    const icon = document.getElementById('lock-icon');
-    if (icon) icon.innerHTML = isScreenLocked
-        ? '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path>'
-        : '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>';
-    showMessage(isScreenLocked ? '屏幕已锁定' : '屏幕已解锁', 'info');
+    const playerContainer = document.querySelector('.player-container'); // Should be .player-area or dplayer container
+    const lockButton = document.getElementById('lock-button'); // The button itself
+    // Assuming the icon is inside the button, we can find it or just replace innerHTML
+    // const lockIcon = document.getElementById('lock-icon'); // More specific if you have an ID on the SVG
+
+    if (playerContainer) { // Ensure player container exists
+        playerContainer.classList.toggle('player-locked', isScreenLocked);
+    }
+
+    if (lockButton) {
+        if (isScreenLocked) {
+            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-unlock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`; // Unlock icon
+            lockButton.setAttribute('aria-label', '解锁屏幕');
+            if (typeof showMessage === 'function') showMessage('屏幕已锁定', 'info');
+        } else {
+            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`; // Lock icon
+            lockButton.setAttribute('aria-label', '锁定屏幕');
+            if (typeof showMessage === 'function') showMessage('屏幕已解锁', 'info');
+        }
+    }
 }
 
-/* ---------------------------------------------------------------------- */
-/* 13. 选集列表                                                           */
-/* ---------------------------------------------------------------------- */
-function renderEpisodes () {
-    const grid = document.getElementById('episode-grid');
-    if (!grid) { setTimeout(renderEpisodes, 100); return; }
-    grid.innerHTML = '';
+function renderEpisodes() {
+    const episodeGrid = document.getElementById('episode-grid');
+    if (!episodeGrid) {
+        console.warn('[PlayerApp] episode-grid element not found in renderEpisodes(). Will retry in 100 ms.');
+        // Adding a counter to prevent infinite recursion if element is never found
+        if (typeof this.renderEpisodesRetryCount === 'undefined') this.renderEpisodesRetryCount = 0;
+        this.renderEpisodesRetryCount++;
+        if (this.renderEpisodesRetryCount < 10) { // Max 10 retries (1 second)
+            setTimeout(() => renderEpisodes.call(this), 100);
+        } else {
+            console.error('[PlayerApp] episode-grid element still not found after multiple retries.');
+            this.renderEpisodesRetryCount = 0; // Reset for future calls if any
+        }
+        return;
+    }
+    this.renderEpisodesRetryCount = 0; // Reset retry count on success
 
-    if (!currentEpisodes.length) {
-        grid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">没有可用的剧集</div>';
+    const episodesContainer = document.getElementById('episodes-container');
+    if (episodesContainer) episodesContainer.classList.remove('hidden');
+
+    episodeGrid.innerHTML = '';
+
+    if (!window.currentEpisodes || window.currentEpisodes.length === 0) {
+      //  console.log('[PlayerApp Debug] No episodes to render.');
+        episodeGrid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">没有可用的剧集</div>';
         return;
     }
 
-    const order = [...Array(currentEpisodes.length).keys()];
-    if (episodesReversed) order.reverse();
+    const indexArr = [...Array(currentEpisodes.length).keys()];
+    if (episodesReversed) indexArr.reverse();
 
-    order.forEach(idx => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = idx === currentEpisodeIndex
-            ? 'p-2 rounded episode-active'
-            : 'p-2 rounded bg-[#222] hover:bg-[#333] text-gray-300';
-        btn.textContent   = idx + 1;
-        btn.dataset.index = idx;
-        btn.onclick       = e => playEpisode(+e.currentTarget.dataset.index);
-        grid.appendChild(btn);
-    });
-    updateEpisodeInfo();
-    updateButtonStates();
-}
-function updateEpisodeInfo () {
-    SQuery('#episode-info-span', span => {
-        if (currentEpisodes.length > 1) span.textContent = `第 ${currentEpisodeIndex + 1} 集 / 共 ${currentEpisodes.length} 集`;
-        else span.textContent = '';
+    indexArr.forEach((realIndex) => { // displayIdx is not needed if textContent is realIndex + 1
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = realIndex === currentEpisodeIndex
+            ? 'p-2 rounded bg-blue-600 text-white episode-active'
+            : 'p-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-300';
+        button.textContent = `${realIndex + 1}`; // Show actual episode number
+        button.setAttribute('aria-label', `第 ${realIndex + 1} 集`);
+        button.addEventListener('click', () => playEpisode(realIndex));
+
+        episodeGrid.appendChild(button);
     });
 }
 
-/* ---------------------------------------------------------------------- */
-/* 14. 顺序 / 上下集                                                      */
-/* ---------------------------------------------------------------------- */
-function toggleEpisodeOrder () {
+
+function updateEpisodeInfo() {
+    const episodeInfoSpan = document.getElementById('episode-info-span');
+    if (!episodeInfoSpan) return;
+    if (window.currentEpisodes && window.currentEpisodes.length > 1) {
+        const totalEpisodes = window.currentEpisodes.length;
+        // Determine current number based on reversed state for display
+        let currentDisplayNumber = window.currentEpisodeIndex + 1;
+        // If you want the "第 X 集" to reflect the visual order (1st button, 2nd button etc.)
+        // then currentDisplayNumber might need adjustment if episodesReversed is true.
+        // However, currentEpisodeIndex always refers to the actual index in the currentEpisodes array.
+        // For now, `${window.currentEpisodeIndex + 1}` seems correct as it's the actual episode number.
+        episodeInfoSpan.textContent = `第 ${currentDisplayNumber} 集 / 共 ${totalEpisodes} 集`;
+    } else {
+        episodeInfoSpan.textContent = '';
+    }
+}
+
+function toggleEpisodeOrder() {
     episodesReversed = !episodesReversed;
-    localStorage.setItem('episodesReversed', episodesReversed);
+    localStorage.setItem('episodesReversed', episodesReversed.toString());
+ //   console.log('[PlayerApp] Episode order toggled. New state:', episodesReversed ? 'Reversed' : 'Normal');
     updateOrderButton();
     renderEpisodes();
 }
-function updateOrderButton () {
+
+function updateOrderButton(){
     const icon = document.getElementById('order-icon');
-    if (!icon) return;
+    if(!icon)return;
+    // 清空原 path 后填充新图标
     icon.innerHTML = episodesReversed
-        ? '<polyline points="18 15 12 9 6 15"></polyline>'
-        : '<polyline points="6 9 12 15 18 9"></polyline>';
+        ? '<polyline points="18 15 12 9 6 15"></polyline>'  // ⬆️  倒序
+        : '<polyline points="6 9 12 15 18 9"></polyline>';  // ⬇️  正序
 }
 
-function playPreviousEpisode () {
-    if (!currentEpisodes.length) return;
-    if (episodesReversed) {            // 倒序：上一集应是 index +1
-        if (currentEpisodeIndex < currentEpisodes.length - 1) playEpisode(currentEpisodeIndex + 1);
-        else showMessage('已经是第一集了','info');
+function playPreviousEpisode() {
+    if (!currentEpisodes || currentEpisodes.length === 0) return;
+    // Logic is the same regardless of episodesReversed because currentEpisodeIndex is the true index.
+    // The visual order is handled by renderEpisodes.
+    if (currentEpisodeIndex > 0) {
+        playEpisode(currentEpisodeIndex - 1);
     } else {
-        if (currentEpisodeIndex > 0) playEpisode(currentEpisodeIndex - 1);
-        else showMessage('已经是第一集了','info');
+        if (typeof showMessage === 'function') showMessage('已经是第一集了', 'info');
     }
 }
-function playNextEpisode () {
-    if (!currentEpisodes.length) return;
-    if (episodesReversed) {            // 倒序：下一集应是 index -1
-        if (currentEpisodeIndex > 0) playEpisode(currentEpisodeIndex - 1);
-        else showMessage('已经是最后一集了','info');
+window.playPreviousEpisode = playPreviousEpisode;
+
+function playNextEpisode() {
+    if (!currentEpisodes || currentEpisodes.length === 0) return;
+    // Logic is the same regardless of episodesReversed.
+    if (currentEpisodeIndex < currentEpisodes.length - 1) {
+        playEpisode(currentEpisodeIndex + 1);
     } else {
-        if (currentEpisodeIndex < currentEpisodes.length - 1) playEpisode(currentEpisodeIndex + 1);
-        else showMessage('已经是最后一集了','info');
+        if (typeof showMessage === 'function') showMessage('已经是最后一集了', 'info');
     }
 }
-function updateButtonStates () {
-    const prevBtn = document.getElementById('prev-episode');
-    const nextBtn = document.getElementById('next-episode');
-    if (prevBtn) {
-        prevBtn.disabled = (!episodesReversed && currentEpisodeIndex <= 0) ||
-                           (episodesReversed && currentEpisodeIndex >= currentEpisodes.length - 1);
-        prevBtn.classList.toggle('opacity-50', prevBtn.disabled);
+window.playNextEpisode = playNextEpisode;
+
+function updateButtonStates() {
+    const prevButton = document.getElementById('prev-episode');
+    const nextButton = document.getElementById('next-episode');
+    const totalEpisodes = window.currentEpisodes ? window.currentEpisodes.length : 0;
+
+    if (prevButton) {
+        // "Previous" button is disabled if currentEpisodeIndex is 0 (first actual episode)
+        prevButton.disabled = window.currentEpisodeIndex <= 0;
+        prevButton.classList.toggle('opacity-50', prevButton.disabled);
+        prevButton.classList.toggle('cursor-not-allowed', prevButton.disabled);
     }
-    if (nextBtn) {
-        nextBtn.disabled = (!episodesReversed && currentEpisodeIndex >= currentEpisodes.length - 1) ||
-                           (episodesReversed && currentEpisodeIndex <= 0);
-        nextBtn.classList.toggle('opacity-50', nextBtn.disabled);
+    if (nextButton) {
+        // "Next" button is disabled if currentEpisodeIndex is the last actual episode
+        nextButton.disabled = window.currentEpisodeIndex >= totalEpisodes - 1;
+        nextButton.classList.toggle('opacity-50', nextButton.disabled);
+        nextButton.classList.toggle('cursor-not-allowed', nextButton.disabled);
     }
 }
 
-/* ---------------------------------------------------------------------- */
-/* 15. 播放指定集                                                         */
-/* ---------------------------------------------------------------------- */
-function playEpisode (idx) {
-    if (idx < 0 || idx >= currentEpisodes.length) return;
-    currentEpisodeIndex             = idx;
-    window.currentEpisodeIndex      = idx;
+function saveCurrentProgress() {
+    if (!dp || !dp.video || isUserSeeking || videoHasEnded || !window.addToViewingHistory) return;
+    const currentTime = dp.video.currentTime;
+    const duration = dp.video.duration;
 
-    const url = currentEpisodes[idx];
-    const newUrl = new URL(location.href);
-    newUrl.searchParams.set('index', idx);
-    history.replaceState({},'',newUrl);
-    localStorage.setItem('currentEpisodeIndex', idx);
+    // Only save if meaningful progress has been made and video hasn't practically ended
+    if (currentTime > 5 && duration > 0 && currentTime < duration * 0.98) { // Check against 98% to avoid saving if "ended" event was missed
+        try {
+            const videoInfo = {
+                title: currentVideoTitle,
+                url: window.currentEpisodes[window.currentEpisodeIndex], // url of the current episode
+                episodeIndex: window.currentEpisodeIndex,
+                playbackPosition: Math.floor(currentTime),
+                duration: Math.floor(duration),
+                timestamp: Date.now(),
+                sourceName: new URLSearchParams(window.location.search).get('source') || '', // If you have source name
+                sourceCode: new URLSearchParams(window.location.search).get('source_code') || '',
+                episodes: window.currentEpisodes // Save the full list for context
+            };
+            window.addToViewingHistory(videoInfo); // Call global function from ui.js
+        } catch (e) {
+            console.error('保存播放进度失败:', e);
+        }
+    }
+}
+
+function startProgressSaveInterval() {
+    if (progressSaveInterval) clearInterval(progressSaveInterval);
+    progressSaveInterval = setInterval(saveCurrentProgress, 30000); // Save every 30 seconds
+}
+
+function saveToHistory() { // This is more like an "initial save" or "episode change save"
+    if (!dp || !dp.video || !currentVideoTitle || !window.addToViewingHistory || !currentEpisodes[currentEpisodeIndex]) return;
+    try {
+        const videoInfo = {
+            title: currentVideoTitle,
+            url: window.currentEpisodes[window.currentEpisodeIndex],
+            episodeIndex: window.currentEpisodeIndex,
+            episodes: window.currentEpisodes, // Full list for context
+            playbackPosition: Math.floor(dp.video.currentTime), // Current time, even if 0 for new episode
+            duration: Math.floor(dp.video.duration) || 0, // Duration, or 0 if not loaded yet
+            timestamp: Date.now(),
+            sourceName: new URLSearchParams(window.location.search).get('source') || '',
+            sourceCode: new URLSearchParams(window.location.search).get('source_code') || ''
+        };
+        window.addToViewingHistory(videoInfo);
+    } catch (e) {
+        console.error('保存到历史记录失败:', e);
+    }
+}
+
+function clearVideoProgress() { // This seems to clear localStorage progress, not related to viewing history
+    const progressKey = `videoProgress_${getVideoId()}`;
+    try {
+        localStorage.removeItem(progressKey);
+        if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) console.log('已清除 localStorage 播放进度记录 for ' + progressKey);
+    } catch (e) { console.error('清除 localStorage 播放进度记录失败', e); }
+}
+
+function getVideoId() {
+    const sourceCode = new URLSearchParams(window.location.search).get('source_code') || 'unknown';
+    return `${encodeURIComponent(currentVideoTitle)}_${sourceCode}_ep${window.currentEpisodeIndex}`;
+}
+
+function playEpisode(index) {
+    if (index < 0 || index >= currentEpisodes.length) {
+        console.warn(`[PlayerApp] Invalid episode index: ${index}`);
+        return;
+    }
+
+    currentEpisodeIndex = index;
+    window.currentEpisodeIndex = index;
+
+    const episodeUrl = currentEpisodes[index];
+    if (!episodeUrl) {
+        console.warn(`[PlayerApp] No URL found for episode index: ${index}`);
+        return;
+    }
+
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('index', index.toString());
+    // Also update 'url' param if it's meant to reflect the current episode's URL directly
+    // For simplicity, let's assume 'url' was the initial entry point or for single videos
+    // newUrl.searchParams.set('url', episodeUrl); // Optional: if you want the main 'url' param to always be the current episode
+
+    window.history.replaceState({}, '', newUrl.toString());
+
+    localStorage.setItem('currentEpisodeIndex', index.toString()); // Should this be currentVideoTitle specific?
 
     updateEpisodeInfo();
     updateButtonStates();
-    renderEpisodes();
+    renderEpisodes(); // Re-render to highlight the new active episode
 
     if (dp) {
-        SQuery('#loading', el => el.style.display = 'flex');
-        clearVideoProgress();
-        dp.switchVideo({ url, type:'hls' });
-        dp.play();
-    } else initPlayer(url);
-    saveToHistory();
-}
+        const loadingEl = document.getElementById('loading');
+        if (loadingEl) loadingEl.style.display = 'flex';
 
-/* ---------------------------------------------------------------------- */
-/* 16. 播放记录 / 进度持久化                                              */
-/* ---------------------------------------------------------------------- */
-function saveCurrentProgress () {
-    if (!dp?.video || isUserSeeking || videoHasEnded) return;
-    const ct = dp.video.currentTime, dur = dp.video.duration;
-    if (ct < 5 || ct > dur * 0.98) return;
-    try {
-        window.addToViewingHistory?.({
-            title: currentVideoTitle,
-            url: currentEpisodes[currentEpisodeIndex],
-            episodeIndex: currentEpisodeIndex,
-            playbackPosition: Math.floor(ct),
-            duration: Math.floor(dur),
-            timestamp: Date.now(),
-            sourceCode: new URLSearchParams(location.search).get('source_code') || '',
-            episodes: currentEpisodes
-        });
-    } catch (e) { console.error('保存进度失败:', e); }
-}
-function startProgressSaveInterval () {
-    clearInterval(progressSaveInterval);
-    progressSaveInterval = setInterval(saveCurrentProgress, 30000);
-}
-function saveToHistory () {
-    if (!dp?.video) return;
-    window.addToViewingHistory?.({
-        title: currentVideoTitle,
-        url: currentEpisodes[currentEpisodeIndex],
-        episodeIndex: currentEpisodeIndex,
-        playbackPosition: Math.floor(dp.video.currentTime),
-        duration: Math.floor(dp.video.duration),
-        timestamp: Date.now(),
-        sourceCode: new URLSearchParams(location.search).get('source_code') || '',
-        episodes: currentEpisodes
-    });
-}
-function clearVideoProgress () {
-    localStorage.removeItem(`videoProgress_${getVideoId()}`);
-}
-function getVideoId () {
-    const code = new URLSearchParams(location.search).get('source_code') || 'unknown';
-    return `${encodeURIComponent(currentVideoTitle)}_${code}_ep${currentEpisodeIndex}`;
-}
+        clearVideoProgress(); // Clear localStorage progress for the *new* episode about to be played
 
-/* ---------------------------------------------------------------------- */
-/* 17. 继续播放提示                                                       */
-/* ---------------------------------------------------------------------- */
-function showPositionRestoreHint (pos) {
-    if (pos < 10) return;
-    const m = Math.floor(pos / 60);
-    const s = `${Math.floor(pos % 60)}`.padStart(2,'0');
-    showMessage(`已从 ${m}:${s} 继续播放`, 'info');
+        videoHasEnded = false; // Reset ended flag for new episode
+        isUserSeeking = false; // Reset seeking flag
+
+        dp.switchVideo({ url: episodeUrl, type: 'hls' });
+        dp.play().catch(e => console.warn("Play on episode switch prevented:", e)); // DPlayer's autoplay should handle this
+    } else {
+        console.error('[PlayerApp] DPlayer instance not available for playEpisode');
+        // If dp is not available, it implies a full page load might be needed,
+        // or initPlayer should be called with the new episodeUrl.
+        // For now, assuming dp should exist if episodes are being switched.
+        // Potentially: initializePageContent() could be re-triggered or initPlayer(episodeUrl)
+        initPlayer(episodeUrl, new URLSearchParams(window.location.search).get('source_code'));
+    }
+
+    // Save to viewing history immediately for the new episode (position will be 0 or near 0)
+    // Delay slightly to allow metadata to potentially load for duration.
+    setTimeout(saveToHistory, 1000);
 }
-/* ==========================  END  ===================================== */
+window.playEpisode = playEpisode; // Expose globally
