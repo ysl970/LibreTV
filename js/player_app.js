@@ -763,7 +763,10 @@ function updateEpisodeInfo() {
 // Add these functions to player_app.js
 
 function toggleEpisodeOrder() {
+    console.log('[PlayerApp Debug] toggleEpisodeOrder called.');
+    console.log('[PlayerApp Debug] Before toggle - episodesReversed:', episodesReversed);
     episodesReversed = !episodesReversed;
+    console.log('[PlayerApp Debug] After toggle - episodesReversed:', episodesReversed);
     localStorage.setItem('episodesReversed', episodesReversed.toString());
     updateOrderButton();
     renderEpisodes();
@@ -1094,9 +1097,15 @@ function toggleLockScreen() {
 }
 
 function renderEpisodes() {
+    console.log('[PlayerApp Debug] renderEpisodes called.');
+    console.log('[PlayerApp Debug] current episodesReversed state:', episodesReversed);
+    console.log('[PlayerApp Debug] currentEpisodes (should be original order):', JSON.parse(JSON.stringify(window.currentEpisodes))); // Deep copy for logging to avoid future modification issues in console view
+    console.log('[PlayerApp Debug] currentEpisodeIndex (original index of current video):', window.currentEpisodeIndex);
+
     const episodeGrid = document.getElementById('episode-grid');
     if (!episodeGrid) return;
-    
+    console.error('[PlayerApp Debug] episode-grid element not found!');
+
     // Show episodes container
     const episodesContainer = document.getElementById('episodes-container');
     if (episodesContainer) episodesContainer.classList.remove('hidden');
@@ -1104,7 +1113,8 @@ function renderEpisodes() {
     // Clear existing episodes
     episodeGrid.innerHTML = '';
     
-    if (!currentEpisodes || currentEpisodes.length === 0) {
+    if (!window.currentEpisodes || window.currentEpisodes.length === 0) {
+        console.log('[PlayerApp Debug] No episodes to render.');
         episodeGrid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">没有可用的剧集</div>';
         return;
     }
