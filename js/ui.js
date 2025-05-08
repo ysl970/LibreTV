@@ -53,14 +53,14 @@ function checkPasswordProtection() {
  */
 function togglePanel(panelIdToShow, panelIdToHide, onShowCallback) {
     if (!checkPasswordProtection()) return false;
-    
+
     const panelToShow = getElement(panelIdToShow);
     if (!panelToShow) return false;
-    
+
     // 切换目标面板
     const isShowing = panelToShow.classList.toggle('show');
     panelToShow.setAttribute('aria-hidden', !isShowing);
-    
+
     // 如果指定了要隐藏的面板，确保它被关闭
     if (panelIdToHide) {
         const panelToHide = getElement(panelIdToHide);
@@ -69,12 +69,12 @@ function togglePanel(panelIdToShow, panelIdToHide, onShowCallback) {
             panelToHide.setAttribute('aria-hidden', 'true');
         }
     }
-    
+
     // 如果面板被显示且有回调，执行回调
     if (isShowing && typeof onShowCallback === 'function') {
         onShowCallback();
     }
-    
+
     return true;
 }
 
@@ -179,23 +179,23 @@ function showModal(content, title = '') {
     const modal = getElement('modal');
     const modalContent = getElement('modalContent');
     const modalTitle = getElement('modalTitle');
-    
+
     if (!modal || !modalContent) return;
-    
+
     // 保存当前焦点元素，以便关闭时恢复
     lastFocusedElement = document.activeElement;
-    
+
     // 设置内容
     modalContent.innerHTML = content;
     if (modalTitle && title) modalTitle.textContent = title;
-    
+
     // 显示模态框
     modal.classList.remove('hidden');
     modal.setAttribute('aria-hidden', 'false');
-    
+
     // 设置焦点陷阱
     setupFocusTrap(modal);
-    
+
     // 将焦点移至模态框内的第一个可聚焦元素
     const focusableElements = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
     if (focusableElements.length) {
@@ -210,16 +210,16 @@ function showModal(content, title = '') {
  * @param {HTMLElement} container 需要设置焦点陷阱的容器
  */
 function setupFocusTrap(container) {
-    container.addEventListener('keydown', function(e) {
+    container.addEventListener('keydown', function (e) {
         // 如果按下的不是Tab键，不处理
         if (e.key !== 'Tab') return;
-        
+
         const focusableElements = container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
         if (!focusableElements.length) return;
-        
+
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
-        
+
         // Shift+Tab 从第一个元素循环到最后一个
         if (e.shiftKey && document.activeElement === firstElement) {
             e.preventDefault();
@@ -244,7 +244,7 @@ function closeModal() {
         modal.setAttribute('aria-hidden', 'true');
     }
     if (modalContent) modalContent.innerHTML = '';
-    
+
     // 恢复焦点
     if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
         lastFocusedElement.focus();
@@ -312,7 +312,7 @@ function saveSearchHistory(query) {
 function handleSearchTagClick(e) {
     const tag = e.target.closest('.search-tag');
     if (!tag) return;
-    
+
     const searchInput = getElement('searchInput');
     if (searchInput) {
         searchInput.value = tag.textContent;
@@ -334,17 +334,17 @@ function renderSearchHistory() {
     // 标题与清空按钮
     const header = document.createElement('div');
     header.className = "flex justify-between items-center w-full mb-2";
-    
+
     const titleDiv = document.createElement('div');
     titleDiv.className = "text-gray-500";
     titleDiv.textContent = "最近搜索:";
-    
+
     const clearBtn = document.createElement('button');
     clearBtn.id = "clearHistoryBtn";
     clearBtn.className = "text-gray-500 hover:text-white transition-colors";
     clearBtn.setAttribute('aria-label', "清除搜索历史");
     clearBtn.textContent = "清除搜索历史";
-    
+
     header.appendChild(titleDiv);
     header.appendChild(clearBtn);
     frag.appendChild(header);
@@ -357,14 +357,14 @@ function renderSearchHistory() {
         if (item.timestamp) tag.title = `搜索于: ${new Date(item.timestamp).toLocaleString()}`;
         frag.appendChild(tag);
     });
-    
+
     historyContainer.innerHTML = '';
     historyContainer.appendChild(frag);
-    
+
     // 移除旧事件监听器（如果有）并添加新的事件委托
     historyContainer.removeEventListener('click', handleSearchTagClick);
     historyContainer.addEventListener('click', handleSearchTagClick);
-    
+
     // 为清空按钮添加事件
     const clearHistoryBtn = getElement('clearHistoryBtn');
     if (clearHistoryBtn) {
@@ -378,7 +378,7 @@ function renderSearchHistory() {
  */
 function clearSearchHistory() {
     if (!checkPasswordProtection()) return;
-    
+
     try {
         localStorage.removeItem(SEARCH_HISTORY_KEY);
         renderSearchHistory();
@@ -435,7 +435,7 @@ function handleHistoryListClick(e) {
         }
         return;
     }
-    
+
     // 处理历史项点击
     const historyItem = e.target.closest('.history-item');
     if (historyItem) {
@@ -464,7 +464,7 @@ function formatPlaybackTime(seconds) {
  */
 function addToViewingHistory(videoInfo) {
     if (!checkPasswordProtection()) return; // Crucial security check
-    
+
     try {
         let history = getViewingHistory();
         const idx = history.findIndex(item => item.title === videoInfo.title); // Original logic: find by title
@@ -482,14 +482,14 @@ function addToViewingHistory(videoInfo) {
                 item.duration = videoInfo.duration || item.duration; // Preserve existing duration if new one isn't provided
             }
             item.url = videoInfo.url; // Update URL if title matches, as per original logic
-            
+
             if (videoInfo.episodes && Array.isArray(videoInfo.episodes) && videoInfo.episodes.length) {
                 // Update episodes if new list is different or doesn't exist
                 if (!item.episodes || item.episodes.length !== videoInfo.episodes.length) {
                     item.episodes = [...videoInfo.episodes];
                 }
             }
-            
+
             history.splice(idx, 1); // Remove old item
             history.unshift(item);  // Add updated item to the beginning
         } else {
@@ -507,7 +507,7 @@ function addToViewingHistory(videoInfo) {
         if (history.length > HISTORY_MAX_ITEMS) {
             history.splice(HISTORY_MAX_ITEMS); // Corrected from previous thought: splice directly
         }
-        
+
         localStorage.setItem('viewingHistory', JSON.stringify(history));
     } catch (e) {
         console.error('保存观看历史失败:', e); // Retain original error logging style
@@ -519,7 +519,7 @@ function addToViewingHistory(videoInfo) {
  */
 function clearViewingHistory() {
     if (!checkPasswordProtection()) return;
-    
+
     try {
         localStorage.removeItem('viewingHistory');
         loadViewingHistory();
@@ -541,82 +541,82 @@ function loadViewingHistory() {
         historyList.innerHTML = `<div class="text-center text-gray-500 py-8">暂无观看记录</div>`;
         return;
     }
-    
+
     const frag = document.createDocumentFragment();
-    
+
     history.forEach(item => {
         // 防XSS
         const safeTitle = (item.title || '').replace(/[<>"']/g, c => ({ '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
         const safeSource = (item.sourceName || '未知来源').replace(/[<>"']/g, c => ({ '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
         const episodeText = item.episodeIndex !== undefined ? `第${item.episodeIndex + 1}集` : '';
-        
+
         const historyItem = document.createElement('div');
         historyItem.className = 'history-item cursor-pointer relative group';
         historyItem.dataset.url = item.url;
         historyItem.dataset.title = safeTitle;
         historyItem.dataset.episodeIndex = item.episodeIndex || 0;
         historyItem.dataset.playbackPosition = item.playbackPosition || 0;
-        
+
         // 构建历史项内容
         const historyInfo = document.createElement('div');
         historyInfo.className = 'history-info';
-        
+
         const titleDiv = document.createElement('div');
         titleDiv.className = 'history-title';
         titleDiv.innerHTML = safeTitle;
-        
+
         const metaDiv = document.createElement('div');
         metaDiv.className = 'history-meta';
-        
+
         if (episodeText) {
             const episodeSpan = document.createElement('span');
             episodeSpan.className = 'history-episode';
             episodeSpan.innerHTML = episodeText;
             metaDiv.appendChild(episodeSpan);
-            
+
             const separatorSpan = document.createElement('span');
             separatorSpan.className = 'history-separator mx-1';
             separatorSpan.innerHTML = '·';
             metaDiv.appendChild(separatorSpan);
         }
-        
+
         const sourceSpan = document.createElement('span');
         sourceSpan.className = 'history-source';
         sourceSpan.innerHTML = safeSource;
         metaDiv.appendChild(sourceSpan);
-        
+
         const timeDiv = document.createElement('div');
         timeDiv.className = 'history-time';
         timeDiv.textContent = formatTimestamp(item.timestamp);
-        
+
         historyInfo.appendChild(titleDiv);
         historyInfo.appendChild(metaDiv);
-        
+
         // 进度条
         if (item.playbackPosition && item.duration && item.playbackPosition > 10 && item.playbackPosition < item.duration * 0.95) {
             const progressDiv = document.createElement('div');
             progressDiv.className = 'history-progress';
-            
+
             const progressBar = document.createElement('div');
             progressBar.className = 'progress-bar';
-            
+
             const progressFilled = document.createElement('div');
             progressFilled.className = 'progress-filled';
             progressFilled.style.width = `${Math.round(item.playbackPosition / item.duration * 100)}%`;
-            
+
             const progressText = document.createElement('div');
             progressText.className = 'progress-text';
             progressText.textContent = `${formatPlaybackTime(item.playbackPosition)} / ${formatPlaybackTime(item.duration)}`;
-            
+
             progressBar.appendChild(progressFilled);
             progressDiv.appendChild(progressBar);
             progressDiv.appendChild(progressText);
             historyInfo.appendChild(progressDiv);
         }
-        
+
         historyInfo.appendChild(timeDiv);
         historyItem.appendChild(historyInfo);
-        
+
         // 删除按钮
         const deleteButton = document.createElement('button');
         deleteButton.className = 'history-item-delete-btn absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-400 p-1 rounded-full hover:bg-gray-800 z-10';
@@ -624,15 +624,15 @@ function loadViewingHistory() {
         deleteButton.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
         </svg>`;
-        
+
         historyItem.appendChild(deleteButton);
         frag.appendChild(historyItem);
     });
-    
+
     historyList.innerHTML = '';
     historyList.appendChild(frag);
     if (history.length > 5) historyList.classList.add('pb-4');
-    
+
     // 移除旧的事件监听器和添加新的事件委托的代码已移至attachEventListeners函数
 }
 
@@ -650,17 +650,17 @@ function renderSearchHistory() {
     // 标题与清空按钮
     const header = document.createElement('div');
     header.className = "flex justify-between items-center w-full mb-2";
-    
+
     const titleDiv = document.createElement('div');
     titleDiv.className = "text-gray-500";
     titleDiv.textContent = "最近搜索:";
-    
+
     const clearBtn = document.createElement('button');
     clearBtn.id = "clearHistoryBtn";
     clearBtn.className = "text-gray-500 hover:text-white transition-colors";
     clearBtn.setAttribute('aria-label', "清除搜索历史");
     clearBtn.textContent = "清除搜索历史";
-    
+
     header.appendChild(titleDiv);
     header.appendChild(clearBtn);
     frag.appendChild(header);
@@ -673,12 +673,12 @@ function renderSearchHistory() {
         if (item.timestamp) tag.title = `搜索于: ${new Date(item.timestamp).toLocaleString()}`;
         frag.appendChild(tag);
     });
-    
+
     historyContainer.innerHTML = '';
     historyContainer.appendChild(frag);
-    
+
     // 移除旧的事件监听器和添加新的事件委托的代码已移至attachEventListeners函数
-    
+
     // 为清空按钮添加事件 - 这个按钮每次渲染都是新创建的，所以需要在这里添加事件
     const clearHistoryBtn = getElement('clearHistoryBtn');
     if (clearHistoryBtn) {
@@ -696,38 +696,38 @@ function attachEventListeners() {
     if (settingsButton) {
         settingsButton.addEventListener('click', toggleSettings);
     }
-    
+
     // 关闭设置面板按钮
     const closeSettingsPanelButton = getElement('closeSettingsPanelButton');
     if (closeSettingsPanelButton) {
         closeSettingsPanelButton.addEventListener('click', toggleSettings);
     }
-    
+
     // 清空观看历史按钮
     const clearViewingHistoryButton = getElement('clearViewingHistoryButton');
     if (clearViewingHistoryButton) {
         clearViewingHistoryButton.addEventListener('click', clearViewingHistory);
     }
-    
+
     // 关闭模态框按钮
     const closeModalButton = getElement('closeModalButton');
     if (closeModalButton) {
         closeModalButton.addEventListener('click', closeModal);
     }
-    
+
     // 优化：将委托事件监听器移到这里一次性设置
     // 搜索历史标签点击事件委托
     const recentSearches = getElement('recentSearches');
     if (recentSearches) {
         recentSearches.addEventListener('click', handleSearchTagClick);
     }
-    
+
     // 观看历史列表点击事件委托
     const historyList = getElement('historyList');
     if (historyList) {
         historyList.addEventListener('click', handleHistoryListClick);
     }
-    
+
     // 初始化其他可能的事件监听器
     initializeAdditionalListeners();
 }
@@ -741,18 +741,18 @@ function initializeAdditionalListeners() {
     // 如果未来这些按钮会动态增减，可考虑改为事件委托模式
     const apiSelectButtons = document.querySelectorAll('[data-action="selectAllAPIs"]');
     if (apiSelectButtons.length > 0) {
-        const apiSelectHandler = function() {
+        const apiSelectHandler = function () {
             const selectAll = this.dataset.value === 'true';
             if (typeof window.selectAllAPIs === 'function') {
                 window.selectAllAPIs(selectAll);
             }
         };
-        
+
         apiSelectButtons.forEach(button => {
             button.addEventListener('click', apiSelectHandler);
         });
     }
-    
+
     // 自定义API管理
     const addCustomApiButton = document.querySelector('[data-action="showAddCustomApiForm"]');
     if (addCustomApiButton && typeof window.showAddCustomApiForm === 'function') {
@@ -761,10 +761,10 @@ function initializeAdditionalListeners() {
 }
 
 // 页面加载完成后初始化
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // 初始化事件监听器
     attachEventListeners();
-    
+
     // 初始化搜索历史
     renderSearchHistory();
 });
