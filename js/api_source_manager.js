@@ -400,32 +400,7 @@ const APISourceManager = {
             <button onclick="APISourceManager.cancelAddCustomApi()" class="bg-[#444] hover:bg-[#555] text-white px-3 py-1 rounded text-xs">取消</button>
         `;
     },
-    /**
- * 按索引返回自定义 API 信息
- * @param {number} index
- * @returns {Object|null}
- */
-    getCustomApiInfo: function (index) {
-        const list = AppState.get('customAPIs') || [];
-        if (index < 0 || index >= list.length) return null;
-        return list[index];
-    },
 
-    /**
-     * 取消新增自定义 API（对应“取消”按钮）
-     */
-    cancelAddCustomApi: function () {
-        const form = DOMCache.get('addCustomApiForm') || document.getElementById('addCustomApiForm');
-        if (form) form.classList.add('hidden');
-
-        // 清空并复位表单
-        const nameInput = DOMCache.get('customApiName') || document.getElementById('customApiName');
-        const urlInput = DOMCache.get('customApiUrl') || document.getElementById('customApiUrl');
-        const isAdult = DOMCache.get('customApiIsAdult') || document.getElementById('customApiIsAdult');
-        if (nameInput) nameInput.value = '';
-        if (urlInput) urlInput.value = '';
-        if (isAdult) isAdult.checked = false;
-    }
 };
 
 

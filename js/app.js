@@ -539,36 +539,6 @@ function renderSearchResults(results) {
  
 }
 
-/**
- * 生成单条搜索结果卡片的 HTML（字符串）
- * @param {Object} item
- * @returns {string}
- */
-function createResultItem(item) {
-    // 防 XSS
-    const title = sanitizeText(item.vod_name || item.name || '未知标题');
-    const cover = item.vod_pic || item.pic || '';
-    const id = item.vod_id || item.id;
-    const year = sanitizeText(item.vod_year || '');
-    const actor = sanitizeText(item.vod_actor || '');
-    const source = sanitizeText(item.source_name || '未知');
-    const sourceCode = item.source_code || '';
-    const apiUrl = item.api_url || '';
-
-    return `
-    <div class="card-hover cursor-pointer"
-         onclick="getVideoDetail('${id}', '${sourceCode}', '${apiUrl}')"
-         title="${title}">
-        <div class="search-card-img-container">
-            <img src="${cover}" alt="${title}" loading="lazy" />
-        </div>
-        <div class="flex-grow p-2 flex flex-col">
-            <h3 class="font-medium mb-1">${title}</h3>
-            <p class="text-xs text-gray-400 flex-1 overflow-hidden">${actor}</p>
-            <p class="text-xs text-gray-500 mt-1">${year ? year + ' · ' : ''}${source}</p>
-        </div>
-    </div>`;
-}
 
 /**
  * 获取视频详情
