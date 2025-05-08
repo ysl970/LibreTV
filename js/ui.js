@@ -781,3 +781,4 @@ window.clearViewingHistory = clearViewingHistory;
 // window.playFromHistory = playFromHistory;
 window.saveSearchHistory = saveSearchHistory;
 window.clearSearchHistory = clearSearchHistory;
+window.renderSearchHistory = renderSearchHistory;
