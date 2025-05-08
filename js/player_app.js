@@ -970,7 +970,13 @@ function playEpisode(index) {
         isUserSeeking = false; // Reset seeking flag
 
                // ★ 切源后立刻播放，确保真正加载新地址
-        dp.switchVideo({ url: episodeUrl, type: 'hls' });
+        dp.switchVideo({ 
+                url: episodeUrl,
+                type: 'hls',
+               
+                customType: {
+                    hls: window.PLAYER_CUSTOM_HLS || window._dplayerCustomHls
+                } });
         dp.play();        // ★ 显式播放
     } else {
         console.error('[PlayerApp] DPlayer instance not available for playEpisode');
