@@ -22,14 +22,23 @@ window.currentEpisodeIndex = 0;
 // window.dp will be set after DPlayer initialization
 // window.playEpisode will be set later
 
+// In js/player_app.js
 document.addEventListener('DOMContentLoaded', function() {
-    // 检查密码 (需要 password.js 先加载并定义好函数)
+    console.log('[PlayerApp Debug] DOMContentLoaded event fired.');
+    const testGridElement = document.getElementById('episode-grid');
+    if (testGridElement) {
+        console.log('[PlayerApp Debug] SUCCESS: episode-grid was FOUND immediately on DOMContentLoaded.');
+    } else {
+        console.error('[PlayerApp Debug] FAILURE: episode-grid was NOT FOUND immediately on DOMContentLoaded.');
+    }
+
+    // Existing password check and initializePageContent call
     if (typeof window.isPasswordVerified === 'function' && typeof window.isPasswordProtected === 'function') {
         if (window.isPasswordProtected() && !window.isPasswordVerified()) {
             if (typeof window.showPasswordModal === 'function') window.showPasswordModal();
             const loadingEl = document.getElementById('loading');
             if (loadingEl) loadingEl.style.display = 'none';
-            return; // Stop initialization if password required but not verified
+            return; 
         }
     } else {
         console.warn("Password functions (isPasswordProtected/isPasswordVerified) not found. Assuming no password protection.");
@@ -128,7 +137,8 @@ function initializePageContent() {
     }
 
     updateEpisodeInfo();
-    renderEpisodes();
+    //renderEpisodes();
+    setTimeout(renderEpisodes, 0); // Deferred call - diagnostics only
     updateButtonStates();
     updateOrderButton();
     
