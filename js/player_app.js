@@ -1131,14 +1131,12 @@ function toggleLockScreen() {
 }
 
 function renderEpisodes() {
-    console.log('[PlayerApp Debug] renderEpisodes called.');
-    console.log('[PlayerApp Debug] current episodesReversed state:', episodesReversed);
-    console.log('[PlayerApp Debug] currentEpisodes (should be original order):', JSON.parse(JSON.stringify(window.currentEpisodes))); // Deep copy for logging to avoid future modification issues in console view
-    console.log('[PlayerApp Debug] currentEpisodeIndex (original index of current video):', window.currentEpisodeIndex);
-
-    const episodeGrid = document.getElementById('episode-grid');
-    if (!episodeGrid) return;
-    console.error('[PlayerApp Debug] episode-grid element not found!');
+        const episodeGrid = document.getElementById('episode-grid');
+        if (!episodeGrid) {
+            console.warn('[PlayerApp] episode-grid element not found in renderEpisodes(). Will retry in 100 ms.');
+            setTimeout(renderEpisodes, 100);
+            return;
+        }
 
     // Show episodes container
     const episodesContainer = document.getElementById('episodes-container');
@@ -1153,25 +1151,21 @@ function renderEpisodes() {
         return;
     }
     
-    // Create a copy of episodes array to avoid modifying the original
-    let episodes = [...currentEpisodes];
+        /* ========= 重新计算“显示顺序”和“按钮文字” ========= */
+        // 获取 [0,1,2,…,n-1] 数组
+        const indexArr = [...Array(currentEpisodes.length).keys()];
+        if (episodesReversed) indexArr.reverse();   // 倒序显示
     
-    // Reverse if needed
-    if (episodesReversed) {
-        episodes = episodes.reverse();
-    }
-    
-    // Render each episode button
-    episodes.forEach((_, idx) => {
-        const episodeIndex = episodesReversed ? currentEpisodes.length - 1 - idx : idx;
+        indexArr.forEach((realIndex, displayIdx) => {
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = episodeIndex === currentEpisodeIndex 
+        button.className = realIndex === currentEpisodeIndex
             ? 'p-2 rounded bg-blue-600 text-white episode-active' 
             : 'p-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-300';
-        button.textContent = `${idx + 1}`;
-        button.setAttribute('aria-label', `第 ${idx + 1} 集`);
-        button.addEventListener('click', () => playEpisode(episodeIndex));
+            // 文本应显示真实的集数 (1..n 或 n..1)
+            button.textContent = `${realIndex + 1}`;
+            button.setAttribute('aria-label', `第 ${realIndex + 1} 集`);
+            button.addEventListener('click', () => playEpisode(realIndex));
         
         episodeGrid.appendChild(button);
     });
