@@ -1,5 +1,25 @@
 // File: js/player_app.js
-
+// Add this helper function at the top of js/player_app.js
+function SQuery(selector, callback, timeout = 5000, interval = 100) {
+    let elapsedTime = 0;
+    const check = () => {
+        const element = document.querySelector(selector); // Using querySelector
+        if (element) {
+            console.log(`[SQuery] Element '${selector}' found by SQuery.`);
+            callback(element);
+        } else {
+            elapsedTime += interval;
+            if (elapsedTime < timeout) {
+                setTimeout(check, interval);
+            } else {
+                console.error(`[SQuery] Element '${selector}' NOT FOUND by SQuery after ${timeout}ms.`);
+                // You could call your global showError or showToast here
+                // Example: if (typeof showError === 'function') showError(`关键UI元素 '${selector}' 未找到`);
+            }
+        }
+    };
+    check();
+}
 // --- 模块内变量 ---
 let currentVideoTitle = '';
 let currentEpisodeIndex = 0;
@@ -54,6 +74,7 @@ document.addEventListener('passwordVerified', () => {
 });
 
 function initializePageContent() {
+    console.log('[PlayerApp Debug] initializePageContent starting...');
     const urlParams = new URLSearchParams(window.location.search);
     const videoUrl = urlParams.get('url');
     const title = urlParams.get('title');
