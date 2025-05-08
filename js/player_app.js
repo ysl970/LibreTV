@@ -950,9 +950,7 @@ function playEpisode(index) {
 
     const newUrl = new URL(window.location.href);
     newUrl.searchParams.set('index', index.toString());
-    // Also update 'url' param if it's meant to reflect the current episode's URL directly
-    // For simplicity, let's assume 'url' was the initial entry point or for single videos
-    // newUrl.searchParams.set('url', episodeUrl); // Optional: if you want the main 'url' param to always be the current episode
+    newUrl.searchParams.set('url', episodeUrl);
 
     window.history.replaceState({}, '', newUrl.toString());
 
