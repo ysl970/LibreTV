@@ -129,6 +129,14 @@ const API_SITES = {
         api: 'https://api.wujinapi.me',
         name: '无尽资源'
     },
+        guaizi: {
+        api: 'https://gz360.tv/',
+        name: '瓜子影视'
+    },
+    dashixio: {
+        api: 'https://dsxys.pro/',
+        name: '大师兄影视' 
+    },
 };
 
 // 添加聚合搜索的配置选项
