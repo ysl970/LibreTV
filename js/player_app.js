@@ -13,6 +13,7 @@ let videoHasEnded = false;
 let userClickedPosition = null;
 let shortcutHintTimeout = null;
 let progressSaveInterval = null;
+let isScreenLocked = false;
 
 // 将需要在 player_preload.js 中访问的变量挂载到 window
 window.currentEpisodes = [];
@@ -451,43 +452,7 @@ function addDPlayerEventListeners(){
 
 // ... existing code ...
 
-// Add this variable with other state variables at the top
-let isScreenLocked = false;
-
-// Add this function to handle lock button functionality
-function toggleLockScreen() {
-    isScreenLocked = !isScreenLocked;
-    const playerContainer = document.querySelector('.player-container');
-    const lockButton = document.getElementById('lock-button');
-    
-    if (isScreenLocked) {
-        // Lock the screen
-        playerContainer.classList.add('player-locked');
-        if (lockButton) {
-            lockButton.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-unlock">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
-                </svg>
-                <span>解锁</span>
-            `;
-            lockButton.setAttribute('aria-label', '解锁屏幕');
-        }
-    } else {
-        // Unlock the screen
-        playerContainer.classList.remove('player-locked');
-        if (lockButton) {
-            lockButton.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                <span>锁定</span>
-            `;
-            lockButton.setAttribute('aria-label', '锁定屏幕');
-        }
-    }
-}
+// ... existing code ...
 
 function setupPlayerControls() {
     const backButton = document.getElementById('back-button');
@@ -718,6 +683,30 @@ function showMessage(text, type = 'info', duration = 3000) {
         messageElement.classList.add('opacity-0');
         messageElement._messageTimeout = null;
     }, duration);
+}
+
+function toggleLockScreen() {
+    isScreenLocked = !isScreenLocked;
+    const playerContainer = document.querySelector('.player-container');
+    const lockButton = document.getElementById('lock-button');
+    
+    if (isScreenLocked) {
+        // Lock the screen
+        playerContainer.classList.add('player-locked');
+        if (lockButton) {
+            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-unlock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`;
+            lockButton.setAttribute('aria-label', '解锁屏幕');
+        }
+        if (typeof showMessage === 'function') showMessage('屏幕已锁定', 'info');
+    } else {
+        // Unlock the screen
+        playerContainer.classList.remove('player-locked');
+        if (lockButton) {
+            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+            lockButton.setAttribute('aria-label', '锁定屏幕');
+        }
+        if (typeof showMessage === 'function') showMessage('屏幕已解锁', 'info');
+    }
 }
 
 function renderEpisodes() {
@@ -1080,6 +1069,30 @@ function showMessage(text, type = 'info', duration = 3000) {
         messageElement.classList.add('opacity-0');
         messageElement._messageTimeout = null;
     }, duration);
+}
+
+function toggleLockScreen() {
+    isScreenLocked = !isScreenLocked;
+    const playerContainer = document.querySelector('.player-container');
+    const lockButton = document.getElementById('lock-button');
+    
+    if (isScreenLocked) {
+        // Lock the screen
+        playerContainer.classList.add('player-locked');
+        if (lockButton) {
+            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-unlock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`;
+            lockButton.setAttribute('aria-label', '解锁屏幕');
+        }
+        if (typeof showMessage === 'function') showMessage('屏幕已锁定', 'info');
+    } else {
+        // Unlock the screen
+        playerContainer.classList.remove('player-locked');
+        if (lockButton) {
+            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+            lockButton.setAttribute('aria-label', '锁定屏幕');
+        }
+        if (typeof showMessage === 'function') showMessage('屏幕已解锁', 'info');
+    }
 }
 
 function renderEpisodes() {
