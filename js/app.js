@@ -536,7 +536,9 @@ function renderSearchResults(results) {
 
     searchResults.innerHTML = html;
 
- 
+    document.getElementById('resultsArea')?.classList.remove('hidden');
+    document.getElementById('searchArea')?.classList.add('hidden');
+    document.getElementById('doubanArea')?.classList.add('hidden');
 }
 
 
