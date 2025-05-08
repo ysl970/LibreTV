@@ -138,7 +138,7 @@ function initPasswordProtection() {
         const input = document.getElementById('passwordInput');
         if (input) {
             if (!input._passwordEvtBinded) { // 避免重复绑定
-                input.addEventListener('keypress', function(e) {
+                input.addEventListener('keypress', function (e) {
                     if (e.key === 'Enter') handlePasswordSubmit();
                 });
                 input._passwordEvtBinded = true;

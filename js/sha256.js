@@ -1,5 +1,5 @@
 // js/sha256.js
-window.sha256 = async function(message) {
+window.sha256 = async function (message) {
     if (window.crypto && window.crypto.subtle && window.crypto.subtle.digest) {
         const msgBuffer = new TextEncoder().encode(message);
         const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);

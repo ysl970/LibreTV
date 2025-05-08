@@ -1,154 +1,157 @@
 /* Player-specific styles */
 /* Basic layout and player-related styles */
-.player-container { 
-    width: 100%; 
-    max-width: 1200px; 
-    margin: 0 auto; 
+.player-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 /* Player area */
-#player { 
-    width: 100%; 
-    height: 60vh; 
+#player {
+    width: 100%;
+    height: 60vh;
 }
 
 /* Loading and error overlays */
-.loading-container, .error-container {
-    position: absolute; 
-    top: 0; 
-    left: 0; 
-    right: 0; 
+.loading-container,
+.error-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     bottom: 0;
-    display: flex; 
-    align-items: center; 
+    display: flex;
+    align-items: center;
     justify-content: center;
-    background-color: rgba(0,0,0,0.7); 
-    color: #fff; 
-    z-index: 100; 
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    z-index: 100;
     flex-direction: column;
 }
 
 .loading-spinner {
-    width: 50px; 
-    height: 50px; 
-    border: 4px solid rgba(255,255,255,.3);
-    border-radius: 50%; 
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, .3);
+    border-radius: 50%;
     border-top-color: #fff;
-    animation: spin 1s ease-in-out infinite; 
+    animation: spin 1s ease-in-out infinite;
     margin-bottom: 10px;
 }
 
-@keyframes spin { 
-    to { transform: rotate(360deg); } 
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
-.error-container { 
-    display: none; 
-    text-align: center; 
-    padding: 1rem; 
+.error-container {
+    display: none;
+    text-align: center;
+    padding: 1rem;
 }
 
-.error-icon { 
-    font-size: 48px; 
-    margin-bottom: 10px; 
+.error-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
 }
 
-.episode-active { 
-    background: #3b82f6 !important; 
-    border-color: #60a5fa !important; 
+.episode-active {
+    background: #3b82f6 !important;
+    border-color: #60a5fa !important;
 }
 
-.episode-grid { 
-    max-height: 30vh; 
-    overflow-y: auto; 
-    padding: 1rem 0; 
+.episode-grid {
+    max-height: 30vh;
+    overflow-y: auto;
+    padding: 1rem 0;
 }
 
 /* Custom switch styles */
-.switch { 
-    position: relative; 
-    display: inline-block; 
-    width: 46px; 
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
     height: 24px;
 }
 
-.switch input { 
-    opacity: 0; 
-    width: 0; 
+.switch input {
+    opacity: 0;
+    width: 0;
     height: 0;
 }
 
-.slider { 
-    position: absolute; 
-    cursor: pointer; 
-    top: 0; 
-    left: 0; 
-    right: 0; 
-    bottom: 0; 
-    background: #333; 
-    border-radius: 24px; 
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #333;
+    border-radius: 24px;
     transition: .4s;
 }
 
-.slider:before { 
-    position: absolute; 
-    content: ""; 
-    height: 18px; 
-    width: 18px; 
-    left: 3px; 
-    bottom: 3px; 
-    background: #fff; 
-    border-radius: 50%; 
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
     transition: .4s;
 }
 
-input:checked + .slider { 
+input:checked+.slider {
     background: #00ccff;
 }
 
-input:checked + .slider:before { 
+input:checked+.slider:before {
     transform: translateX(22px);
 }
 
 /* Keyboard shortcut hint */
 .shortcut-hint {
-    position: fixed; 
-    top: 50%; 
-    left: 50%; 
-    transform: translate(-50%,-50%);
-    background: rgba(0,0,0,.8); 
-    color: #fff; 
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, .8);
+    color: #fff;
     padding: 1rem 2rem;
-    border-radius: .5rem; 
-    font-size: 1.5rem; 
-    display: flex; 
-    align-items: center; 
-    gap: .5rem; 
+    border-radius: .5rem;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
     z-index: 1000;
-    opacity: 0; 
+    opacity: 0;
     transition: opacity .3s;
 }
 
-.shortcut-hint.show { 
-    opacity: 1; 
+.shortcut-hint.show {
+    opacity: 1;
 }
 
 /* Fullscreen adaptations */
 .player-container:-webkit-full-screen,
 .player-container:fullscreen {
-    position: fixed; 
-    top: 0; 
-    left: 0; 
-    width: 100vw; 
-    height: 100vh; 
-    z-index: 10000; 
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10000;
     background: #000;
 }
 
 .player-container:-webkit-full-screen #player,
-.player-container:fullscreen #player { 
-    width: 100%; 
-    height: 100%; 
+.player-container:fullscreen #player {
+    width: 100%;
+    height: 100%;
 }
 
 /* Lock screen styles */
@@ -175,37 +178,58 @@ input:checked + .slider:before {
 }
 
 /* — 选集按钮底色（未选中） — */
-#episode-grid button:not(.episode-active){
-    background:#222;          /* 与旧版一致 */
-    color:#d1d5db;            /* gray-300 */
-    border:1px solid #333;
+#episode-grid button:not(.episode-active) {
+    background: #222;
+    /* 与旧版一致 */
+    color: #d1d5db;
+    /* gray-300 */
+    border: 1px solid #333;
 }
-#episode-grid button:not(.episode-active):hover{background:#333;color:#fff}
+
+#episode-grid button:not(.episode-active):hover {
+    background: #333;
+    color: #fff
+}
 
 /* — 选集按钮（选中） — */
-.episode-active{
-    background:#3b82f6!important;
-    border-color:#60a5fa!important;
-    color:#fff!important;
-    font-weight:bold;
+.episode-active {
+    background: #3b82f6 !important;
+    border-color: #60a5fa !important;
+    color: #fff !important;
+    font-weight: bold;
 }
+
 /* — 仅图标按钮的统一尺寸 — */
-.icon-btn{
-    padding:.5rem;            /* p-2 */
-    display:flex;align-items:center;justify-content:center;
+.icon-btn {
+    padding: .5rem;
+    /* p-2 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* — 控件标签（自动播放 / 记住进度） — */
-.control-label{font-size:.875rem;/*text-sm*/color:#9ca3af;/*gray-400*/margin-right:.25rem;}
+.control-label {
+    font-size: .875rem;
+    /*text-sm*/
+    color: #9ca3af;
+    /*gray-400*/
+    margin-right: .25rem;
+}
 
 /* ① 隐藏 “选集” 二字 */
-#episodes-container h2{display:none}
+#episodes-container h2 {
+    display: none
+}
 
 /* ② 让整排控件靠右 */
-.player-control-bar{           /* 自定义类名 */
-    display:flex;
-    flex-wrap:wrap;
-    gap:1rem;                  /* 原 gap-4 */
-    justify-content:flex-end;  /* 关键：右对齐 */
-    align-items:center;
+.player-control-bar {
+    /* 自定义类名 */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    /* 原 gap-4 */
+    justify-content: flex-end;
+    /* 关键：右对齐 */
+    align-items: center;
 }

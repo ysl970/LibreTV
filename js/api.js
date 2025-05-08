@@ -42,8 +42,8 @@ async function handleSpecialSourceDetail(id, sourceCode) {
             return idx > -1 ? link.slice(0, idx) : link;
         });
 
-        const title = (result.html.match(/<h1[^>]*>([^<]+)<\/h1>/) || [,''])[1].trim();
-        const desc = (result.html.match(/<div[^>]*class=["']sketch["'][^>]*>([\s\S]*?)<\/div>/) || [,''])[1]
+        const title = (result.html.match(/<h1[^>]*>([^<]+)<\/h1>/) || [, ''])[1].trim();
+        const desc = (result.html.match(/<div[^>]*class=["']sketch["'][^>]*>([\s\S]*?)<\/div>/) || [, ''])[1]
             .replace(/<[^>]+>/g, ' ').trim();
 
         return JSON.stringify({
@@ -78,8 +78,8 @@ async function handleCustomApiSpecialDetail(id, customApi) {
                 return idx > -1 ? link.slice(0, idx) : link;
             });
 
-        const title = (result.html.match(/<h1[^>]*>([^<]+)<\/h1>/) || [,''])[1].trim();
-        const desc = (result.html.match(/<div[^>]*class=["']sketch["'][^>]*>([\s\S]*?)<\/div>/) || [,''])[1]
+        const title = (result.html.match(/<h1[^>]*>([^<]+)<\/h1>/) || [, ''])[1].trim();
+        const desc = (result.html.match(/<div[^>]*class=["']sketch["'][^>]*>([\s\S]*?)<\/div>/) || [, ''])[1]
             .replace(/<[^>]+>/g, ' ').trim();
 
         return JSON.stringify({
@@ -283,7 +283,7 @@ async function handleApiRequest(url) {
                 const mainSource = videoDetail.vod_play_url.split('$$$')[0] || '';
                 episodes = mainSource.split('#')
                     .map(ep => {
-                        const [ , link ] = ep.split('$');
+                        const [, link] = ep.split('$');
                         return link && (link.startsWith('http://') || link.startsWith('https://')) ? link : '';
                     })
                     .filter(Boolean);
@@ -326,9 +326,9 @@ async function handleApiRequest(url) {
 }
 
 // 初始化 API 请求拦截（fetch patch）
-(function() {
+(function () {
     const originalFetch = window.fetch;
-    window.fetch = async function(input, init) {
+    window.fetch = async function (input, init) {
         let requestUrl;
         if (typeof input === 'string') {
             requestUrl = new URL(input, window.location.origin);

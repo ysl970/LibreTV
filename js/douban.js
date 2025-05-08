@@ -4,7 +4,7 @@
 const CONFIG = {
   // API相关
   TIMEOUT: 10000,
-  PAGE_SIZE: 16, 
+  PAGE_SIZE: 16,
   MAX_TAG_LENGTH: 20,
   MAX_PAGE_START: 144,
 
@@ -23,7 +23,7 @@ const CONFIG = {
 
   // 默认标签
   DEFAULT_TAG: '热门',
-  
+
   // UI相关
   CLASSES: {
     ACTIVE: 'bg-pink-600 text-white',
@@ -34,7 +34,7 @@ const CONFIG = {
   // 错误信息
   MESSAGES: {
     NETWORK_ERROR: '网络连接失败，请检查网络设置',
-    TIMEOUT_ERROR: '请求超时，请稍后重试', 
+    TIMEOUT_ERROR: '请求超时，请稍后重试',
     API_ERROR: '获取豆瓣数据失败，请稍后重试',
     TAG_EXISTS: '标签已存在',
     TAG_RESERVED: '热门标签不能删除',
@@ -79,7 +79,7 @@ const utils = {
         "'": '&#39;'
       })[char]);
   },
-  
+
   // 验证标签格式
   validateTag(tag) {
     if (!tag?.trim()) {
@@ -147,7 +147,7 @@ const utils = {
     }
   }
 };
-  
+
 // 加载用户标签
 function loadUserTags() {
   movieTags = utils.storage.get(CONFIG.STORAGE_KEYS.MOVIE_TAGS, [...defaultMovieTags]);
@@ -158,7 +158,7 @@ function loadUserTags() {
 function saveUserTags() {
   const movieSaved = utils.storage.set(CONFIG.STORAGE_KEYS.MOVIE_TAGS, movieTags);
   const tvSaved = utils.storage.set(CONFIG.STORAGE_KEYS.TV_TAGS, tvTags);
-  
+
   if (!movieSaved || !tvSaved) {
     showToast('保存标签失败', 'error');
   }
@@ -168,30 +168,30 @@ function saveUserTags() {
 // 初始化豆瓣功能
 function initDouban() {
   // 初始化关键DOM元素缓存
-  ['doubanToggle', 'doubanArea', 'douban-movie-toggle', 'douban-tv-toggle', 
-   'douban-tags', 'douban-refresh', 'douban-results', 'searchInput'].forEach(id => {
-    utils.getElement(id);
-  });
+  ['doubanToggle', 'doubanArea', 'douban-movie-toggle', 'douban-tv-toggle',
+    'douban-tags', 'douban-refresh', 'douban-results', 'searchInput'].forEach(id => {
+      utils.getElement(id);
+    });
 
   const doubanToggle = utils.getElement('doubanToggle');
   if (doubanToggle) {
     const isEnabled = utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, true) === true;
     doubanToggle.checked = isEnabled;
 
-// 如果是首次加载且 localStorage 中没有设置过，则强制写入 true
-  if (localStorage.getItem(CONFIG.STORAGE_KEYS.ENABLED) === null) {
+    // 如果是首次加载且 localStorage 中没有设置过，则强制写入 true
+    if (localStorage.getItem(CONFIG.STORAGE_KEYS.ENABLED) === null) {
       utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, true);
     }
 
     const toggleBg = doubanToggle.nextElementSibling;
     const toggleDot = toggleBg.nextElementSibling;
-    
+
     if (isEnabled) {
       toggleBg.classList.add('bg-pink-600');
       toggleDot.classList.add('translate-x-6');
     }
 
-    doubanToggle.addEventListener('change', function(e) {
+    doubanToggle.addEventListener('change', function (e) {
       const isChecked = e.target.checked;
       utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, isChecked);
 
@@ -245,7 +245,7 @@ function fillSearchInput(title) {
 
   const safeTitle = utils.safeText(title);
   const input = utils.getElement('searchInput');
-  
+
   if (input) {
     input.value = safeTitle;
     input.focus();
@@ -259,7 +259,7 @@ function fillAndSearch(title) {
 
   const safeTitle = utils.safeText(title);
   const input = utils.getElement('searchInput');
-  
+
   if (input) {
     input.value = safeTitle;
     if (typeof search === 'function') {
@@ -337,7 +337,7 @@ function renderDoubanMovieTvSwitch() {
     doubanPageStart = 0;
 
     renderDoubanTags();
-    
+
     if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true) {
       renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
     }
@@ -372,12 +372,11 @@ function renderDoubanTags() {
   // 添加标签按钮
   currentTags.forEach(tag => {
     const btn = document.createElement('button');
-    btn.className = `py-1.5 px-3.5 rounded text-sm font-medium transition-all duration-300 ${
-      tag === doubanCurrentTag ? CONFIG.CLASSES.ACTIVE : 'bg-[#1a1a1a] text-gray-300 hover:bg-pink-700 hover:text-white'
-    }`;
+    btn.className = `py-1.5 px-3.5 rounded text-sm font-medium transition-all duration-300 ${tag === doubanCurrentTag ? CONFIG.CLASSES.ACTIVE : 'bg-[#1a1a1a] text-gray-300 hover:bg-pink-700 hover:text-white'
+      }`;
     btn.textContent = tag;
 
-    btn.onclick = utils.debounce(function() {
+    btn.onclick = utils.debounce(function () {
       if (doubanCurrentTag !== tag) {
         doubanCurrentTag = tag;
         doubanPageStart = 0;
@@ -398,7 +397,7 @@ function setupDoubanRefreshBtn() {
   const btn = utils.getElement('douban-refresh');
   if (!btn) return;
 
-  btn.onclick = utils.debounce(function() {
+  btn.onclick = utils.debounce(function () {
     doubanPageStart += doubanPageSize;
     if (doubanPageStart > CONFIG.MAX_PAGE_START) {
       doubanPageStart = 0;
@@ -455,7 +454,7 @@ async function fetchDoubanData(url) {
       if (data?.contents) {
         return JSON.parse(data.contents);
       }
-      
+
       throw new Error("无法获取有效数据");
     } catch (fallbackErr) {
       console.error("豆瓣 API 备用请求也失败：", fallbackErr);
@@ -508,16 +507,16 @@ function renderDoubanCards(data, container) {
       const safeRate = utils.safeText(item.rate || "暂无");
       const safeUrl = item.url || "#";
       const originalCoverUrl = item.cover || "";
-      const proxiedCoverUrl = typeof PROXY_URL !== 'undefined' ? 
-                             PROXY_URL + encodeURIComponent(originalCoverUrl) : 
-                             originalCoverUrl;
+      const proxiedCoverUrl = typeof PROXY_URL !== 'undefined' ?
+        PROXY_URL + encodeURIComponent(originalCoverUrl) :
+        originalCoverUrl;
 
       const card = document.createElement("div");
       card.className = CONFIG.CLASSES.CARD;
-      
+
       // 使用数据属性传递数据，而不是直接在onclick中使用
       card.setAttribute('data-title', safeTitle);
-      
+
       card.innerHTML = `
         <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer douban-card-cover">
           <img src="${originalCoverUrl}" alt="${safeTitle}"
@@ -541,20 +540,20 @@ function renderDoubanCards(data, container) {
           </button>
         </div>
       `;
-      
+
       // 使用事件委托而非内联事件
       const coverEl = card.querySelector('.douban-card-cover');
       const buttonEl = card.querySelector('.douban-search-btn');
       const linkEl = card.querySelector('.douban-link');
-      
+
       if (coverEl) {
         coverEl.addEventListener('click', () => fillAndSearchWithDouban(safeTitle));
       }
-      
+
       if (buttonEl) {
         buttonEl.addEventListener('click', () => fillAndSearchWithDouban(safeTitle));
       }
-      
+
       if (linkEl) {
         linkEl.addEventListener('click', (e) => e.stopPropagation());
       }
@@ -594,20 +593,20 @@ function showTagManageModal() {
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4" id="tagsGrid">
           ${currentTags.length ? currentTags.map(tag => {
-            const canDelete = tag !== CONFIG.DEFAULT_TAG;
-            const safeTag = utils.safeText(tag);
-            return `
+    const canDelete = tag !== CONFIG.DEFAULT_TAG;
+    const safeTag = utils.safeText(tag);
+    return `
               <div class="bg-[#1a1a1a] text-gray-300 py-1.5 px-3 rounded text-sm font-medium flex justify-between items-center group">
                 <span>${safeTag}</span>
                 ${canDelete ?
-                  `<button class="delete-tag-btn text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+        `<button class="delete-tag-btn text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                     data-tag="${safeTag}">✕</button>` :
-                  `<span class="text-gray-500 text-xs italic opacity-0 group-hover:opacity-100">必需</span>`
-                }
+        `<span class="text-gray-500 text-xs italic opacity-0 group-hover:opacity-100">必需</span>`
+      }
               </div>
             `;
-          }).join('') :
-          `<div class="col-span-full text-center py-4 text-gray-500">无标签，请添加或恢复默认</div>`}
+  }).join('') :
+      `<div class="col-span-full text-center py-4 text-gray-500">无标签，请添加或恢复默认</div>`}
         </div>
       </div>
       <div class="border-t border-gray-700 pt-4">
@@ -661,11 +660,11 @@ function showTagManageModal() {
     showTagManageModal();
   });
 
-  modal.querySelector('#addTagForm')?.addEventListener('submit', function(e) {
+  modal.querySelector('#addTagForm')?.addEventListener('submit', function (e) {
     e.preventDefault();
     const input = document.getElementById('newTagInput');
     if (!input) return;
-    
+
     const newTag = input.value.trim();
     if (newTag) {
       addTag(newTag);
@@ -702,7 +701,7 @@ function addTag(tag) {
 // 删除标签
 function deleteTag(tag) {
   if (!tag) return;
-  
+
   if (tag === CONFIG.DEFAULT_TAG) {
     showToast(CONFIG.MESSAGES.TAG_RESERVED, 'warning');
     return;
@@ -730,7 +729,7 @@ function deleteTag(tag) {
 // 重置为默认标签
 function resetTagsToDefault() {
   const isMovie = doubanMovieTvCurrentSwitch === CONFIG.MEDIA_TYPES.MOVIE;
-  
+
   if (isMovie) {
     movieTags = [...defaultMovieTags];
   } else {
