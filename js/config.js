@@ -136,7 +136,6 @@ const API_SITES = {
     dashixio: {
         api: 'https://dsxys.pro/',
         name: '大师兄影视' 
-        detail: 'https://dsxys.com'
     },
 };
 
