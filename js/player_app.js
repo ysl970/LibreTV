@@ -69,7 +69,10 @@ document.addEventListener('DOMContentLoaded', function () {
 // Listen for password verification success event
 document.addEventListener('passwordVerified', () => {
     const loadingEl = document.getElementById('loading');
-    if (loadingEl) loadingEl.style.display = 'flex'; // Show loading after password
+    if (loadingEl) {
+        loadingEl.style.display = 'flex';              // 原来的
+        document.documentElement.classList.add('show-loading'); // ← 新增
+    }
     initializePageContent();
 });
 
@@ -410,7 +413,11 @@ function addDPlayerEventListeners() {
 
     dp.on('loadedmetadata', function () {
         if (debugMode) console.log("[PlayerApp] DPlayer event: loadedmetadata");
-        const el = document.getElementById('loading'); if (el) el.style.display = 'none';
+        const el = document.getElementById('loading');
+        if (el) {
+            el.style.display = 'none';                     // 原来的
+            document.documentElement.classList.remove('show-loading'); // ← 新增
+        }
         videoHasEnded = false;
         setupProgressBarPreciseClicks();
         setTimeout(saveToHistory, 3000); // Save initial state to history
