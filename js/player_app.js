@@ -436,8 +436,7 @@ function addDPlayerEventListeners(){
         videoHasEnded = true;
         saveCurrentProgress(); // Ensure final progress is saved
         clearVideoProgress(); // Clear progress for *this specific video*
-            if (!autoplayEnabled) return;       // 用户关掉了自动连播
-        
+        if (!autoplayEnabled) return;       // 用户关掉了自动连播
             const nextIdx = currentEpisodeIndex + 1;   // 始终 +1（上一条回复已统一）
             if (nextIdx < currentEpisodes.length) {
                 setTimeout(() => {
