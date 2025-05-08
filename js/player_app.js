@@ -424,12 +424,13 @@ function addDPlayerEventListeners(){
     });
     
     dp.on('ended', function() {
-         if (debugMode) console.log("[PlayerApp] DPlayer event: ended");
         videoHasEnded = true;
         saveCurrentProgress(); // Ensure final progress is saved
         clearVideoProgress(); // Clear progress for *this specific video*
-        if (autoplayEnabled && window.currentEpisodeIndex < window.currentEpisodes.length - 1) {
-            if (debugMode) console.log('[PlayerApp] Video ended, autoplaying next.');
+        const hasNext = episodesReversed ? currentEpisodeIndex < currentEpisodes.length - 1
+                                         : currentEpisodeIndex < currentEpisodes.length - 1;
+        if (autoplayEnabled && hasNext) {
+  
             setTimeout(() => {
                 if (videoHasEnded && !isUserSeeking) { // Ensure it really ended and user isn't seeking
                      if(typeof window.playNextEpisode === 'function') window.playNextEpisode();
@@ -1186,10 +1187,9 @@ function updateEpisodeInfo() {
 function playPreviousEpisode() {
     if (!currentEpisodes || currentEpisodes.length === 0) return;
     
-    if (episodesReversed) {
-        // In reversed order, "previous" means going to the next index
-        if (currentEpisodeIndex < currentEpisodes.length - 1) {
-            playEpisode(currentEpisodeIndex + 1);
+        if (episodesReversed) {
+                if (currentEpisodeIndex > 0) {
+                    playEpisode(currentEpisodeIndex - 1);
         } else {
             if (typeof showMessage === 'function') showMessage('已经是第一集了', 'info');
         }
@@ -1208,10 +1208,9 @@ window.playPreviousEpisode = playPreviousEpisode;
 function playNextEpisode() {
     if (!currentEpisodes || currentEpisodes.length === 0) return;
     
-    if (episodesReversed) {
-        // In reversed order, "next" means going to the previous index
-        if (currentEpisodeIndex > 0) {
-            playEpisode(currentEpisodeIndex - 1);
+        if (episodesReversed) {
+                if (currentEpisodeIndex < currentEpisodes.length - 1) {
+                    playEpisode(currentEpisodeIndex + 1);
         } else {
             if (typeof showMessage === 'function') showMessage('已经是最后一集了', 'info');
         }
