@@ -101,7 +101,7 @@
             <div class="flex flex-wrap gap-4 justify-between">
                 <!-- Autoplay Next -->
                 <div class="flex items-center gap-2">
-                    <span id="autoplay-label">自动播放</span>
+                    <span id="autoplay-label" class="control-label">自动播放下一集</span>
                     <label class="switch">
                         <input type="checkbox" id="autoplay-next" checked aria-labelledby="autoplay-label">
                         <span class="slider"></span>
@@ -110,27 +110,27 @@
                 
                 <!-- Remember Progress -->
                 <div class="flex items-center gap-2">
-                    <span id="remember-progress-label">记住进度</span>
+                    <span id="remember-progress-label" class="control-label">记住播放进度</span>
                     <label class="switch">
                         <input type="checkbox" id="remember-progress" checked aria-labelledby="remember-progress-label">
                         <span class="slider"></span>
                     </label>
                 </div>
                 
-                <!-- Episode Order Button -->
-                <button id="order-button" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors" aria-label="切换剧集顺序">
-                    正序
-                </button>
-                
+                 <!-- Episode Order Button：只留图标 -->
+                 <button id="order-button" class="icon-btn bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors" aria-label="切换剧集顺序">
+                     <!-- 替换为 SVG 图标 -->
+                     <svg id="order-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                 </button>
+
                 <!-- Position 5: Lock Button -->
-                <!-- Position 5: Lock Button -->
-                <button id="lock-button" class="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors flex items-center gap-1" aria-label="锁定屏幕">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock">
-                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                    </svg>
-                    <span>锁定</span>
-                </button>
+                 <button id="lock-button" class="icon-btn bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors" aria-label="锁定/解锁">
+                     <svg id="lock-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                     <!-- 默认：锁定图标 -->
+                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                       <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                     </svg>
+                 </button>
             </div>
         </div>
         

@@ -174,14 +174,26 @@ input:checked + .slider:before {
     font-weight: bold;
 }
 
-/* Inactive episode button style */
-#episode-grid button:not(.episode-active) {
-    background-color: #1f2937;
-    color: #d1d5db;
-    border: 1px solid #374151;
+/* — 选集按钮底色（未选中） — */
+#episode-grid button:not(.episode-active){
+    background:#222;          /* 与旧版一致 */
+    color:#d1d5db;            /* gray-300 */
+    border:1px solid #333;
+}
+#episode-grid button:not(.episode-active):hover{background:#333;color:#fff}
+
+/* — 选集按钮（选中） — */
+.episode-active{
+    background:#3b82f6!important;
+    border-color:#60a5fa!important;
+    color:#fff!important;
+    font-weight:bold;
+}
+/* — 仅图标按钮的统一尺寸 — */
+.icon-btn{
+    padding:.5rem;            /* p-2 */
+    display:flex;align-items:center;justify-content:center;
 }
 
-#episode-grid button:not(.episode-active):hover {
-    background-color: #374151;
-    color: white;
-}
+/* — 控件标签（自动播放 / 记住进度） — */
+.control-label{font-size:.875rem;/*text-sm*/color:#9ca3af;/*gray-400*/margin-right:.25rem;}

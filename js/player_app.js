@@ -805,17 +805,13 @@ function toggleEpisodeOrder() {
     renderEpisodes();
 }
 
-function updateOrderButton() {
-    const orderButton = document.getElementById('order-button');
-    if (!orderButton) return;
-    
-    orderButton.textContent = episodesReversed ? '倒序' : '正序';
-    orderButton.setAttribute('aria-label', episodesReversed ? '切换为正序' : '切换为倒序');
-    
-    const episodesCount = document.getElementById('episodes-count');
-    if (episodesCount) {
-        episodesCount.textContent = `共 ${currentEpisodes.length} 集`;
-    }
+function updateOrderButton(){
+    const icon = document.getElementById('order-icon');
+    if(!icon)return;
+    // 清空原 path 后填充新图标
+    icon.innerHTML = episodesReversed
+        ? '<polyline points="18 15 12 9 6 15"></polyline>'  // ⬆️  倒序
+        : '<polyline points="6 9 12 15 18 9"></polyline>';  // ⬇️  正序
 }
 
 // Add event listener for the order button in the initializePageContent function
@@ -1107,28 +1103,16 @@ function showMessage(text, type = 'info', duration = 3000) {
     }, duration);
 }
 
-function toggleLockScreen() {
+function toggleLockScreen(){
     isScreenLocked = !isScreenLocked;
     const playerContainer = document.querySelector('.player-container');
-    const lockButton = document.getElementById('lock-button');
-    
-    if (isScreenLocked) {
-        // Lock the screen
-        playerContainer.classList.add('player-locked');
-        if (lockButton) {
-            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-unlock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`;
-            lockButton.setAttribute('aria-label', '解锁屏幕');
-        }
-        if (typeof showMessage === 'function') showMessage('屏幕已锁定', 'info');
-    } else {
-        // Unlock the screen
-        playerContainer.classList.remove('player-locked');
-        if (lockButton) {
-            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-            lockButton.setAttribute('aria-label', '锁定屏幕');
-        }
-        if (typeof showMessage === 'function') showMessage('屏幕已解锁', 'info');
-    }
+    const icon = document.getElementById('lock-icon');
+
+    playerContainer.classList.toggle('player-locked', isScreenLocked);
+
+    icon.innerHTML = isScreenLocked
+        ? '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path>' // 🔓
+        : '<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>'; // 🔒
 }
 
 function renderEpisodes() {
