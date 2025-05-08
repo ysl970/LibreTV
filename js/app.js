@@ -769,3 +769,141 @@ function createResultItem(item) {
     return tempDiv.innerHTML;
 }
 
+/**
+ * 处理搜索结果项点击事件
+ * @param {Event} event - 点击事件
+ */
+function handleResultClick(event) {
+    const cardElement = this;
+    const id = cardElement.dataset.id;
+    const title = cardElement.dataset.title;
+    const sourceCode = cardElement.dataset.source;
+    
+    if (id && sourceCode) {
+        showVideoEpisodesModal(id, title, sourceCode);
+    }
+}
+
+/**
+ * 显示视频剧集模态框
+ * @param {string} id - 视频ID
+ * @param {string} title - 视频标题
+ * @param {string} sourceCode - 来源代码
+ */
+function showVideoEpisodesModal(id, title, sourceCode) {
+    showLoading('加载剧集信息...');
+    
+    // 获取当前选中的API
+    const selectedApi = getSelectedApi(sourceCode);
+    if (!selectedApi) {
+        hideLoading();
+        showToast('未找到有效的数据源', 'error');
+        return;
+    }
+    
+    // 调用API获取详情
+    fetchVideoDetail(id, sourceCode)
+        .then(data => {
+            hideLoading();
+            if (!data || !data.episodes || data.episodes.length === 0) {
+                showToast('未找到剧集信息', 'warning');
+                return;
+            }
+            
+            // 保存当前剧集信息到状态
+            AppState.set('currentEpisodes', data.episodes);
+            AppState.set('currentVideoTitle', title);
+            AppState.set('currentSourceName', selectedApi.name);
+            AppState.set('currentSourceCode', sourceCode);
+            
+            // 渲染剧集按钮并显示模态框
+            const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode);
+            showModal(episodeButtonsHtml, title);
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('获取剧集信息失败:', error);
+            showToast('获取剧集信息失败', 'error');
+        });
+}
+
+/**
+ * 渲染剧集按钮HTML
+ * @param {Array} episodes - 剧集列表
+ * @param {string} title - 视频标题
+ * @param {string} sourceCode - 来源代码
+ * @returns {string} - 剧集按钮HTML
+ */
+function renderEpisodeButtons(episodes, title, sourceCode) {
+    if (!episodes || episodes.length === 0) return '<p class="text-center text-gray-500">暂无剧集信息</p>';
+    
+    // 排序控制UI
+    let html = `
+    <div class="mb-4 flex justify-between items-center">
+        <div class="text-sm text-gray-400">共 ${episodes.length} 集</div>
+        <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg flex items-center gap-1">
+            <span id="orderText">正序</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+        </button>
+    </div>
+    <div id="episodeButtonsContainer" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">`;
+    
+    // 生成剧集按钮
+    episodes.forEach((episode, index) => {
+        html += `
+        <button 
+            onclick="playVideo('${episode}', '${title}', ${index}, '${AppState.get('currentSourceName')}', '${sourceCode}')" 
+            class="episode-btn px-2 py-1 bg-gray-800 hover:bg-gray-700 text-white rounded text-sm transition-colors"
+            data-index="${index}"
+        >
+            ${index + 1}
+        </button>`;
+    });
+    
+    html += '</div>';
+    return html;
+}
+
+/**
+ * 切换剧集排序UI
+ */
+function toggleEpisodeOrderUI() {
+    const container = document.getElementById('episodeButtonsContainer');
+    const orderText = document.getElementById('orderText');
+    if (!container || !orderText) return;
+    
+    // 获取所有剧集按钮并转换为数组
+    const buttons = Array.from(container.querySelectorAll('.episode-btn'));
+    if (buttons.length === 0) return;
+    
+    // 判断当前排序方式
+    const isAscending = orderText.textContent === '正序';
+    
+    // 更新排序文本
+    orderText.textContent = isAscending ? '倒序' : '正序';
+    
+    // 反转按钮顺序
+    buttons.reverse().forEach(button => {
+        container.appendChild(button);
+    });
+}
+
+// 将函数暴露给全局作用域
+window.showVideoEpisodesModal = showVideoEpisodesModal;
+window.toggleEpisodeOrderUI = toggleEpisodeOrderUI;
+
+// 移除或注释掉旧的getVideoDetail函数
+// function getVideoDetail(id, sourceCode) {
+//     // 旧代码...
+// }
+
+// 确保createResultItemUsingTemplate函数中设置了点击事件
+function createResultItemUsingTemplate(result) {
+    // 设置点击事件
+    cardElement.onclick = handleResultClick;
+    
+    return cardElement;
+}
+
