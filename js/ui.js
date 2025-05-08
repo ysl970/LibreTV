@@ -696,6 +696,12 @@ function attachEventListeners() {
     if (settingsButton) {
         settingsButton.addEventListener('click', toggleSettings);
     }
+    
+    // 观看历史按钮
+    const historyButton = getElement('historyButton');
+    if (historyButton) {
+      historyButton.addEventListener('click', toggleHistory);
+    }
 
     // 关闭设置面板按钮
     const closeSettingsPanelButton = getElement('closeSettingsPanelButton');
