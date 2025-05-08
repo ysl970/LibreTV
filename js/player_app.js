@@ -5,7 +5,7 @@ function SQuery(selector, callback, timeout = 5000, interval = 100) {
     const check = () => {
         const element = document.querySelector(selector); // Using querySelector
         if (element) {
-            console.log(`[SQuery] Element '${selector}' found by SQuery.`);
+           // console.log(`[SQuery] Element '${selector}' found by SQuery.`);
             callback(element);
         } else {
             elapsedTime += interval;
@@ -44,10 +44,10 @@ window.currentEpisodeIndex = 0;
 
 // In js/player_app.js
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('[PlayerApp Debug] DOMContentLoaded event fired.');
+  //  console.log('[PlayerApp Debug] DOMContentLoaded event fired.');
     const testGridElement = document.getElementById('episode-grid');
     if (testGridElement) {
-        console.log('[PlayerApp Debug] SUCCESS: episode-grid was FOUND immediately on DOMContentLoaded.');
+     //   console.log('[PlayerApp Debug] SUCCESS: episode-grid was FOUND immediately on DOMContentLoaded.');
     } else {
         console.error('[PlayerApp Debug] FAILURE: episode-grid was NOT FOUND immediately on DOMContentLoaded.');
     }
@@ -74,7 +74,7 @@ document.addEventListener('passwordVerified', () => {
 });
 
 function initializePageContent() {
-    console.log('[PlayerApp Debug] initializePageContent starting...');
+  //  console.log('[PlayerApp Debug] initializePageContent starting...');
     const urlParams = new URLSearchParams(window.location.search);
     const videoUrl = urlParams.get('url');
     const title = urlParams.get('title');
@@ -91,17 +91,17 @@ function initializePageContent() {
         if (episodesListParam) {
             try {
                 currentEpisodes = JSON.parse(decodeURIComponent(episodesListParam));
-                console.log("[PlayerApp] Episodes loaded from URL parameter.");
+              //  console.log("[PlayerApp] Episodes loaded from URL parameter.");
             } catch (e) {
                 console.warn("[PlayerApp] Failed to parse episodes from URL, falling back to localStorage.", e);
                 currentEpisodes = episodesSource ? JSON.parse(episodesSource) : [];
             }
         } else if (episodesSource) {
             currentEpisodes = JSON.parse(episodesSource);
-            console.log("[PlayerApp] Episodes loaded from localStorage.");
+          //  console.log("[PlayerApp] Episodes loaded from localStorage.");
         } else {
             currentEpisodes = [];
-            console.log("[PlayerApp] No episode data found in URL or localStorage.");
+          //  console.log("[PlayerApp] No episode data found in URL or localStorage.");
         }
         window.currentEpisodes = currentEpisodes; // Expose globally
 
@@ -222,7 +222,7 @@ class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
         }
 
         if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-            console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
+         //   console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
         }
 
         const lines = m3u8Content.split('\n');
@@ -233,7 +233,7 @@ class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
                 filteredLines.push(line);
             } else {
                 if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-                    console.log('[AdFilter-Legacy] Removing line:', line);
+               //     console.log('[AdFilter-Legacy] Removing line:', line);
                 }
             }
         }
@@ -524,7 +524,7 @@ function setupPlayerControls() {
                     dp.switchVideo({ url: videoUrlRetry, type: 'hls' });
                     dp.play();
                 } else {
-                     console.log("[PlayerApp] Retrying: Re-initializing player.");
+                 //    console.log("[PlayerApp] Retrying: Re-initializing player.");
                     initPlayer(videoUrlRetry, sourceCodeRetry);
                 }
             } else {
@@ -799,7 +799,7 @@ function updateEpisodeInfo() {
 function toggleEpisodeOrder() {
     episodesReversed = !episodesReversed;
     localStorage.setItem('episodesReversed', episodesReversed.toString());
-    console.log('[PlayerApp] Episode order toggled. New state:', episodesReversed ? 'Reversed' : 'Normal');
+ //   console.log('[PlayerApp] Episode order toggled. New state:', episodesReversed ? 'Reversed' : 'Normal');
     updateOrderButton();
     renderEpisodes();
 }
@@ -835,17 +835,17 @@ function initializePageContent() {
         if (episodesListParam) {
             try {
                 currentEpisodes = JSON.parse(decodeURIComponent(episodesListParam));
-                console.log("[PlayerApp] Episodes loaded from URL parameter.");
+              //  console.log("[PlayerApp] Episodes loaded from URL parameter.");
             } catch (e) {
                 console.warn("[PlayerApp] Failed to parse episodes from URL, falling back to localStorage.", e);
                 currentEpisodes = episodesSource ? JSON.parse(episodesSource) : [];
             }
         } else if (episodesSource) {
             currentEpisodes = JSON.parse(episodesSource);
-            console.log("[PlayerApp] Episodes loaded from localStorage.");
+          //  console.log("[PlayerApp] Episodes loaded from localStorage.");
         } else {
             currentEpisodes = [];
-            console.log("[PlayerApp] No episode data found in URL or localStorage.");
+         //   console.log("[PlayerApp] No episode data found in URL or localStorage.");
         }
         window.currentEpisodes = currentEpisodes; // Expose globally
 
@@ -904,7 +904,7 @@ function initializePageContent() {
     updateEpisodeInfo();
     requestAnimationFrame(() => {
         renderEpisodes();
-        console.log('[PlayerApp] renderEpisodes called via requestAnimationFrame');
+     //   console.log('[PlayerApp] renderEpisodes called via requestAnimationFrame');
     });
     updateButtonStates();
     updateOrderButton();
@@ -1146,7 +1146,7 @@ function renderEpisodes() {
     episodeGrid.innerHTML = '';
     
     if (!window.currentEpisodes || window.currentEpisodes.length === 0) {
-        console.log('[PlayerApp Debug] No episodes to render.');
+      //  console.log('[PlayerApp Debug] No episodes to render.');
         episodeGrid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">没有可用的剧集</div>';
         return;
     }
