@@ -536,13 +536,7 @@ function renderSearchResults(results) {
 
     searchResults.innerHTML = html;
 
-    // 统计数量
-    const countEl = document.getElementById('searchResultsCount');
-    if (countEl) countEl.textContent = allResults.length;
-
-    // 切换可见区
-    document.getElementById('resultsArea')?.classList.remove('hidden');
-    document.getElementById('searchArea')?.classList.add('hidden');
+ 
 }
 
 /**
