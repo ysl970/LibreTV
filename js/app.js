@@ -871,17 +871,15 @@ function handlePlayerError() {
 
 // 辅助函数用于渲染剧集按钮（使用当前的排序状态）
 function renderEpisodes(vodName, sourceCode) {
-    const episodes = episodesReversed ? [...currentEpisodes].reverse() : currentEpisodes;
-    return episodes.map((episode, index) => {
-        // 根据倒序状态计算真实的剧集索引
-        const realIndex = episodesReversed ? currentEpisodes.length - 1 - index : index;
-        return `
-            <button id="episode-${realIndex}" onclick="playVideo('${episode}','${vodName.replace(/"/g, '&quot;')}', '${sourceCode}', ${realIndex})" 
-                    class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors text-center episode-btn">
-                第${realIndex + 1}集
-            </button>
-        `;
-    }).join('');
+    let order = [...Array(currentEpisodes.length).keys()];      // [0,1,2,...]
+    if (episodesReversed) order = order.reverse();              // 倒序显示，但idx永远是原始下标
+
+    return order.map(idx => `
+        <button id="episode-${idx}" onclick="playVideo('${currentEpisodes[idx]}','${vodName.replace(/"/g, '&quot;')}', '${sourceCode}', ${idx})"
+            class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors text-center episode-btn">
+            第${idx + 1}集
+        </button>
+    `).join('');
 }
 
 // 切换排序状态的函数
