@@ -245,7 +245,7 @@ function initializeAppState() {
 function initializeDOMCache() {
     // 缓存搜索相关元素
     DOMCache.set('searchInput', document.getElementById('searchInput'));
-    DOMCache.set('searchResults', document.getElementById('searchResults'));
+    DOMCache.set('searchResults', document.getElementById('results'));
     DOMCache.set('searchForm', document.getElementById('searchForm'));
     DOMCache.set('searchHistoryContainer', document.getElementById('searchHistory'));
     
@@ -260,7 +260,7 @@ function initializeDOMCache() {
     
     // 缓存过滤器相关元素
     DOMCache.set('yellowFilterToggle', document.getElementById('yellowFilterToggle'));
-    DOMCache.set('adFilteringToggle', document.getElementById('adFilteringToggle'));
+    DOMCache.set('adFilteringToggle', document.getElementById('adFilterToggle'));
     
     // 缓存预加载相关元素
     DOMCache.set('preloadingToggle', document.getElementById('preloadingToggle'));
