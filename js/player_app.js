@@ -12,6 +12,7 @@ function SQuery(selector, callback, timeout = 5000, interval = 100) {
         else console.error(`[SQuery] '${selector}' NOT found in ${timeout} ms`);
     })();
 }
+console.log('[DEBUG] player_app.js loaded at', location.href);
 
 /* ---------------------------------------------------------------------- */
 /*  2. 全局状态                                                           */
@@ -120,6 +121,8 @@ function initializePageContent () {
     /* ---------- 事件 ---------- */
     document.addEventListener('keydown', handleKeyboardShortcuts);
     window.addEventListener('beforeunload', saveCurrentProgress);
+    window.addEventListener('error', e => console.error('GLOBAL ERR', e.message, e.filename, e.lineno));
+
     document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && saveCurrentProgress());
 }
 
