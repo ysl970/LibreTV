@@ -459,6 +459,64 @@ function formatPlaybackTime(seconds) {
 }
 
 /**
+ * 添加观看历史记录
+ * @param {Object} item 历史记录项
+ */
+function addToViewingHistory(item) {
+    if (!item || !item.url || !item.title) return;
+    
+    try {
+        let history = getViewingHistory();
+        
+        // 查找是否已存在相同URL的记录
+        const existingIndex = history.findIndex(h => h.url === item.url);
+        if (existingIndex !== -1) {
+            // 更新现有记录
+            const existing = history[existingIndex];
+            history.splice(existingIndex, 1); // 先移除
+            
+            // 合并属性，保留新的播放位置和时间戳
+            item = {
+                ...existing,
+                ...item,
+                timestamp: Date.now() // 更新时间戳
+            };
+        } else {
+            // 新记录，添加时间戳
+            item.timestamp = Date.now();
+        }
+        
+        // 新记录放在最前面
+        history.unshift(item);
+        
+        // 限制历史记录数量
+        if (history.length > HISTORY_MAX_ITEMS) {
+            history = history.slice(0, HISTORY_MAX_ITEMS);
+        }
+        
+        localStorage.setItem('viewingHistory', JSON.stringify(history));
+    } catch (e) {
+        console.error('添加观看历史失败:', e);
+    }
+}
+
+/**
+ * 清空观看历史
+ */
+function clearViewingHistory() {
+    if (!checkPasswordProtection()) return;
+    
+    try {
+        localStorage.removeItem('viewingHistory');
+        loadViewingHistory();
+        showToast('观看历史已清除', 'success');
+    } catch (e) {
+        console.error('清除观看历史失败:', e);
+        showToast('清除观看历史失败', 'error');
+    }
+}
+
+/**
  * 渲染历史面板
  */
 function loadViewingHistory() {
@@ -561,187 +619,100 @@ function loadViewingHistory() {
     historyList.appendChild(frag);
     if (history.length > 5) historyList.classList.add('pb-4');
     
-    // 移除旧事件监听器（如果有）并添加新的事件委托
-    historyList.removeEventListener('click', handleHistoryListClick);
-    historyList.addEventListener('click', handleHistoryListClick);
+    // 移除旧的事件监听器和添加新的事件委托的代码已移至attachEventListeners函数
 }
 
 /**
- * 删除历史
- * @param {string} encodedUrl 编码后的URL
+ * 渲染搜索历史标签
  */
-function deleteHistoryItem(encodedUrl) {
-    try {
-        const url = decodeURIComponent(encodedUrl), history = getViewingHistory();
-        const newHistory = history.filter(item => item.url !== url);
-        localStorage.setItem('viewingHistory', JSON.stringify(newHistory));
-        loadViewingHistory();
-        showToast('已删除该记录', 'success');
-    } catch (e) {
-        console.error('删除历史记录项失败:', e);
-        showToast('删除记录失败', 'error');
-    }
-}
+function renderSearchHistory() {
+    const historyContainer = getElement('recentSearches');
+    if (!historyContainer) return;
+    const history = getSearchHistory();
+    if (!history.length) { historyContainer.innerHTML = ''; return; }
 
-/**
- * 从观看历史记录打开播放页面（在当前标签页）
- * @param {string} url 视频URL
- * @param {string} title 视频标题
- * @param {number} episodeIndex 集数索引
- * @param {number} playbackPosition 播放位置（秒）
- */
-function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
-    try {
-        let episodesList = [];
-        const historyRaw = localStorage.getItem('viewingHistory');
-        if (historyRaw) {
-            try {
-                const history = JSON.parse(historyRaw);
-                const historyItem = history.find(item => item.title === title);
-                if (historyItem && Array.isArray(historyItem.episodes)) {
-                    episodesList = historyItem.episodes;
-                }
-            } catch (parseError) {
-                console.error("解析 viewingHistory 出错:", parseError);
-            }
-        }
-        if (!episodesList.length) {
-            try {
-                const stored = JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
-                if (Array.isArray(stored) && stored.length) {
-                    episodesList = stored;
-                }
-            } catch (e) {
-                console.error("解析 currentEpisodes 失败:", e);
-            }
-        }
-        if (episodesList.length) {
-            localStorage.setItem('currentEpisodes', JSON.stringify(episodesList));
-        }
-        
-        if (url.includes('?')) {
-            const playUrl = new URL(url);
-            if (!playUrl.searchParams.has('index') && episodeIndex > 0) {
-                playUrl.searchParams.set('index', episodeIndex);
-            }
-            if (playbackPosition > 10 && !playUrl.searchParams.has('position')) {
-                playUrl.searchParams.set('position', Math.floor(playbackPosition));
-            }
-            window.location.href = playUrl.toString();
-        } else {
-            const positionParam = playbackPosition > 10 ? `&position=${Math.floor(playbackPosition)}` : '';
-            const playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}${positionParam}`;
-            window.location.href = playerUrl;
-        }
-    } catch (e) {
-        console.error('从历史记录播放失败:', e);
-        const fallbackUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}`;
-        window.location.href = fallbackUrl;
-    }
-}
+    const frag = document.createDocumentFragment();
 
-/** 
- * 增加/更新历史（同标题合并，每标题仅一条记录）
- * @param {Object} videoInfo 视频信息对象
- */
-function addToViewingHistory(videoInfo) {
-    if (!checkPasswordProtection()) return;
+    // 标题与清空按钮
+    const header = document.createElement('div');
+    header.className = "flex justify-between items-center w-full mb-2";
     
-    try {
-        const history = getViewingHistory();
-        const idx = history.findIndex(item => item.title === videoInfo.title);
-        if (idx !== -1) {
-            const item = history[idx];
-            item.episodeIndex = videoInfo.episodeIndex;
-            item.timestamp = Date.now();
-            if (videoInfo.sourceName && !item.sourceName) item.sourceName = videoInfo.sourceName;
-            if (videoInfo.playbackPosition && videoInfo.playbackPosition > 10) {
-                item.playbackPosition = videoInfo.playbackPosition;
-                item.duration = videoInfo.duration || item.duration;
-            }
-            item.url = videoInfo.url;
-            if (videoInfo.episodes && Array.isArray(videoInfo.episodes) && videoInfo.episodes.length) {
-                if (!item.episodes || item.episodes.length !== videoInfo.episodes.length) {
-                    item.episodes = [...videoInfo.episodes];
-                }
-            }
-            // 放到最前
-            history.splice(idx, 1);
-            history.unshift(item);
-        } else {
-            const newItem = { ...videoInfo, timestamp: Date.now(), episodes: Array.isArray(videoInfo.episodes) ? [...videoInfo.episodes] : [] };
-            history.unshift(newItem);
-        }
-        if (history.length > HISTORY_MAX_ITEMS) history.splice(HISTORY_MAX_ITEMS);
-        localStorage.setItem('viewingHistory', JSON.stringify(history));
-    } catch (e) { console.error('保存观看历史失败:', e); }
-}
-
-/**
- * 清除观看历史
- */
-function clearViewingHistory() {
-    if (!checkPasswordProtection()) return;
+    const titleDiv = document.createElement('div');
+    titleDiv.className = "text-gray-500";
+    titleDiv.textContent = "最近搜索:";
     
-    try {
-        localStorage.removeItem('viewingHistory');
-        loadViewingHistory();
-        showToast('观看历史已清空', 'success');
-    } catch (e) {
-        console.error('清除观看历史失败:', e);
-        showToast('清除观看历史失败', 'error');
-    }
-}
+    const clearBtn = document.createElement('button');
+    clearBtn.id = "clearHistoryBtn";
+    clearBtn.className = "text-gray-500 hover:text-white transition-colors";
+    clearBtn.setAttribute('aria-label', "清除搜索历史");
+    clearBtn.textContent = "清除搜索历史";
+    
+    header.appendChild(titleDiv);
+    header.appendChild(clearBtn);
+    frag.appendChild(header);
 
-// ============= 初始化与事件监听 =================
-
-// 初始化UI事件监听
-document.addEventListener('DOMContentLoaded', function () {
-    // 点击页面空白时自动关闭历史侧边栏
-    document.addEventListener('click', function (e) {
-        const historyPanel = getElement('historyPanel');
-        const historyButton = document.querySelector('[data-toggle="history"], #historyButton, button[onclick="toggleHistory(event)"]');
-        if (historyPanel && historyButton &&
-            !historyPanel.contains(e.target) && !historyButton.contains(e.target) &&
-            historyPanel.classList.contains('show')) {
-            historyPanel.classList.remove('show');
-            historyPanel.setAttribute('aria-hidden', 'true');
-        }
+    // 添加标签
+    history.forEach(item => {
+        const tag = document.createElement('button');
+        tag.className = 'search-tag';
+        tag.textContent = item.text;
+        if (item.timestamp) tag.title = `搜索于: ${new Date(item.timestamp).toLocaleString()}`;
+        frag.appendChild(tag);
     });
     
-    // 绑定所有UI事件
-    attachEventListeners();
-});
+    historyContainer.innerHTML = '';
+    historyContainer.appendChild(frag);
+    
+    // 移除旧的事件监听器和添加新的事件委托的代码已移至attachEventListeners函数
+    
+    // 为清空按钮添加事件 - 这个按钮每次渲染都是新创建的，所以需要在这里添加事件
+    const clearHistoryBtn = getElement('clearHistoryBtn');
+    if (clearHistoryBtn) {
+        clearHistoryBtn.removeEventListener('click', clearSearchHistory);
+        clearHistoryBtn.addEventListener('click', clearSearchHistory);
+    }
+}
 
-/** 
- * 绑定所有UI元素事件监听器
+/**
+ * 初始化事件监听器
  */
 function attachEventListeners() {
-    // 历史面板切换
-    const historyButton = getElement('historyButton');
-    if (historyButton) {
-        historyButton.addEventListener('click', toggleHistory);
+    // 设置按钮事件
+    const settingsButton = getElement('settingsButton');
+    if (settingsButton) {
+        settingsButton.addEventListener('click', toggleSettings);
     }
-    const closeHistoryButton = getElement('closeHistoryPanelButton');
-    if (closeHistoryButton) {
-        closeHistoryButton.addEventListener('click', toggleHistory);
-    }
-
-    // 使用事件委托优化事件监听器注册
-    const eventBindings = [
-        { id: 'settingsButton', event: 'click', handler: toggleSettings },
-        { id: 'closeSettingsPanelButton', event: 'click', handler: toggleSettings },
-        { id: 'clearViewingHistoryButton', event: 'click', handler: clearViewingHistory },
-        { id: 'closeModalButton', event: 'click', handler: closeModal }
-    ];
     
-    // 批量注册事件监听器
-    eventBindings.forEach(binding => {
-        const element = getElement(binding.id);
-        if (element) {
-            element.addEventListener(binding.event, binding.handler);
-        }
-    });
+    // 关闭设置面板按钮
+    const closeSettingsPanelButton = getElement('closeSettingsPanelButton');
+    if (closeSettingsPanelButton) {
+        closeSettingsPanelButton.addEventListener('click', toggleSettings);
+    }
+    
+    // 清空观看历史按钮
+    const clearViewingHistoryButton = getElement('clearViewingHistoryButton');
+    if (clearViewingHistoryButton) {
+        clearViewingHistoryButton.addEventListener('click', clearViewingHistory);
+    }
+    
+    // 关闭模态框按钮
+    const closeModalButton = getElement('closeModalButton');
+    if (closeModalButton) {
+        closeModalButton.addEventListener('click', closeModal);
+    }
+    
+    // 优化：将委托事件监听器移到这里一次性设置
+    // 搜索历史标签点击事件委托
+    const recentSearches = getElement('recentSearches');
+    if (recentSearches) {
+        recentSearches.addEventListener('click', handleSearchTagClick);
+    }
+    
+    // 观看历史列表点击事件委托
+    const historyList = getElement('historyList');
+    if (historyList) {
+        historyList.addEventListener('click', handleHistoryListClick);
+    }
     
     // 初始化其他可能的事件监听器
     initializeAdditionalListeners();
@@ -751,7 +722,9 @@ function attachEventListeners() {
  * 初始化其他可能的事件监听器
  */
 function initializeAdditionalListeners() {
-    // API选择按钮 - 使用事件委托优化
+    // API选择按钮 - 保留单独的事件监听器
+    // 注: 由于这些按钮数量有限且不会动态变化，使用单独的事件监听器更直接清晰
+    // 如果未来这些按钮会动态增减，可考虑改为事件委托模式
     const apiSelectButtons = document.querySelectorAll('[data-action="selectAllAPIs"]');
     if (apiSelectButtons.length > 0) {
         const apiSelectHandler = function() {
@@ -766,12 +739,21 @@ function initializeAdditionalListeners() {
         });
     }
     
-    // 自定义API管理 - 使用可选链简化代码
+    // 自定义API管理
     const addCustomApiButton = document.querySelector('[data-action="showAddCustomApiForm"]');
     if (addCustomApiButton && typeof window.showAddCustomApiForm === 'function') {
         addCustomApiButton.addEventListener('click', window.showAddCustomApiForm);
     }
 }
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 初始化事件监听器
+    attachEventListeners();
+    
+    // 初始化搜索历史
+    renderSearchHistory();
+});
 
 // 导出公共函数
 window.showToast = showToast;
