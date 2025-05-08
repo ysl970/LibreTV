@@ -131,11 +131,12 @@ const API_SITES = {
     },
         guaizi: {
         api: 'https://gz360.tv/',
-        name: '瓜子影视'
+        name: '瓜子影视',
     },
     dashixio: {
         api: 'https://dsxys.pro/',
-        name: '大师兄影视' 
+        name: '大师兄影视' ,
+        detail: 'https://dsxys.com',
     },
 };
 
