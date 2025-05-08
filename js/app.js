@@ -535,32 +535,42 @@ function renderSearchResults(results) {
         return;
     }
 
-    // 渲染结果
-    let html = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">';
-
-    // 使用createResultItem函数生成每个结果项的HTML
+    // Clear previous results
+    searchResults.innerHTML = '';
+    
+    // Create grid container
+    const gridContainer = document.createElement('div');
+    gridContainer.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4';
+    
+    // Add each result to the grid
     allResults.forEach(item => {
         try {
-            html += createResultItem(item);
+            const resultElement = createResultItemUsingTemplate(item);
+            gridContainer.appendChild(resultElement);
         } catch (error) {
             console.error('Error creating result item:', error, item);
-            html += `<div class="card-hover bg-[#222] rounded-lg overflow-hidden">
+            const errorElement = document.createElement('div');
+            errorElement.className = 'card-hover bg-[#222] rounded-lg overflow-hidden';
+            errorElement.innerHTML = `
                 <div class="p-2">
                     <h3 class="text-red-400">加载错误</h3>
                     <p class="text-xs text-gray-400">无法显示此项目</p>
                 </div>
-            </div>`;
+            `;
+            gridContainer.appendChild(errorElement);
         }
     });
-
-    html += '</div>';
+    
+    // Add grid to search results
+    searchResults.appendChild(gridContainer);
 
     // 显示错误信息（如果有）
     if (errors.length > 0) {
-        html += `<div class="mt-4 p-2 bg-[#333] rounded text-xs text-red-400">${errors.join('<br>')}</div>`;
+        const errorContainer = document.createElement('div');
+        errorContainer.className = 'mt-4 p-2 bg-[#333] rounded text-xs text-red-400';
+        errorContainer.innerHTML = errors.join('<br>');
+        searchResults.appendChild(errorContainer);
     }
-
-    searchResults.innerHTML = html;
 
     // Hide search area and douban area when showing results
     document.getElementById('searchArea')?.classList.add('hidden');
@@ -658,60 +668,97 @@ window.playFromHistory = playFromHistory;
 
 
 function createResultItem(item) {
-    // Sanitize item properties before use
+    // Clone the template
+    const template = document.getElementById('search-result-template');
+    if (!template) {
+        console.error('Search result template not found');
+        return '';
+    }
+    
+    const resultElement = template.content.cloneNode(true).firstElementChild;
+    
+    // Sanitize item properties
     const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
     const safeName = sanitizeText(item.vod_name || '');
     const safeRemarks = sanitizeText(item.vod_remarks || '暂无介绍');
     const safeTypeName = sanitizeText(item.type_name || '');
     const safeYear = sanitizeText(item.vod_year || '');
-    const safeSourceInfo = sanitizeText(item.source_name || ''); // Assuming source_name is directly available or derived
-
-    const hasCover = item.vod_pic && item.vod_pic.startsWith('http');
-    const apiUrlAttr = item.api_url ? `data-api-url="${sanitizeText(item.api_url)}"` : '';
+    const safeSourceInfo = sanitizeText(item.source_name || '');
     const sourceCode = sanitizeText(item.source_code || '');
-
-    return `
-    <div class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md" 
-         onclick="getVideoDetail('${safeId}', '${sourceCode}'${item.api_url ? `, '${sanitizeText(item.api_url)}'` : ''})" ${apiUrlAttr}>
-        <div class="flex h-full">
-            ${hasCover ? `
-            <div class="relative flex-shrink-0 search-card-img-container">
-                <img src="${sanitizeText(item.vod_pic)}" alt="${safeName}" 
-                     class="h-full w-full object-cover transition-transform hover:scale-110" 
-                     onerror="this.onerror=null; this.src='https://via.placeholder.com/300x450?text=无封面'; this.classList.add('object-contain');" 
-                     loading="lazy">
-                <div class="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent"></div>
-            </div>` : ''}
-            <div class="p-2 flex flex-col flex-grow">
-                <div class="flex-grow">
-                    <h3 class="font-semibold mb-2 break-words line-clamp-2 ${hasCover ? '' : 'text-center'}" title="${safeName}">${safeName}</h3>
-                    <div class="flex flex-wrap ${hasCover ? '' : 'justify-center'} gap-1 mb-2">
-                        ${safeTypeName ? `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300">${safeTypeName}</span>` : ''}
-                        ${safeYear ? `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300">${safeYear}</span>` : ''}
-                    </div>
-                    <p class="text-gray-400 line-clamp-2 overflow-hidden ${hasCover ? '' : 'text-center'} mb-2">
-                        ${safeRemarks}
-                    </p>
-                </div>
-                <div class="flex justify-between items-center mt-1 pt-1 border-t border-gray-800">
-                    ${safeSourceInfo ? `<span class="bg-[#222] text-xs px-1.5 py-0.5 rounded-full">${safeSourceInfo}</span>` : '<div></div>'}
-                </div>
-            </div>
-        </div>
-    </div>
-    `;
-}
-
-// Ensure sanitizeText function is available and robust
-function sanitizeText(text) {
-    if (typeof text !== 'string') return '';
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    
+    // Set data attributes for video details
+    resultElement.setAttribute('onclick', `getVideoDetail('${safeId}', '${sourceCode}'${item.api_url ? `, '${sanitizeText(item.api_url)}'` : ''})`);
+    if (item.api_url) {
+        resultElement.setAttribute('data-api-url', sanitizeText(item.api_url));
+    }
+    
+    // Set image if available
+    const hasCover = item.vod_pic && item.vod_pic.startsWith('http');
+    const imgContainer = resultElement.querySelector('.search-card-img-container');
+    const img = resultElement.querySelector('.result-img');
+    
+    if (hasCover && img) {
+        img.src = sanitizeText(item.vod_pic);
+        img.alt = safeName;
+        img.onerror = function() {
+            this.onerror = null;
+            this.src = 'https://via.placeholder.com/300x450?text=无封面';
+            this.classList.add('object-contain');
+        };
+    } else if (imgContainer) {
+        imgContainer.remove(); // Remove image container if no image
+        
+        // Center text when no image
+        const title = resultElement.querySelector('.result-title');
+        if (title) title.classList.add('text-center');
+        
+        const meta = resultElement.querySelector('.result-meta');
+        if (meta) meta.classList.add('justify-center');
+        
+        const remarks = resultElement.querySelector('.result-remarks');
+        if (remarks) remarks.classList.add('text-center');
+    }
+    
+    // Set text content
+    const title = resultElement.querySelector('.result-title');
+    if (title) {
+        title.textContent = safeName;
+        title.title = safeName;
+    }
+    
+    const type = resultElement.querySelector('.result-type');
+    if (type) {
+        if (safeTypeName) {
+            type.textContent = safeTypeName;
+        } else {
+            type.remove();
+        }
+    }
+    
+    const year = resultElement.querySelector('.result-year');
+    if (year) {
+        if (safeYear) {
+            year.textContent = safeYear;
+        } else {
+            year.remove();
+        }
+    }
+    
+    const remarks = resultElement.querySelector('.result-remarks');
+    if (remarks) remarks.textContent = safeRemarks;
+    
+    const sourceName = resultElement.querySelector('.result-source-name');
+    if (sourceName) {
+        if (safeSourceInfo) {
+            sourceName.textContent = safeSourceInfo;
+        } else {
+            sourceName.parentElement.innerHTML = '<div></div>';
+        }
+    }
+    
+    // Convert to HTML string for compatibility with existing renderSearchResults
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(resultElement);
+    return tempDiv.innerHTML;
 }
 

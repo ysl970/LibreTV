@@ -430,6 +430,31 @@
         window.__ENV__ = window.__ENV__ || {};
         window.__ENV__.PASSWORD = "{{PASSWORD}}";
     </script>
-</body>
 
+
+<!-- Templates -->
+<template id="search-result-template"> 
+    <div class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md"> 
+        <div class="flex h-full"> 
+            <div class="search-card-img-container relative flex-shrink-0"> 
+                <img src="" alt="" class="result-img h-full w-full object-cover transition-transform hover:scale-110" loading="lazy"> 
+                <div class="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent"></div> 
+            </div> 
+            <div class="p-2 flex flex-col flex-grow"> 
+                <div class="flex-grow"> 
+                    <h3 class="result-title font-semibold mb-2 break-words line-clamp-2"></h3> 
+                    <div class="result-meta flex flex-wrap gap-1 mb-2"> 
+                        <span class="result-type text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300"></span> 
+                        <span class="result-year text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300"></span> 
+                    </div> 
+                    <p class="result-remarks text-gray-400 line-clamp-2 overflow-hidden mb-2"></p> 
+                </div> 
+                <div class="result-source flex justify-between items-center mt-1 pt-1 border-t border-gray-800"> 
+                    <span class="result-source-name bg-[#222] text-xs px-1.5 py-0.5 rounded-full"></span> 
+                </div> 
+            </div> 
+        </div> 
+    </div> 
+</template>
+</body>
 </html>
