@@ -361,14 +361,9 @@ function renderSearchHistory() {
     historyContainer.innerHTML = '';
     historyContainer.appendChild(frag);
 
-    // 移除旧事件监听器（如果有）并添加新的事件委托
-    historyContainer.removeEventListener('click', handleSearchTagClick);
-    historyContainer.addEventListener('click', handleSearchTagClick);
-
-    // 为清空按钮添加事件
-    const clearHistoryBtn = getElement('clearHistoryBtn');
+    // Get the newly rendered button and attach event listener
+    const clearHistoryBtn = historyContainer.querySelector('#clearHistoryBtn');
     if (clearHistoryBtn) {
-        clearHistoryBtn.removeEventListener('click', clearSearchHistory);
         clearHistoryBtn.addEventListener('click', clearSearchHistory);
     }
 }

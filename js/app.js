@@ -509,6 +509,22 @@ function renderSearchResults(results) {
         });
     }
 
+    // Always show resultsArea if we have errors or results
+    const resultsArea = document.getElementById('resultsArea');
+    if (resultsArea) {
+        if (errors.length > 0 || allResults.length > 0) {
+            resultsArea.classList.remove('hidden');
+        } else {
+            resultsArea.classList.add('hidden');
+        }
+    }
+
+    // Update search results count
+    const searchResultsCount = document.getElementById('searchResultsCount');
+    if (searchResultsCount) {
+        searchResultsCount.textContent = allResults.length.toString();
+    }
+
     // 如果没有结果
     if (allResults.length === 0) {
         let message = '没有找到相关内容';
@@ -524,7 +540,17 @@ function renderSearchResults(results) {
 
     // 使用createResultItem函数生成每个结果项的HTML
     allResults.forEach(item => {
-        html += createResultItem(item);
+        try {
+            html += createResultItem(item);
+        } catch (error) {
+            console.error('Error creating result item:', error, item);
+            html += `<div class="card-hover bg-[#222] rounded-lg overflow-hidden">
+                <div class="p-2">
+                    <h3 class="text-red-400">加载错误</h3>
+                    <p class="text-xs text-gray-400">无法显示此项目</p>
+                </div>
+            </div>`;
+        }
     });
 
     html += '</div>';
@@ -536,7 +562,7 @@ function renderSearchResults(results) {
 
     searchResults.innerHTML = html;
 
-    document.getElementById('resultsArea')?.classList.remove('hidden');
+    // Hide search area and douban area when showing results
     document.getElementById('searchArea')?.classList.add('hidden');
     document.getElementById('doubanArea')?.classList.add('hidden');
 }
