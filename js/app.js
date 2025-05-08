@@ -245,7 +245,7 @@ function initializeAppState() {
 function initializeDOMCache() {
     // 缓存搜索相关元素
     DOMCache.set('searchInput', document.getElementById('searchInput'));
-    DOMCache.set('searchResults', document.getElementById('results'));
+    DOMCache.set('searchResults', document.getElementById('searchResults'));
     DOMCache.set('searchForm', document.getElementById('searchForm'));
     DOMCache.set('searchHistoryContainer', document.getElementById('searchHistory'));
     
