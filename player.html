@@ -2,28 +2,34 @@
 <html lang="zh-CN">
 
 <head>
-
-<!-- critical style：避免白屏 & 大字闪现 -->
-<style>
-    /* 1️⃣ 先把整个页面底色设成黑色，覆盖浏览器默认白色 */
-    html,body{background:#000;margin:0;padding:0;}
-    
-    /* 2️⃣ 默认把 #loading 隐藏起来（加载失败时 JS 再显示） */
-    #loading{
-      display:none;              /* 初始就隐藏 */
-      position:fixed;inset:0;    /* 全屏蒙版 */
-      background:#000;
-      color:#fff;
-      font-size:14px;            /* 不用大字 */
-      align-items:center;
-      justify-content:center;
-    }
-    
-    /* 3️⃣ 需要真的“加载中”时，在 JS 里加 .show-loading 类即可 */
-    html.show-loading #loading{display:flex;}
-    </style>
-    
     <meta charset="UTF-8">
+    <!-- critical style：避免白屏  大字闪现 -->
+    <style>
+        html,
+        body {
+            background: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        #loading {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #000;
+            color: #fff;
+            font-size: 14px;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            /* 可选，确保蒙版最上层 */
+        }
+
+        html.show-loading #loading {
+            display: flex;
+        }
+    </style>
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="LibreTV - 自由观影">
     <title>播放器</title>
