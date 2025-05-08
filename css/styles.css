@@ -444,8 +444,11 @@ body {
   margin-top: 4px;
 }
 
-.history-separator {
-  color: #666;
+/* 历史分隔符样式 */
+.history-separator { 
+    color: #666; 
+    margin-left: 0.25rem; /* Equivalent to mx-1 */ 
+    margin-right: 0.25rem; /* Equivalent to mx-1 */ 
 }
 
 .history-thumbnail {
