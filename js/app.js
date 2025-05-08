@@ -29,6 +29,41 @@ function sanitizeText(text) {
 }
 
 /**
+ * 播放视频
+ * @param {string} url - 视频URL
+ * @param {string} title - 视频标题
+ * @param {number} episodeIndex - 集数索引
+ * @param {string} sourceName - 来源名称
+ * @param {string} sourceCode - 来源代码
+ */
+function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
+    if (!url) {
+        showToast('无效的视频链接', 'error');
+        return;
+    }
+    
+    // 更新相关状态
+    AppState.set('currentEpisodeIndex', episodeIndex);
+    AppState.set('currentVideoTitle', title);
+    
+    // 保存到观看历史
+    if (typeof addToViewingHistory === 'function') {
+        addToViewingHistory(url, title, episodeIndex, sourceName, sourceCode, AppState.get('currentEpisodes'));
+    }
+    
+    // 构建播放页面URL
+    const playerUrl = new URL('player.html', window.location.origin);
+    playerUrl.searchParams.set('url', url);
+    playerUrl.searchParams.set('title', title);
+    playerUrl.searchParams.set('ep', episodeIndex.toString());
+    if (sourceName) playerUrl.searchParams.set('source', sourceName);
+    if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
+    
+    // 跳转到播放页面
+    window.location.href = playerUrl.toString();
+}
+
+/**
  * 播放上一集
  */
 function playPreviousEpisode() {
@@ -39,9 +74,8 @@ function playPreviousEpisode() {
         AppState.set('currentEpisodeIndex', prevIndex);
         localStorage.setItem('currentEpisodeIndex', prevIndex.toString());
         
-        // 假设有一个playVideo函数来处理实际播放
-        // playVideo(episodes[prevIndex], AppState.get('currentVideoTitle'), prevIndex);
-        console.log("播放上一集: 索引", prevIndex);
+        const title = AppState.get('currentVideoTitle');
+        playVideo(episodes[prevIndex], title, prevIndex);
     } else {
         showToast('已经是第一集了', 'info');
     }
@@ -58,9 +92,8 @@ function playNextEpisode() {
         AppState.set('currentEpisodeIndex', nextIndex);
         localStorage.setItem('currentEpisodeIndex', nextIndex.toString());
         
-        // 假设有一个playVideo函数来处理实际播放
-        // playVideo(episodes[nextIndex], AppState.get('currentVideoTitle'), nextIndex);
-        console.log("播放下一集: 索引", nextIndex);
+        const title = AppState.get('currentVideoTitle');
+        playVideo(episodes[nextIndex], title, nextIndex);
     } else {
         showToast('已经是最后一集了', 'info');
     }
@@ -91,9 +124,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 初始化事件监听器
     initializeEventListeners();
-    
-    // 初始化UI组件
-    initializeUIComponents();
     
     // 加载搜索历史
     renderSearchHistory();
@@ -403,31 +433,313 @@ function renderSearchResults(results) {
     // 渲染结果
     let html = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">';
     
+    // 使用createResultItem函数生成每个结果项的HTML
     allResults.forEach(item => {
-        const title = sanitizeText(item.vod_name || '未知标题');
-        const cover = item.vod_pic || '';
-        const id = item.vod_id || '';
-        const sourceName = sanitizeText(item.source_name || '未知来源');
-        const sourceCode = item.source_code || '';
-        const apiUrl = item.api_url || '';
-        
-        html += `
-            <div class="result-item bg-[#222] rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-                <div class="relative pb-[140%] overflow-hidden bg-[#333]">
-                    <img src="${cover}" alt="${title}" class="absolute inset-0 w-full h-full object-cover" 
-                        onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCIgeT0iNTAiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGFsaWdubWVudC1iYXNlbGluZT0ibWlkZGxlIiBmb250LWZhbWlseT0ibW9ub3NwYWNlLCBzYW5zLXNlcmlmIiBmaWxsPSIjQUFBIj7ml6DlpLTlg488L3RleHQ+PC9zdmc+';">
-                </div>
-                <div class="p-2">
-                    <h3 class="text-sm font-medium text-white truncate" title="${title}">${title}</h3>
-                    <div class="flex justify-between items-center mt-1">
-                        <span class="text-xs text-gray-400">${sourceName}</span>
-                        <button class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded"
-                            onclick="getVideoDetail('${id}', '${sourceCode}', '${apiUrl}')"
-                            data-id="${id}" data-source="${sourceCode}" data-custom-api="${apiUrl}">播放</button>
-                    </div>
-                </div>
-            </div>
-        `;
+        html += createResultItem(item);
+    });
+    
+    html += '</div>';
+    
+    // 显示错误信息（如果有）
+    if (errors.length > 0) {
+        html += `<div class="mt-4 p-2 bg-[#333] rounded text-xs text-red-400">${errors.join('<br>')}</div>`;
+    }
+    
+    searchResults.innerHTML = html;
+}
+
+/**
+ * 执行搜索
+ */
+function search() {
+    const searchInput = DOMCache.get('searchInput');
+    const searchResults = DOMCache.get('searchResults');
+    
+    if (!searchInput || !searchResults) return;
+    
+    const query = searchInput.value.trim();
+    if (!query) {
+        showToast('请输入搜索内容', 'warning');
+        return;
+    }
+    
+    // 保存搜索历史
+    saveSearchHistory(query);
+    
+    // 显示加载状态
+    searchResults.innerHTML = '<div class="text-center py-4"><div class="spinner"></div><p class="mt-2 text-gray-400">正在搜索，请稍候...</p></div>';
+    
+    // 获取选中的API
+    const selectedAPIs = AppState.get('selectedAPIs');
+    if (!selectedAPIs || selectedAPIs.length === 0) {
+        searchResults.innerHTML = '<div class="text-center py-4 text-gray-400">请至少选择一个API源</div>';
+        return;
+    }
+    
+    // 执行搜索请求
+    performSearch(query, selectedAPIs)
+        .then(renderSearchResults)
+        .catch(error => {
+            searchResults.innerHTML = `<div class="text-center py-4 text-red-400">搜索出错: ${error.message}</div>`;
+        });
+}
+
+/**
+ * 执行搜索请求
+ * @param {string} query - 搜索查询
+ * @param {Array} selectedAPIs - 选中的API列表
+ * @returns {Promise} - 搜索结果Promise
+ */
+async function performSearch(query, selectedAPIs) {
+    // 创建搜索请求数组
+    const searchPromises = selectedAPIs.map(apiId => {
+        if (apiId.startsWith('custom_')) {
+            // 自定义API搜索
+            const customIndex = parseInt(apiId.replace('custom_', ''));
+            const customApi = APISourceManager.getCustomApiInfo(customIndex);
+            if (customApi) {
+                return fetch(`/api/search?wd=${encodeURIComponent(query)}&source=custom&customApi=${encodeURIComponent(customApi.url)}`)
+                    .then(response => response.json())
+                    .then(data => ({
+                        ...data,
+                        apiId: apiId,
+                        apiName: customApi.name
+                    }))
+                    .catch(error => ({
+                        code: 400,
+                        msg: `自定义API(${customApi.name})搜索失败: ${error.message}`,
+                        list: [],
+                        apiId: apiId
+                    }));
+            }
+        } else {
+            // 内置API搜索
+            return fetch(`/api/search?wd=${encodeURIComponent(query)}&source=${apiId}`)
+                .then(response => response.json())
+                .then(data => ({
+                    ...data,
+                    apiId: apiId,
+                    apiName: API_SITES[apiId]?.name || apiId
+                }))
+                .catch(error => ({
+                    code: 400,
+                    msg: `API(${API_SITES[apiId]?.name || apiId})搜索失败: ${error.message}`,
+                    list: [],
+                    apiId: apiId
+                }));
+        }
+    }).filter(Boolean);
+    
+    // 等待所有搜索完成
+    return Promise.all(searchPromises);
+}
+
+/**
+ * 渲染搜索结果
+ * @param {Array} results - 搜索结果数组
+ */
+function renderSearchResults(results) {
+    const searchResults = DOMCache.get('searchResults');
+    if (!searchResults) return;
+    
+    // 合并所有结果
+    let allResults = [];
+    let errors = [];
+    
+    results.forEach(result => {
+        if (result.code === 200 && Array.isArray(result.list)) {
+            // 为每个结果添加来源信息
+            const resultsWithSource = result.list.map(item => ({
+                ...item,
+                source_name: result.apiName || API_SITES[result.apiId]?.name || '未知来源',
+                source_code: result.apiId.startsWith('custom_') ? 'custom' : result.apiId,
+                api_url: result.apiId.startsWith('custom_') ? 
+                    APISourceManager.getCustomApiInfo(parseInt(result.apiId.replace('custom_', '')))?.url : ''
+            }));
+            allResults = allResults.concat(resultsWithSource);
+        } else if (result.msg) {
+            errors.push(result.msg);
+        }
+    });
+    
+    // 过滤结果（如果启用了黄色内容过滤）
+    const yellowFilterEnabled = getBoolConfig('yellowFilterEnabled', true);
+    if (yellowFilterEnabled) {
+        allResults = allResults.filter(item => {
+            const title = item.vod_name || '';
+            const type = item.type_name || '';
+            return !/(伦理|写真|福利|成人|情色|色情|三级|美女|性感|倮|AV|av|福利|诱惑|裸|情趣|情色|成人|性爱|性感|美女|女优)/.test(title + type);
+        });
+    }
+    
+    // 如果没有结果
+    if (allResults.length === 0) {
+        let message = '没有找到相关内容';
+        if (errors.length > 0) {
+            message += `<div class="mt-2 text-xs text-red-400">${errors.join('<br>')}</div>`;
+        }
+        searchResults.innerHTML = `<div class="text-center py-4 text-gray-400">${message}</div>`;
+        return;
+    }
+    
+    // 渲染结果
+    let html = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">';
+    
+    // 使用createResultItem函数生成每个结果项的HTML
+    allResults.forEach(item => {
+        html += createResultItem(item);
+    });
+    
+    html += '</div>';
+    
+    // 显示错误信息（如果有）
+    if (errors.length > 0) {
+        html += `<div class="mt-4 p-2 bg-[#333] rounded text-xs text-red-400">${errors.join('<br>')}</div>`;
+    }
+    
+    searchResults.innerHTML = html;
+}
+
+/**
+ * 执行搜索
+ */
+function search() {
+    const searchInput = DOMCache.get('searchInput');
+    const searchResults = DOMCache.get('searchResults');
+    
+    if (!searchInput || !searchResults) return;
+    
+    const query = searchInput.value.trim();
+    if (!query) {
+        showToast('请输入搜索内容', 'warning');
+        return;
+    }
+    
+    // 保存搜索历史
+    saveSearchHistory(query);
+    
+    // 显示加载状态
+    searchResults.innerHTML = '<div class="text-center py-4"><div class="spinner"></div><p class="mt-2 text-gray-400">正在搜索，请稍候...</p></div>';
+    
+    // 获取选中的API
+    const selectedAPIs = AppState.get('selectedAPIs');
+    if (!selectedAPIs || selectedAPIs.length === 0) {
+        searchResults.innerHTML = '<div class="text-center py-4 text-gray-400">请至少选择一个API源</div>';
+        return;
+    }
+    
+    // 执行搜索请求
+    performSearch(query, selectedAPIs)
+        .then(renderSearchResults)
+        .catch(error => {
+            searchResults.innerHTML = `<div class="text-center py-4 text-red-400">搜索出错: ${error.message}</div>`;
+        });
+}
+
+/**
+ * 执行搜索请求
+ * @param {string} query - 搜索查询
+ * @param {Array} selectedAPIs - 选中的API列表
+ * @returns {Promise} - 搜索结果Promise
+ */
+async function performSearch(query, selectedAPIs) {
+    // 创建搜索请求数组
+    const searchPromises = selectedAPIs.map(apiId => {
+        if (apiId.startsWith('custom_')) {
+            // 自定义API搜索
+            const customIndex = parseInt(apiId.replace('custom_', ''));
+            const customApi = APISourceManager.getCustomApiInfo(customIndex);
+            if (customApi) {
+                return fetch(`/api/search?wd=${encodeURIComponent(query)}&source=custom&customApi=${encodeURIComponent(customApi.url)}`)
+                    .then(response => response.json())
+                    .then(data => ({
+                        ...data,
+                        apiId: apiId,
+                        apiName: customApi.name
+                    }))
+                    .catch(error => ({
+                        code: 400,
+                        msg: `自定义API(${customApi.name})搜索失败: ${error.message}`,
+                        list: [],
+                        apiId: apiId
+                    }));
+            }
+        } else {
+            // 内置API搜索
+            return fetch(`/api/search?wd=${encodeURIComponent(query)}&source=${apiId}`)
+                .then(response => response.json())
+                .then(data => ({
+                    ...data,
+                    apiId: apiId,
+                    apiName: API_SITES[apiId]?.name || apiId
+                }))
+                .catch(error => ({
+                    code: 400,
+                    msg: `API(${API_SITES[apiId]?.name || apiId})搜索失败: ${error.message}`,
+                    list: [],
+                    apiId: apiId
+                }));
+        }
+    }).filter(Boolean);
+    
+    // 等待所有搜索完成
+    return Promise.all(searchPromises);
+}
+
+/**
+ * 渲染搜索结果
+ * @param {Array} results - 搜索结果数组
+ */
+function renderSearchResults(results) {
+    const searchResults = DOMCache.get('searchResults');
+    if (!searchResults) return;
+    
+    // 合并所有结果
+    let allResults = [];
+    let errors = [];
+    
+    results.forEach(result => {
+        if (result.code === 200 && Array.isArray(result.list)) {
+            // 为每个结果添加来源信息
+            const resultsWithSource = result.list.map(item => ({
+                ...item,
+                source_name: result.apiName || API_SITES[result.apiId]?.name || '未知来源',
+                source_code: result.apiId.startsWith('custom_') ? 'custom' : result.apiId,
+                api_url: result.apiId.startsWith('custom_') ? 
+                    APISourceManager.getCustomApiInfo(parseInt(result.apiId.replace('custom_', '')))?.url : ''
+            }));
+            allResults = allResults.concat(resultsWithSource);
+        } else if (result.msg) {
+            errors.push(result.msg);
+        }
+    });
+    
+    // 过滤结果（如果启用了黄色内容过滤）
+    const yellowFilterEnabled = getBoolConfig('yellowFilterEnabled', true);
+    if (yellowFilterEnabled) {
+        allResults = allResults.filter(item => {
+            const title = item.vod_name || '';
+            const type = item.type_name || '';
+            return !/(伦理|写真|福利|成人|情色|色情|三级|美女|性感|倮|AV|av|福利|诱惑|裸|情趣|情色|成人|性爱|性感|美女|女优)/.test(title + type);
+        });
+    }
+    
+    // 如果没有结果
+    if (allResults.length === 0) {
+        let message = '没有找到相关内容';
+        if (errors.length > 0) {
+            message += `<div class="mt-2 text-xs text-red-400">${errors.join('<br>')}</div>`;
+        }
+        searchResults.innerHTML = `<div class="text-center py-4 text-gray-400">${message}</div>`;
+        return;
+    }
+    
+    // 渲染结果
+    let html = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">';
+    
+    // 使用createResultItem函数生成每个结果项的HTML
+    allResults.forEach(item => {
+        html += createResultItem(item);
     });
     
     html += '</div>';
@@ -487,9 +799,15 @@ async function getVideoDetail(id, sourceCode, apiUrl = '') {
             addToViewingHistory(data.videoInfo);
         }
         
-        // 跳转到播放页面
+        // 使用playVideo函数播放第一集
         const firstEpisode = data.episodes[0];
-        window.location.href = `player.html?url=${encodeURIComponent(firstEpisode)}&title=${encodeURIComponent(data.videoInfo?.title || '')}&source_code=${sourceCode}`;
+        playVideo(
+            firstEpisode, 
+            data.videoInfo?.title || '未知视频', 
+            0, 
+            data.videoInfo?.source_name || '', 
+            sourceCode
+        );
     } catch (error) {
         if (searchResults) {
             searchResults.innerHTML = `<div class="text-center py-4 text-red-400">获取视频详情失败: ${error.message}</div>`;
@@ -512,10 +830,11 @@ function resetToHome() {
     renderSearchHistory();
 }
 
-// 确保全局函数可用
+// 导出需要在全局访问的函数
 window.search = search;
 window.getVideoDetail = getVideoDetail;
 window.resetToHome = resetToHome;
+window.playVideo = playVideo;
 window.playPreviousEpisode = playPreviousEpisode;
 window.playNextEpisode = playNextEpisode;
 window.showDetails = showDetails;
