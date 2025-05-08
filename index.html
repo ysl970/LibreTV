@@ -331,7 +331,7 @@
             </section>
 
             <!-- 搜索结果 -->
-            <section id="resultsArea" class="w-full" aria-label="搜索结果">
+            <section id="resultsArea" class="w-full hidden" aria-label="搜索结果">
                 <div class="mx-auto max-w-7xl px-2">
                     <div class="flex justify-end items-center mb-4">
                         <div class="text-sm text-gray-400">
@@ -340,6 +340,8 @@
                     </div>
                     <div id="searchResults" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
                         role="region" aria-live="polite"></div>
+                    role="region" aria-live="polite">
+                </div>
             </section>
         </div>
     </main>
