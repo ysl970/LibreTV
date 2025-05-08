@@ -746,6 +746,19 @@ function toggleLockScreen() {
 function renderEpisodes() {
     const grid = document.getElementById('episode-grid');
     if (!grid) { setTimeout(renderEpisodes, 100); return; }
+       // ★ 让选集区域可见 / 隐藏
+       const container = document.getElementById('episodes-container');
+       if (container) {
+           if (currentEpisodes.length > 1) {
+               container.classList.remove('hidden');
+           } else {
+               container.classList.add('hidden');
+           }
+       }
+    
+       // ★ 更新“共 x 集”文字
+       const countSpan = document.getElementById('episodes-count');
+       if (countSpan) countSpan.textContent = `共 ${currentEpisodes.length} 集`;
 
     grid.innerHTML = '';
 
@@ -958,8 +971,11 @@ function playEpisode(index) {
         videoHasEnded = false; // Reset ended flag for new episode
         isUserSeeking = false; // Reset seeking flag
 
-        dp.switchVideo({ url: episodeUrl, type: 'hls' });
-         
+               // ★ 切源后立刻播放，确保真正加载新地址
+        dp.switchVideo({ url: episodeUrl, type: 'hls', autoplay: true });
+               // 如果你的 DPlayer 版本不识别 autoplay，可改成：
+               // dp.switchVideo({ url: episodeUrl, type: 'hls' });
+               // dp.play();
     } else {
         console.error('[PlayerApp] DPlayer instance not available for playEpisode');
         // If dp is not available, it implies a full page load might be needed,
