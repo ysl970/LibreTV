@@ -117,7 +117,7 @@ function updateDoubanVisibility() {
     const doubanArea = document.getElementById('doubanArea');
     if (!doubanArea) return;
     
-    const isEnabled = localStorage。getItem('doubanEnabled') === 'false';
+    const isEnabled = localStorage。getItem('doubanEnabled') === 'true';
     const isSearching = document.getElementById('resultsArea') && 
         !document.getElementById('resultsArea').classList.contains('hidden');
     
