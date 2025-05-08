@@ -778,6 +778,6 @@ window.toggleSettings = toggleSettings;
 window.toggleHistory = toggleHistory;
 window.addToViewingHistory = addToViewingHistory;
 window.clearViewingHistory = clearViewingHistory;
-window.playFromHistory = playFromHistory;
+// window.playFromHistory = playFromHistory;
 window.saveSearchHistory = saveSearchHistory;
 window.clearSearchHistory = clearSearchHistory;
