@@ -656,3 +656,62 @@ window.playNextEpisode = playNextEpisode;
 window.showDetails = showDetails;
 window.playFromHistory = playFromHistory;
 
+
+function createResultItem(item) {
+    // Sanitize item properties before use
+    const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
+    const safeName = sanitizeText(item.vod_name || '');
+    const safeRemarks = sanitizeText(item.vod_remarks || '暂无介绍');
+    const safeTypeName = sanitizeText(item.type_name || '');
+    const safeYear = sanitizeText(item.vod_year || '');
+    const safeSourceInfo = sanitizeText(item.source_name || ''); // Assuming source_name is directly available or derived
+
+    const hasCover = item.vod_pic && item.vod_pic.startsWith('http');
+    const apiUrlAttr = item.api_url ? `data-api-url="${sanitizeText(item.api_url)}"` : '';
+    const sourceCode = sanitizeText(item.source_code || '');
+
+    return `
+    <div class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md" 
+         onclick="getVideoDetail('${safeId}', '${sourceCode}'${item.api_url ? `, '${sanitizeText(item.api_url)}'` : ''})" ${apiUrlAttr}>
+        <div class="flex h-full">
+            ${hasCover ? `
+            <div class="relative flex-shrink-0 search-card-img-container">
+                <img src="${sanitizeText(item.vod_pic)}" alt="${safeName}" 
+                     class="h-full w-full object-cover transition-transform hover:scale-110" 
+                     onerror="this.onerror=null; this.src='https://via.placeholder.com/300x450?text=无封面'; this.classList.add('object-contain');" 
+                     loading="lazy">
+                <div class="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent"></div>
+            </div>` : ''}
+            <div class="p-2 flex flex-col flex-grow">
+                <div class="flex-grow">
+                    <h3 class="font-semibold mb-2 break-words line-clamp-2 ${hasCover ? '' : 'text-center'}" title="${safeName}">${safeName}</h3>
+                    <div class="flex flex-wrap ${hasCover ? '' : 'justify-center'} gap-1 mb-2">
+                        ${safeTypeName ? `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300">${safeTypeName}</span>` : ''}
+                        ${safeYear ? `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300">${safeYear}</span>` : ''}
+                    </div>
+                    <p class="text-gray-400 line-clamp-2 overflow-hidden ${hasCover ? '' : 'text-center'} mb-2">
+                        ${safeRemarks}
+                    </p>
+                </div>
+                <div class="flex justify-between items-center mt-1 pt-1 border-t border-gray-800">
+                    ${safeSourceInfo ? `<span class="bg-[#222] text-xs px-1.5 py-0.5 rounded-full">${safeSourceInfo}</span>` : '<div></div>'}
+                </div>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+// Ensure sanitizeText function is available and robust
+function sanitizeText(text) {
+    if (typeof text !== 'string') return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+

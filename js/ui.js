@@ -344,6 +344,7 @@ function renderSearchHistory() {
     clearBtn.className = "text-gray-500 hover:text-white transition-colors";
     clearBtn.setAttribute('aria-label', "清除搜索历史");
     clearBtn.textContent = "清除搜索历史";
+    clearBtn.onclick = clearSearchHistory; // Directly assign the function reference
 
     header.appendChild(titleDiv);
     header.appendChild(clearBtn);
