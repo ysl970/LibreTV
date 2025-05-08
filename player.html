@@ -98,10 +98,11 @@
         
         <!-- Position 3, 5: Controls and Lock Button -->
         <div class="p-4 bg-gray-900 rounded-lg mx-4 mb-4">
-            <div class="flex flex-wrap gap-4 justify-between">
+                <!-- 这里加 player-control-bar，删除 justify-between -->
+                <div class="player-control-bar">
                 <!-- Autoplay Next -->
                 <div class="flex items-center gap-2">
-                    <span id="autoplay-label" class="control-label">自动播放下一集</span>
+                    <span id="autoplay-label" class="control-label">自动播放</span>
                     <label class="switch">
                         <input type="checkbox" id="autoplay-next" checked aria-labelledby="autoplay-label">
                         <span class="slider"></span>
@@ -110,7 +111,7 @@
                 
                 <!-- Remember Progress -->
                 <div class="flex items-center gap-2">
-                    <span id="remember-progress-label" class="control-label">记住播放进度</span>
+                    <span id="remember-progress-label" class="control-label">记住进度</span>
                     <label class="switch">
                         <input type="checkbox" id="remember-progress" checked aria-labelledby="remember-progress-label">
                         <span class="slider"></span>

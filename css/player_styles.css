@@ -197,3 +197,15 @@ input:checked + .slider:before {
 
 /* — 控件标签（自动播放 / 记住进度） — */
 .control-label{font-size:.875rem;/*text-sm*/color:#9ca3af;/*gray-400*/margin-right:.25rem;}
+
+/* ① 隐藏 “选集” 二字 */
+#episodes-container h2{display:none}
+
+/* ② 让整排控件靠右 */
+.player-control-bar{           /* 自定义类名 */
+    display:flex;
+    flex-wrap:wrap;
+    gap:1rem;                  /* 原 gap-4 */
+    justify-content:flex-end;  /* 关键：右对齐 */
+    align-items:center;
+}
