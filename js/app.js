@@ -476,8 +476,8 @@ async function performSearch(query, selectedAPIs) {
  * @param {Array} results - 搜索结果数组
  */
 function renderSearchResults(results) {
-    const searchResults = DOMCache.get('searchResults');
-    if (!searchResults) return;
+    const searchResultsContainer = DOMCache.get('searchResults'); // Use cached element 
+    if (!searchResultsContainer) return; 
 
     // 合并所有结果
     let allResults = [];
@@ -509,79 +509,72 @@ function renderSearchResults(results) {
         });
     }
 
-    // Always show resultsArea if we have errors or results
-    const resultsArea = document.getElementById('resultsArea');
-    if (resultsArea) {
-        if (errors.length > 0 || allResults.length > 0) {
-            resultsArea.classList.remove('hidden');
-        } else {
-            resultsArea.classList.add('hidden');
-        }
-    }
+    // Show/hide results area 
+    const resultsArea = getElement('resultsArea'); // Use getElement 
+    if (resultsArea) { 
+        if (errors.length > 0 || allResults.length > 0) { 
+            resultsArea.classList.remove('hidden'); 
+        } else { 
+            resultsArea.classList.add('hidden'); 
+        } 
+    } 
 
-    // Update search results count
-    const searchResultsCount = document.getElementById('searchResultsCount');
-    if (searchResultsCount) {
-        searchResultsCount.textContent = allResults.length.toString();
-    }
+    // Update count 
+    const searchResultsCount = getElement('searchResultsCount'); // Use getElement 
+    if (searchResultsCount) { 
+        searchResultsCount.textContent = allResults.length.toString(); 
+    } 
 
-    // 如果没有结果
-    if (allResults.length === 0) {
-        let message = '没有找到相关内容';
-        if (errors.length > 0) {
-            message += `<div class="mt-2 text-xs text-red-400">${errors.join('<br>')}</div>`;
-        }
-        searchResults.innerHTML = `<div class="text-center py-4 text-gray-400">${message}</div>`;
-        return;
-    }
+    searchResultsContainer.innerHTML = ''; // Clear previous results 
 
-    // Clear previous results
-    searchResults.innerHTML = '';
-    
-    // Create grid container
-    const gridContainer = document.createElement('div');
-    gridContainer.className = 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4';
-    
-    // Add each result to the grid
-    allResults.forEach(item => {
-        try {
-            const resultElement = createResultItemUsingTemplate(item);
-            gridContainer.appendChild(resultElement);
-        } catch (error) {
-            console.error('Error creating result item:', error, item);
-            const errorElement = document.createElement('div');
-            errorElement.className = 'card-hover bg-[#222] rounded-lg overflow-hidden';
-            errorElement.innerHTML = `
-                <div class="p-2">
-                    <h3 class="text-red-400">加载错误</h3>
-                    <p class="text-xs text-gray-400">无法显示此项目</p>
-                </div>
-            `;
-            gridContainer.appendChild(errorElement);
-        }
-    });
-    
-    // Add grid to search results
-    searchResults.appendChild(gridContainer);
+    if (allResults.length === 0) { 
+        let message = '没有找到相关内容'; 
+        if (errors.length > 0) { 
+            message += `<div class="mt-2 text-xs text-red-400">${errors.join('<br>')}</div>`; 
+        } 
+        searchResultsContainer.innerHTML = `<div class="text-center py-4 text-gray-400">${message}</div>`; 
+        return; 
+    } 
 
-    // 显示错误信息（如果有）
-    if (errors.length > 0) {
-        const errorContainer = document.createElement('div');
-        errorContainer.className = 'mt-4 p-2 bg-[#333] rounded text-xs text-red-400';
-        errorContainer.innerHTML = errors.join('<br>');
-        searchResults.appendChild(errorContainer);
-    }
+    // Create a container for the grid 
+    const gridContainer = document.createElement('div'); 
+    // ** Important: Make sure these grid classes match your index.html and desired layout ** 
+    gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-center'; // Added justify-center 
 
-    // 删除这一行
-    // document.getElementById('searchArea')?.classList.add('hidden');
-    
-    // 根据需要添加类，而不是隐藏搜索区域
-    const searchArea = document.getElementById('searchArea');
-    if (searchArea) {
-        searchArea.classList.remove('flex-1');
-    }
-    
-    document.getElementById('doubanArea')?.classList.add('hidden');
+    const fragment = document.createDocumentFragment(); // Use a fragment for better performance 
+    allResults.forEach(item => { 
+        try { 
+            // Use the NEW template function here 
+            fragment.appendChild(createResultItemUsingTemplate(item)); 
+        } catch (error) { 
+            console.error('Error creating result item from template:', error, item); 
+            // Append an error placeholder element 
+            const errorDiv = document.createElement('div'); 
+            errorDiv.className = 'card-hover bg-[#222] rounded-lg overflow-hidden p-2'; 
+            errorDiv.innerHTML = `<h3 class="text-red-400">加载错误</h3><p class="text-xs text-gray-400">无法显示此项目</p>`; 
+            fragment.appendChild(errorDiv); 
+        } 
+    }); 
+
+    gridContainer.appendChild(fragment); // Append all items at once from the fragment 
+    searchResultsContainer.appendChild(gridContainer); // Add the grid to the main container 
+
+    // Display API errors if any 
+    if (errors.length > 0) { 
+        const errorDiv = document.createElement('div'); 
+        errorDiv.className = 'mt-4 p-2 bg-[#333] rounded text-xs text-red-400'; 
+        errorDiv.innerHTML = errors.join('<br>'); 
+        searchResultsContainer.appendChild(errorDiv); 
+    } 
+
+    // Adjust search area visibility/layout 
+    const searchArea = getElement('searchArea'); 
+    if (searchArea) { 
+        searchArea.classList.remove('flex-1'); 
+        // searchArea.classList.add('mb-8'); // Add margin if needed 
+        searchArea.classList.remove('hidden'); // Ensure search area stays visible 
+    } 
+    getElement('doubanArea')?.classList.add('hidden'); // Keep hiding Douban 
 }
 
 
