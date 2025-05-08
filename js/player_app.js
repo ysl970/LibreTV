@@ -950,41 +950,35 @@ function playEpisode(index) {
 
     const newUrl = new URL(window.location.href);
     newUrl.searchParams.set('index', index.toString());
-    // Also update 'url' param if it's meant to reflect the current episode's URL directly
-    // For simplicity, let's assume 'url' was the initial entry point or for single videos
-    // newUrl.searchParams.set('url', episodeUrl); // Optional: if you want the main 'url' param to always be the current episode
-
+    // 更新URL参数，确保'url'参数反映当前选择的集数URL
+    newUrl.searchParams.set('url', episodeUrl);
     window.history.replaceState({}, '', newUrl.toString());
 
-    localStorage.setItem('currentEpisodeIndex', index.toString()); // Should this be currentVideoTitle specific?
+    localStorage.setItem('currentEpisodeIndex', index.toString());
 
     updateEpisodeInfo();
     updateButtonStates();
-    renderEpisodes(); // Re-render to highlight the new active episode
+    renderEpisodes(); // 重新渲染以高亮显示新的活动集数
 
     if (dp) {
         const loadingEl = document.getElementById('loading');
         if (loadingEl) loadingEl.style.display = 'flex';
 
-        clearVideoProgress(); // Clear localStorage progress for the *new* episode about to be played
+        clearVideoProgress(); // 清除即将播放的新集数的本地存储进度
 
-        videoHasEnded = false; // Reset ended flag for new episode
-        isUserSeeking = false; // Reset seeking flag
+        videoHasEnded = false; // 为新集数重置结束标志
+        isUserSeeking = false; // 重置搜索标志
 
-               // ★ 切源后立刻播放，确保真正加载新地址
+        // 切换视频源并立即播放，确保真正加载新地址
         dp.switchVideo({ url: episodeUrl, type: 'hls' });
-        dp.play();        // ★ 显式播放
+        dp.play();
     } else {
         console.error('[PlayerApp] DPlayer instance not available for playEpisode');
-        // If dp is not available, it implies a full page load might be needed,
-        // or initPlayer should be called with the new episodeUrl.
-        // For now, assuming dp should exist if episodes are being switched.
-        // Potentially: initializePageContent() could be re-triggered or initPlayer(episodeUrl)
         initPlayer(episodeUrl, new URLSearchParams(window.location.search).get('source_code'));
     }
 
-    // Save to viewing history immediately for the new episode (position will be 0 or near 0)
-    // Delay slightly to allow metadata to potentially load for duration.
+    // 立即为新集数保存到观看历史（位置将为0或接近0）
+    // 稍微延迟以允许元数据可能加载持续时间。
     setTimeout(saveToHistory, 1000);
 }
 window.playEpisode = playEpisode; // Expose globally
