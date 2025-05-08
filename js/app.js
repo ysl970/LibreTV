@@ -674,115 +674,93 @@ window.showDetails = showDetails;
 window.playFromHistory = playFromHistory;
 
 
-function createResultItem(item) {
-    // Clone the template
-    const template = document.getElementById('search-result-template');
-    if (!template) {
-        console.error('Search result template not found');
-        return '';
-    }
-    
-    const resultElement = template.content.cloneNode(true).firstElementChild;
-    
-    // Sanitize item properties
-    const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
-    const safeName = sanitizeText(item.vod_name || '');
-    const safeRemarks = sanitizeText(item.vod_remarks || '暂无介绍');
-    const safeTypeName = sanitizeText(item.type_name || '');
-    const safeYear = sanitizeText(item.vod_year || '');
-    const safeSourceInfo = sanitizeText(item.source_name || '');
-    const sourceCode = sanitizeText(item.source_code || '');
-    
-    // Set data attributes for video details
-    resultElement.setAttribute('onclick', `getVideoDetail('${safeId}', '${sourceCode}'${item.api_url ? `, '${sanitizeText(item.api_url)}'` : ''})`);
-    if (item.api_url) {
-        resultElement.setAttribute('data-api-url', sanitizeText(item.api_url));
-    }
-    
-    // Set image if available
-    const hasCover = item.vod_pic && item.vod_pic.startsWith('http');
-    const imgContainer = resultElement.querySelector('.search-card-img-container');
-    const img = resultElement.querySelector('.result-img');
-    
-    if (hasCover && img) {
-        img.src = sanitizeText(item.vod_pic);
-        img.alt = safeName;
-        img.onerror = function() {
-            this.onerror = null;
-            this.src = 'https://via.placeholder.com/300x450?text=无封面';
-            this.classList.add('object-contain');
-        };
-    } else if (imgContainer) {
-        imgContainer.remove(); // Remove image container if no image
-        
-        // Center text when no image
-        const title = resultElement.querySelector('.result-title');
-        if (title) title.classList.add('text-center');
-        
-        const meta = resultElement.querySelector('.result-meta');
-        if (meta) meta.classList.add('justify-center');
-        
-        const remarks = resultElement.querySelector('.result-remarks');
-        if (remarks) remarks.classList.add('text-center');
-    }
-    
-    // Set text content
-    const title = resultElement.querySelector('.result-title');
-    if (title) {
-        title.textContent = safeName;
-        title.title = safeName;
-    }
-    
-    const type = resultElement.querySelector('.result-type');
-    if (type) {
-        if (safeTypeName) {
-            type.textContent = safeTypeName;
-        } else {
-            type.remove();
-        }
-    }
-    
-    const year = resultElement.querySelector('.result-year');
-    if (year) {
-        if (safeYear) {
-            year.textContent = safeYear;
-        } else {
-            year.remove();
-        }
-    }
-    
-    const remarks = resultElement.querySelector('.result-remarks');
-    if (remarks) remarks.textContent = safeRemarks;
-    
-    const sourceName = resultElement.querySelector('.result-source-name');
-    if (sourceName) {
-        if (safeSourceInfo) {
-            sourceName.textContent = safeSourceInfo;
-        } else {
-            sourceName.parentElement.innerHTML = '<div></div>';
-        }
-    }
-    
-    // Convert to HTML string for compatibility with existing renderSearchResults
-    const tempDiv = document.createElement('div');
-    tempDiv.appendChild(resultElement);
-    return tempDiv.innerHTML;
-}
+function createResultItemUsingTemplate(item) { 
+    const template = document.getElementById('search-result-template'); 
+    if (!template) { 
+        console.error("Search result template not found!"); 
+        return document.createDocumentFragment(); // Return empty fragment 
+    } 
 
-/**
- * 处理搜索结果项点击事件
- * @param {Event} event - 点击事件
- */
-function handleResultClick(event) {
-    const cardElement = this;
-    const id = cardElement.dataset.id;
-    const title = cardElement.dataset.title;
-    const sourceCode = cardElement.dataset.source;
-    
-    if (id && sourceCode) {
-        showVideoEpisodesModal(id, title, sourceCode);
-    }
-}
+    const clone = template.content.cloneNode(true); // Clone the template content 
+    const cardElement = clone.querySelector('.card-hover'); // Get the main element 
+
+    // --- Populate Data Safely --- 
+    const imgElement = clone.querySelector('.result-img'); 
+    const imgContainer = clone.querySelector('.search-card-img-container'); 
+    if (item.vod_pic && item.vod_pic.startsWith('http')) { 
+        imgElement.src = item.vod_pic; 
+        imgElement.alt = item.vod_name || ''; 
+        imgElement.onerror = function() { // Error handling for images 
+            this.onerror = null; 
+            this.src = 'https://via.placeholder.com/300x450?text=无封面'; 
+            imgContainer?.classList.add('bg-[#333]', 'flex', 'items-center', 'justify-center'); // Add styles for placeholder 
+            this.classList.add('object-contain', 'w-auto', 'h-auto', 'max-w-full', 'max-h-full'); // Adjust image styles 
+        }; 
+    } else { 
+         imgContainer?.remove(); // Remove image container if no image 
+    } 
+
+    const titleElement = clone.querySelector('.result-title'); 
+    titleElement.textContent = item.vod_name || ''; 
+    titleElement.title = item.vod_name || ''; // Set title attribute for tooltips 
+
+    const typeSpan = clone.querySelector('.result-type'); 
+    if (item.type_name) { 
+        typeSpan.textContent = item.type_name; 
+    } else { 
+        typeSpan.style.display = 'none'; // Hide if no type 
+    } 
+
+    const yearSpan = clone.querySelector('.result-year'); 
+    if (item.vod_year) { 
+        yearSpan.textContent = item.vod_year; 
+    } else { 
+        yearSpan.style.display = 'none'; // Hide if no year 
+    } 
+     // Hide meta container if both type and year are missing 
+    if (!item.type_name && !item.vod_year) { 
+        clone.querySelector('.result-meta')?.remove(); 
+    } 
+
+    clone.querySelector('.result-remarks').textContent = item.vod_remarks || '暂无介绍'; 
+
+    const sourceSpan = clone.querySelector('.result-source-name'); 
+     if(item.source_name){ 
+         sourceSpan.textContent = item.source_name; 
+     } else { 
+          clone.querySelector('.result-source')?.remove(); // Remove source row if no name 
+     } 
+
+    // --- Add Event Listener/Data Attributes --- 
+    if (cardElement) { 
+         cardElement.dataset.id = item.vod_id || ''; 
+         cardElement.dataset.name = item.vod_name || ''; 
+         cardElement.dataset.sourceCode = item.source_code || ''; 
+         if (item.api_url) { 
+            cardElement.dataset.apiUrl = item.api_url; 
+         } 
+         cardElement.onclick = handleResultClick; // Assign a named handler 
+    } 
+
+    return clone; // Return the populated document fragment 
+} 
+
+// Add the handler function (if not already present) 
+function handleResultClick(event) { 
+    const card = event.currentTarget; 
+    const id = card.dataset.id; 
+    const name = card.dataset.name; 
+    const sourceCode = card.dataset.sourceCode; 
+    const apiUrl = card.dataset.apiUrl || ''; 
+
+    if (typeof showVideoEpisodesModal === 'function') { 
+        showVideoEpisodesModal(id, name, sourceCode, apiUrl); 
+    } else { 
+        console.error('showVideoEpisodesModal function not found!'); 
+    } 
+} 
+// Make handler globally accessible if needed (though better to delegate if possible) 
+// window.handleResultClick = handleResultClick; 
 
 /**
  * 显示视频剧集模态框
