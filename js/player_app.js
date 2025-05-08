@@ -950,7 +950,7 @@ function playEpisode(index) {
 
     const newUrl = new URL(window.location.href);
     newUrl.searchParams.set('index', index.toString());
-    newUrl.searchParams.set('url', episodeUrl);
+    newUrl.searchParams.set('url', encodeURIComponent(episodeUrl));
 
     window.history.replaceState({}, '', newUrl.toString());
 
