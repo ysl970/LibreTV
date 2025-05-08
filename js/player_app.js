@@ -490,15 +490,6 @@ function toggleLockScreen() {
 }
 
 function setupPlayerControls() {
-    
-    const lockButton = document.getElementById('lock-button');
-    if (lockButton) lockButton.addEventListener('click', toggleLockScreen);
-    
-    const orderBtn = document.getElementById('order-button');
-    if (orderBtn) orderBtn.addEventListener('click', toggleEpisodeOrder); // toggleEpisodeOrder is local
-}
-
-function setupPlayerControls() {
     const backButton = document.getElementById('back-button');
     if (backButton) {
         backButton.addEventListener('click', () => { window.location.href = 'index.html'; });
@@ -555,6 +546,10 @@ function setupPlayerControls() {
 
     const orderBtn = document.getElementById('order-button');
     if (orderBtn) orderBtn.addEventListener('click', toggleEpisodeOrder); // toggleEpisodeOrder is local
+    
+    // Add lock button event listener
+    const lockButton = document.getElementById('lock-button');
+    if (lockButton) lockButton.addEventListener('click', toggleLockScreen);
 }
 
 function showError(message) {
@@ -890,11 +885,7 @@ function initializePageContent() {
     updateButtonStates();
     updateOrderButton();
     
-    // Add event listener for order button
-    const orderButton = document.getElementById('order-button');
-    if (orderButton) {
-        orderButton.addEventListener('click', toggleEpisodeOrder);
-    }
+    // Order button event listener is now in setupPlayerControls
     
     setTimeout(() => {
         setupProgressBarPreciseClicks();
