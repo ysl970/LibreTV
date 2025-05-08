@@ -130,7 +130,9 @@ function initializePageContent() {
     if (videoTitleElement) videoTitleElement.textContent = currentVideoTitle;
 
     autoplayEnabled = localStorage.getItem('autoplayEnabled') !== 'false';
-    const autoplayToggle = document.getElementById('autoplay-next');
+    const autoplayToggle =
+            document.getElementById('autoplay-next') ||
+            document.getElementById('autoplayToggle');
     if (autoplayToggle) {
         autoplayToggle.checked = autoplayEnabled;
         autoplayToggle.addEventListener('change', function(e) {
@@ -434,18 +436,17 @@ function addDPlayerEventListeners(){
         videoHasEnded = true;
         saveCurrentProgress(); // Ensure final progress is saved
         clearVideoProgress(); // Clear progress for *this specific video*
-        const hasNext = episodesReversed ? currentEpisodeIndex < currentEpisodes.length - 1 // This logic might be tricky with reversed, check playNextEpisode
-                                         : currentEpisodeIndex < currentEpisodes.length - 1;
-        if (autoplayEnabled && hasNext) {
-
-            setTimeout(() => {
-                if (videoHasEnded && !isUserSeeking) { // Ensure it really ended and user isn't seeking
-                     if(typeof window.playNextEpisode === 'function') window.playNextEpisode();
-                }
-            }, 1000); // 1 second delay before playing next
-        } else {
-             if (debugMode) console.log('[PlayerApp] Video ended, no next episode or autoplay disabled.');
-        }
+            if (!autoplayEnabled) return;       // 用户关掉了自动连播
+        
+            const nextIdx = currentEpisodeIndex + 1;   // 始终 +1（上一条回复已统一）
+            if (nextIdx < currentEpisodes.length) {
+                setTimeout(() => {
+                    // 再确认一下确实播完 & 没有人在拖动
+                    if (videoHasEnded && !isUserSeeking) playEpisode(nextIdx);
+                }, 1000);                       // 1 s 延迟，防误触
+            } else {
+                if (debugMode) console.log('[PlayerApp] 已到最后一集，自动连播停止');
+            }
     });
 
     dp.on('timeupdate', function() {
@@ -832,20 +833,18 @@ function updateOrderButton(){
 
 function playPreviousEpisode() {
     if (!currentEpisodes.length) return;
-    const nextIdx = episodesReversed ? currentEpisodeIndex + 1
-                                     : currentEpisodeIndex - 1;
-    if (nextIdx >= 0 && nextIdx < currentEpisodes.length) {
-        playEpisode(nextIdx);
+        const prevIdx = currentEpisodeIndex - 1;          // 无论正序 / 倒序都减 1
+        if (prevIdx >= 0) {
+            playEpisode(prevIdx);
     } else showMessage('已经是第一集了', 'info');
 }
 window.playPreviousEpisode = playPreviousEpisode;
 
 function playNextEpisode() {
     if (!currentEpisodes.length) return;
-    const nextIdx = episodesReversed ? currentEpisodeIndex - 1
-                                     : currentEpisodeIndex + 1;
-    if (nextIdx >= 0 && nextIdx < currentEpisodes.length) {
-        playEpisode(nextIdx);
+        const nextIdx = currentEpisodeIndex + 1;          // 始终加 1
+        if (nextIdx < currentEpisodes.length) {
+            playEpisode(nextIdx);
     } else showMessage('已经是最后一集了', 'info');
 }
 window.playNextEpisode = playNextEpisode;
