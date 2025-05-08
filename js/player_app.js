@@ -742,48 +742,42 @@ function toggleLockScreen() {
 }
 
 function renderEpisodes() {
-    const episodeGrid = document.getElementById('episode-grid');
-    if (!episodeGrid) {
-        console.warn('[PlayerApp] episode-grid element not found in renderEpisodes(). Will retry in 100 ms.');
-        // Adding a counter to prevent infinite recursion if element is never found
-        if (typeof this.renderEpisodesRetryCount === 'undefined') this.renderEpisodesRetryCount = 0;
-        this.renderEpisodesRetryCount++;
-        if (this.renderEpisodesRetryCount < 10) { // Max 10 retries (1 second)
-            setTimeout(() => renderEpisodes.call(this), 100);
-        } else {
-            console.error('[PlayerApp] episode-grid element still not found after multiple retries.');
-            this.renderEpisodesRetryCount = 0; // Reset for future calls if any
-        }
-        return;
-    }
-    this.renderEpisodesRetryCount = 0; // Reset retry count on success
+    const grid = document.getElementById('episode-grid');
+    if (!grid) { setTimeout(renderEpisodes, 100); return; }
 
-    const episodesContainer = document.getElementById('episodes-container');
-    if (episodesContainer) episodesContainer.classList.remove('hidden');
+    grid.innerHTML = '';
 
-    episodeGrid.innerHTML = '';
-
-    if (!window.currentEpisodes || window.currentEpisodes.length === 0) {
-      //  console.log('[PlayerApp Debug] No episodes to render.');
-        episodeGrid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-4">没有可用的剧集</div>';
+    if (!currentEpisodes.length) {
+        grid.innerHTML =
+            '<div class="col-span-full text-center text-gray-400 py-4">没有可用的剧集</div>';
         return;
     }
 
-    const indexArr = [...Array(currentEpisodes.length).keys()];
-    if (episodesReversed) indexArr.reverse();
+    const order = [...Array(currentEpisodes.length).keys()];
+    if (episodesReversed) order.reverse();          // 倒序显示
 
-    indexArr.forEach((realIndex) => { // displayIdx is not needed if textContent is realIndex + 1
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = realIndex === currentEpisodeIndex
-            ? 'p-2 rounded bg-blue-600 text-white episode-active'
-            : 'p-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-300';
-        button.textContent = `${realIndex + 1}`; // Show actual episode number
-        button.setAttribute('aria-label', `第 ${realIndex + 1} 集`);
-        button.addEventListener('click', () => playEpisode(realIndex));
-
-        episodeGrid.appendChild(button);
+    order.forEach(idx => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = idx === currentEpisodeIndex
+              ? 'p-2 rounded episode-active'
+              : 'p-2 rounded bg-[#222] hover:bg-[#333] text-gray-300';
+        btn.textContent     = idx + 1;
+        btn.dataset.index   = idx;                  // 关键：把真实下标写到 data 上
+        grid.appendChild(btn);
     });
+
+    /* 只在父层做一次事件代理，彻底避免闭包 */
+    if (!grid._sListenerBound) {
+        grid.addEventListener('click', evt => {
+            const target = evt.target.closest('button[data-index]');
+            if (target) playEpisode(+target.dataset.index);
+        });
+        grid._sListenerBound = true;
+    }
+
+    updateEpisodeInfo();
+    updateButtonStates();
 }
 
 
@@ -822,25 +816,22 @@ function updateOrderButton(){
 }
 
 function playPreviousEpisode() {
-    if (!currentEpisodes || currentEpisodes.length === 0) return;
-    // Logic is the same regardless of episodesReversed because currentEpisodeIndex is the true index.
-    // The visual order is handled by renderEpisodes.
-    if (currentEpisodeIndex > 0) {
-        playEpisode(currentEpisodeIndex - 1);
-    } else {
-        if (typeof showMessage === 'function') showMessage('已经是第一集了', 'info');
-    }
+    if (!currentEpisodes.length) return;
+    const nextIdx = episodesReversed ? currentEpisodeIndex + 1
+                                     : currentEpisodeIndex - 1;
+    if (nextIdx >= 0 && nextIdx < currentEpisodes.length) {
+        playEpisode(nextIdx);
+    } else showMessage('已经是第一集了', 'info');
 }
 window.playPreviousEpisode = playPreviousEpisode;
 
 function playNextEpisode() {
-    if (!currentEpisodes || currentEpisodes.length === 0) return;
-    // Logic is the same regardless of episodesReversed.
-    if (currentEpisodeIndex < currentEpisodes.length - 1) {
-        playEpisode(currentEpisodeIndex + 1);
-    } else {
-        if (typeof showMessage === 'function') showMessage('已经是最后一集了', 'info');
-    }
+    if (!currentEpisodes.length) return;
+    const nextIdx = episodesReversed ? currentEpisodeIndex - 1
+                                     : currentEpisodeIndex + 1;
+    if (nextIdx >= 0 && nextIdx < currentEpisodes.length) {
+        playEpisode(nextIdx);
+    } else showMessage('已经是最后一集了', 'info');
 }
 window.playNextEpisode = playNextEpisode;
 
