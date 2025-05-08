@@ -412,14 +412,36 @@ const APISourceManager = {
 
 // 导出模块
 window.APISourceManager = APISourceManager;
+
+// Global wrapper functions for HTML onclick compatibility
+// These should be at the end of the file
+
+// Global wrapper for HTML onclick compatibility.
+// TODO: Ideally, remove onclick from HTML and use addEventListener in JS
+// to call APISourceManager.selectAllAPIs directly.
 window.selectAllAPIs = function(selectAll, excludeAdult) {
     APISourceManager.selectAllAPIs(selectAll, excludeAdult);
 };
+
+// Global wrapper for HTML onclick compatibility.
+// TODO: Ideally, remove onclick from HTML and use addEventListener in JS
+// to call APISourceManager.showAddCustomApiForm directly.
+window.showAddCustomApiForm = function() {
+    APISourceManager.showAddCustomApiForm();
+};
+
+// Global wrapper for HTML onclick compatibility.
+// TODO: Ideally, remove onclick from HTML and use addEventListener in JS
+// to call APISourceManager.addCustomApi directly.
 window.addCustomApi = function() {
     APISourceManager.addCustomApi();
 };
+
+// Global wrapper for HTML onclick compatibility.
+// TODO: Ideally, remove onclick from HTML and use addEventListener in JS
+// to call APISourceManager.cancelAddCustomApi directly.
 window.cancelAddCustomApi = function() {
-    APISourceManager.cancelEditCustomApi();
+    APISourceManager.cancelAddCustomApi();
 };
 window.showAddCustomApiForm = function() {
     const form = DOMCache.get('addCustomApiForm') || document.getElementById('addCustomApiForm');
