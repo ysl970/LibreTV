@@ -273,21 +273,23 @@
             <!-- 搜索区 -->
             <section id="searchArea" class="flex-1 flex flex-col items-center justify-center" aria-label="搜索区">
                 <div class="w-full max-w-2xl">
-                    <div class="flex items-stretch mb-3 h-14 shadow-lg rounded-lg overflow-hidden">
-                        <button onclick="resetToHome()"
-                            class="w-20 sm:w-24 flex items-center justify-center bg-white text-black font-medium hover:bg-gray-200 transition-colors"
-                            aria-label="返回首页" title="返回首页" type="button">
-                            首页
-                        </button>
-                        <input type="text" id="searchInput"
-                            class="flex-1 bg-[#111] border-y border-[#333] text-white px-6 py-0 focus:outline-none transition-colors"
-                            placeholder="搜索你喜欢的视频..." autocomplete="off" aria-label="视频搜索框">
-                        <button onclick="search()"
-                            class="w-20 sm:w-24 flex items-center justify-center bg-white text-black font-medium hover:bg-gray-200 transition-colors"
-                            aria-label="搜索按钮" type="button">
-                            搜索
-                        </button>
-                    </div>
+                    <form id="searchForm" onsubmit="event.preventDefault(); search();">
+                        <div class="flex items-stretch mb-3 h-14 shadow-lg rounded-lg overflow-hidden">
+                            <button onclick="resetToHome()"
+                                class="w-20 sm:w-24 flex items-center justify-center bg-white text-black font-medium hover:bg-gray-200 transition-colors"
+                                aria-label="返回首页" title="返回首页" type="button">
+                                首页
+                            </button>
+                            <input type="text" id="searchInput"
+                                class="flex-1 bg-[#111] border-y border-[#333] text-white px-6 py-0 focus:outline-none transition-colors"
+                                placeholder="搜索你喜欢的视频..." autocomplete="off" aria-label="视频搜索框">
+                            <button type="submit"
+                                class="w-20 sm:w-24 flex items-center justify-center bg-white text-black font-medium hover:bg-gray-200 transition-colors"
+                                aria-label="搜索按钮">
+                                搜索
+                            </button>
+                        </div>
+                    </form>
                     <div id="recentSearches" class="mt-4 flex flex-wrap gap-2" aria-label="最近搜索记录" aria-live="polite">
                     </div>
                 </div>
@@ -338,8 +340,8 @@
                             <span id="searchResultsCount">0</span> 个结果
                         </div>
                     </div>
-                    <div id="searchResults" class="container mx-auto px-4 py-4" role="region" aria-live="polite"></div>
-                    role="region" aria-live="polite">
+                    <div id="searchResults" role="region" aria-live="polite">
+                    </div>
                 </div>
             </section>
         </div>

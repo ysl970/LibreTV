@@ -572,8 +572,15 @@ function renderSearchResults(results) {
         searchResults.appendChild(errorContainer);
     }
 
-    // Hide search area and douban area when showing results
-    document.getElementById('searchArea')?.classList.add('hidden');
+    // 删除这一行
+    // document.getElementById('searchArea')?.classList.add('hidden');
+    
+    // 根据需要添加类，而不是隐藏搜索区域
+    const searchArea = document.getElementById('searchArea');
+    if (searchArea) {
+        searchArea.classList.remove('flex-1');
+    }
+    
     document.getElementById('doubanArea')?.classList.add('hidden');
 }
 

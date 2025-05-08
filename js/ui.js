@@ -769,6 +769,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // 初始化搜索历史
     renderSearchHistory();
+    setupPanelAutoClose();
 });
 
 // 导出公共函数
@@ -784,3 +785,42 @@ window.clearViewingHistory = clearViewingHistory;
 window.saveSearchHistory = saveSearchHistory;
 window.clearSearchHistory = clearSearchHistory;
 window.renderSearchHistory = renderSearchHistory;
+
+/**
+ * 设置面板自动关闭功能
+ * 当用户点击面板外区域时自动关闭面板
+ */
+function setupPanelAutoClose() {
+    document.addEventListener('click', function(event) {
+        // 检查是否点击了设置按钮或历史按钮
+        const settingsButton = document.getElementById('settingsButton');
+        const historyButton = document.getElementById('historyButton');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const historyPanel = document.getElementById('historyPanel');
+        
+        // 如果点击的是设置按钮或设置面板内部，不做处理
+        if (settingsButton && settingsButton.contains(event.target)) return;
+        if (settingsPanel && settingsPanel.contains(event.target)) return;
+        
+        // 如果点击的是历史按钮或历史面板内部，不做处理
+        if (historyButton && historyButton.contains(event.target)) return;
+        if (historyPanel && historyPanel.contains(event.target)) return;
+        
+        // 关闭设置面板
+        if (settingsPanel && settingsPanel.classList.contains('show')) {
+            settingsPanel.classList.remove('show');
+            settingsPanel.setAttribute('aria-hidden', 'true');
+        }
+        
+        // 关闭历史面板
+        if (historyPanel && historyPanel.classList.contains('show')) {
+            historyPanel.classList.remove('show');
+            historyPanel.setAttribute('aria-hidden', 'true');
+        }
+    });
+}
+
+// 在DOMContentLoaded事件中调用setupPanelAutoClose
+document.addEventListener('DOMContentLoaded', function() {
+    setupPanelAutoClose();
+});
