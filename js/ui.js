@@ -459,44 +459,58 @@ function formatPlaybackTime(seconds) {
 }
 
 /**
- * 添加观看历史记录
- * @param {Object} item 历史记录项
+ * 增加/更新历史（同标题合并，每标题仅一条记录）
+ * @param {Object} videoInfo 视频信息对象
  */
-function addToViewingHistory(item) {
-    if (!item || !item.url || !item.title) return;
+function addToViewingHistory(videoInfo) {
+    if (!checkPasswordProtection()) return; // Crucial security check
     
     try {
         let history = getViewingHistory();
-        
-        // 查找是否已存在相同URL的记录
-        const existingIndex = history.findIndex(h => h.url === item.url);
-        if (existingIndex !== -1) {
-            // 更新现有记录
-            const existing = history[existingIndex];
-            history.splice(existingIndex, 1); // 先移除
+        const idx = history.findIndex(item => item.title === videoInfo.title); // Original logic: find by title
+
+        if (idx !== -1) {
+            const item = history[idx];
+            // Update existing item with specific fields from videoInfo
+            item.episodeIndex = videoInfo.episodeIndex;
+            item.timestamp = Date.now(); // Always update timestamp
+            if (videoInfo.sourceName && !item.sourceName) { // Only set if not already present or to update
+                item.sourceName = videoInfo.sourceName;
+            }
+            if (videoInfo.playbackPosition && videoInfo.playbackPosition > 10) {
+                item.playbackPosition = videoInfo.playbackPosition;
+                item.duration = videoInfo.duration || item.duration; // Preserve existing duration if new one isn't provided
+            }
+            item.url = videoInfo.url; // Update URL if title matches, as per original logic
             
-            // 合并属性，保留新的播放位置和时间戳
-            item = {
-                ...existing,
-                ...item,
-                timestamp: Date.now() // 更新时间戳
-            };
+            if (videoInfo.episodes && Array.isArray(videoInfo.episodes) && videoInfo.episodes.length) {
+                // Update episodes if new list is different or doesn't exist
+                if (!item.episodes || item.episodes.length !== videoInfo.episodes.length) {
+                    item.episodes = [...videoInfo.episodes];
+                }
+            }
+            
+            history.splice(idx, 1); // Remove old item
+            history.unshift(item);  // Add updated item to the beginning
         } else {
-            // 新记录，添加时间戳
-            item.timestamp = Date.now();
+            // Add as a new item
+            const newItem = {
+                ...videoInfo,
+                timestamp: Date.now(),
+                // Ensure 'episodes' is an array for new items, even if empty
+                episodes: Array.isArray(videoInfo.episodes) ? [...videoInfo.episodes] : []
+            };
+            history.unshift(newItem);
         }
-        
-        // 新记录放在最前面
-        history.unshift(item);
-        
-        // 限制历史记录数量
+
+        // Limit history items
         if (history.length > HISTORY_MAX_ITEMS) {
-            history = history.slice(0, HISTORY_MAX_ITEMS);
+            history.splice(HISTORY_MAX_ITEMS); // Corrected from previous thought: splice directly
         }
         
         localStorage.setItem('viewingHistory', JSON.stringify(history));
     } catch (e) {
-        console.error('添加观看历史失败:', e);
+        console.error('保存观看历史失败:', e); // Retain original error logging style
     }
 }
 
