@@ -77,7 +77,16 @@ function initializePageContent() {
     //  console.log('[PlayerApp Debug] initializePageContent starting...');
     const urlParams = new URLSearchParams(window.location.search);
     const videoUrl = urlParams.get('url');
-    const title = urlParams.get('title');
+    let title = urlParams.get('title');
+    // 把可能的多层编码全部拆掉
+    function fullyDecode(str) {
+        try {
+            let prev, cur = str;
+            do { prev = cur; cur = decodeURIComponent(cur); } while (cur !== prev);
+            return cur;
+        } catch { return str; }   // 遇到非法编码就放弃
+    }
+    title = title ? fullyDecode(title) : '';
     const sourceCode = urlParams.get('source_code');
     let index = parseInt(urlParams.get('index') || '0', 10);
     const episodesListParam = urlParams.get('episodes'); // Check if episodes are passed via URL
@@ -951,7 +960,7 @@ function playEpisode(index) {
     //------------------------------------------------------------------
     const playerUrl = new URL(window.location.origin + window.location.pathname);
     playerUrl.searchParams.set('url', episodeUrl);
-    playerUrl.searchParams.set('title', encodeURIComponent(currentVideoTitle));
+    playerUrl.searchParams.set('title', currentVideoTitle);
     playerUrl.searchParams.set('index', index.toString());
     // 如果你还想保 source_code，也可以加：
     const sourceCode = new URLSearchParams(window.location.search).get('source_code');
