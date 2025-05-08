@@ -137,14 +137,28 @@ const CUSTOM_API_CONFIG = {
 // 隐藏内置黄色采集站API的变量
 const HIDE_BUILTIN_ADULT_APIS = true;
 
-// 获取布尔配置值
 function getBoolConfig(key, def) {
-    const v = localStorage.getItem(key);
-    return v === null ? def : v === 'true';
+    try {
+        const v = localStorage.getItem(key);
+        if (v === null) return def;
+        // Handle potential non-string values
+        return v === 'true' || v === true;
+    } catch (e) {
+        console.warn(`Error reading boolean config for ${key}:`, e);
+        return def;
+    }
 }
 
-// 获取整数配置值
 function getIntConfig(key, def, min = 0, max = 10) {
-    const v = parseInt(localStorage.getItem(key));
-    return (!isNaN(v) && v >= min && v <= max) ? v : def;
+    try {
+        const raw = localStorage.getItem(key);
+        if (raw === null) return def;
+
+        // Handle potential non-string values
+        const v = parseInt(typeof raw === 'string' ? raw : String(raw));
+        return (!isNaN(v) && v >= min && v <= max) ? v : def;
+    } catch (e) {
+        console.warn(`Error reading integer config for ${key}:`, e);
+        return def;
+    }
 }
