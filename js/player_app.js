@@ -299,12 +299,6 @@ function initPlayer(videoUrl, sourceCode) {
 
                         let errorDisplayed = false, errorCount = 0, playbackStarted = false, bufferAppendErrorCount = 0;
 
-                        // Clear previous source element if exists, before attaching HLS
-                        const existingSource = video.querySelector('source');
-                        if (existingSource) existingSource.remove();
-                        // Remove src attribute if set, HLS will manage it
-                        if (video.hasAttribute('src')) video.removeAttribute('src');
-
                         video.addEventListener('playing', function onPlaying() {
                             playbackStarted = true;
                              const loadingEl = document.getElementById('loading'); if(loadingEl) loadingEl.style.display = 'none';
@@ -313,9 +307,15 @@ function initPlayer(videoUrl, sourceCode) {
                         });
 
                         video.disableRemotePlayback = false;
-                        const src = player.options.video.url      // ✅ DPlayer 每次都会带最新的 url
-                                        || video.getAttribute('src') // 兜底
-                                        || video.src;
+                                // ★ 先拿到“正确的新地址”
+                        const src = player.options && player.options.video
+                                       ? player.options.video.url
+                                       : '';           // 理论上一定有
+                        
+                              // ★ 然后再去清理旧 DOM，避免把新地址弄丢
+                        const existingSource = video.querySelector('source');
+                             if (existingSource) existingSource.remove();
+                             if (video.hasAttribute('src')) video.removeAttribute('src');
                         hls.loadSource(src);
                         hls.attachMedia(video);
 
@@ -972,10 +972,8 @@ function playEpisode(index) {
         isUserSeeking = false; // Reset seeking flag
 
                // ★ 切源后立刻播放，确保真正加载新地址
-        dp.switchVideo({ url: episodeUrl, type: 'hls', autoplay: true });
-               // 如果你的 DPlayer 版本不识别 autoplay，可改成：
-               // dp.switchVideo({ url: episodeUrl, type: 'hls' });
-               // dp.play();
+        dp.switchVideo({ url: episodeUrl, type: 'hls' });
+        dp.play();        // ★ 显式播放
     } else {
         console.error('[PlayerApp] DPlayer instance not available for playEpisode');
         // If dp is not available, it implies a full page load might be needed,
