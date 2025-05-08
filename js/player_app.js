@@ -313,8 +313,10 @@ function initPlayer(videoUrl, sourceCode) {
                         });
 
                         video.disableRemotePlayback = false;
-
-                        hls.loadSource(videoUrl); // Load source using the URL passed to initPlayer
+                        const src = player.options.video.url      // ✅ DPlayer 每次都会带最新的 url
+                                        || video.getAttribute('src') // 兜底
+                                        || video.src;
+                        hls.loadSource(src);
                         hls.attachMedia(video);
 
                         hls.on(Hls.Events.MEDIA_ATTACHED, function() {
@@ -957,7 +959,7 @@ function playEpisode(index) {
         isUserSeeking = false; // Reset seeking flag
 
         dp.switchVideo({ url: episodeUrl, type: 'hls' });
-        dp.play().catch(e => console.warn("Play on episode switch prevented:", e)); // DPlayer's autoplay should handle this
+         
     } else {
         console.error('[PlayerApp] DPlayer instance not available for playEpisode');
         // If dp is not available, it implies a full page load might be needed,
