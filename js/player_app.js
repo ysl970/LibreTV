@@ -948,41 +948,20 @@ function playEpisode(index) {
         return;
     }
 
-    const newUrl = new URL(window.location.href);
-    newUrl.searchParams.set('index', index.toString());
-    newUrl.searchParams.set('url', encodeURIComponent(episodeUrl));
-
-    window.history.replaceState({}, '', newUrl.toString());
-
-    localStorage.setItem('currentEpisodeIndex', index.toString()); // Should this be currentVideoTitle specific?
-
-    updateEpisodeInfo();
-    updateButtonStates();
-    renderEpisodes(); // Re-render to highlight the new active episode
-
-    if (dp) {
-        const loadingEl = document.getElementById('loading');
-        if (loadingEl) loadingEl.style.display = 'flex';
-
-        clearVideoProgress(); // Clear localStorage progress for the *new* episode about to be played
-
-        videoHasEnded = false; // Reset ended flag for new episode
-        isUserSeeking = false; // Reset seeking flag
-
-               // ★ 切源后立刻播放，确保真正加载新地址
-        dp.switchVideo({ url: episodeUrl, type: 'hls' });
-        dp.play();        // ★ 显式播放
-    } else {
-        console.error('[PlayerApp] DPlayer instance not available for playEpisode');
-        // If dp is not available, it implies a full page load might be needed,
-        // or initPlayer should be called with the new episodeUrl.
-        // For now, assuming dp should exist if episodes are being switched.
-        // Potentially: initializePageContent() could be re-triggered or initPlayer(episodeUrl)
-        initPlayer(episodeUrl, new URLSearchParams(window.location.search).get('source_code'));
-    }
-
-    // Save to viewing history immediately for the new episode (position will be 0 or near 0)
-    // Delay slightly to allow metadata to potentially load for duration.
-    setTimeout(saveToHistory, 1000);
+         //------------------------------------------------------------------
+         // 新的方法：直接用 location.href 带 index/url 重新加载 player.html
+         //------------------------------------------------------------------
+         const playerUrl = new URL(window.location.origin + window.location.pathname);
+         playerUrl.searchParams.set('url', episodeUrl);
+         playerUrl.searchParams.set('title', encodeURIComponent(currentVideoTitle));
+         playerUrl.searchParams.set('index', index.toString());
+         // 如果你还想保 source_code，也可以加：
+         const sourceCode = new URLSearchParams(window.location.search).get('source_code');
+         if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
+    
+         // 如果你确实需要在 URL 里带整个剧集列表（不依赖 localStorage），也可以加：
+         // playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(currentEpisodes)));
+    
+         window.location.href = playerUrl.toString();
 }
 window.playEpisode = playEpisode; // Expose globally
