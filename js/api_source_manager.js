@@ -401,6 +401,31 @@ const APISourceManager = {
         `;
     },
 
+
+    /**
+     * 根据来源代码获取API信息
+     * @param {string} sourceCode - 来源代码 (例如 'heimuer', 'custom_0')
+     * @returns {object|null} - 包含API信息的对象 (例如 { name: 'API名称', url: 'API地址', isCustom: boolean }) 或 null
+     */
+    getSelectedApi: function (sourceCode) { // <--- 新增的方法
+        if (!sourceCode) {
+            return null;
+        }
+
+        if (sourceCode.startsWith('custom_')) {
+            const customIndex = parseInt(sourceCode.replace('custom_', ''), 10);
+            const apiInfo = this.getCustomApiInfo(customIndex); // 使用 this 调用对象内部方法
+            return apiInfo ? { name: apiInfo.name, url: apiInfo.url, isCustom: true } : null;
+        } else {
+            // 确保 API_SITES 是可访问的 (通常在 config.js 中定义并全局可用)
+            if (typeof API_SITES !== 'undefined' && API_SITES[sourceCode]) {
+                return { name: API_SITES[sourceCode].name, url: API_SITES[sourceCode].api, isCustom: false };
+            } else {
+                console.error("API_SITES 未定义或未找到 sourceCode:", sourceCode);
+                return null;
+            }
+        }
+    }
 };
 
 

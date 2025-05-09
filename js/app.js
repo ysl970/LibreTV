@@ -753,7 +753,8 @@ function showVideoEpisodesModal(id, title, sourceCode) {
     showLoading('加载剧集信息...');
     
     // 获取当前选中的API
-    const selectedApi = getSelectedApi(sourceCode);
+    const selectedApi = APISourceManager.getSelectedApi(sourceCode); 
+
     if (!selectedApi) {
         hideLoading();
         showToast('未找到有效的数据源', 'error');
