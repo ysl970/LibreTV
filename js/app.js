@@ -12,7 +12,7 @@ let currentVideoTitle = '';
 let episodesReversed = false;
 
 // 页面初始化
-document。addEventListener('DOMContentLoaded', function() {
+document。addEventListener('DOMContentLoaded'， function() {
     // 初始化API复选框
     initAPICheckboxes();
     
@@ -45,7 +45,7 @@ document。addEventListener('DOMContentLoaded', function() {
     // 设置黄色内容过滤开关初始状态
     const yellowFilterToggle = document.getElementById('yellowFilterToggle');
     if (yellowFilterToggle) {
-        yellowFilterToggle.checked = localStorage.getItem('yellowFilterEnabled') === 'false';
+        yellowFilterToggle.checked = localStorage.getItem('yellowFilterEnabled') === 'true';
     }
     
     // 设置广告过滤开关初始状态
