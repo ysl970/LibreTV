@@ -164,29 +164,137 @@ function saveUserTags() {
   }
 }
 
-
 // 初始化豆瓣功能
 function initDouban() {
-    // 从localStorage加载标签
-    const savedMovieTags = localStorage.getItem('doubanMovieTags');
-    const savedTvTags = localStorage.getItem('doubanTvTags');
-    
-    // 初始化标签
-    movieTags = savedMovieTags ? JSON.parse(savedMovieTags) : CONFIG.DEFAULT_MOVIE_TAGS;
-    tvTags = savedTvTags ? JSON.parse(savedTvTags) : CONFIG.DEFAULT_TV_TAGS;
-    
-    // 使用AppState管理状态
-    AppState.set('doubanMovieTags', movieTags);
-    AppState.set('doubanTvTags', tvTags);
-    AppState.set('doubanMovieTvCurrentSwitch', 'movie'); // 默认显示电影
-    AppState.set('doubanCurrentTag', movieTags[0]); // 默认使用第一个标签
-    AppState.set('doubanPageStart', 0); // 默认从第0页开始
-    
-    // 初始化UI
-    initDoubanUI();
-    
-    // 加载推荐
-    loadDoubanRecommendations();
+  // 从localStorage加载标签
+  const savedMovieTags = localStorage.getItem(CONFIG.STORAGE_KEYS.MOVIE_TAGS); // 使用 CONFIG.STORAGE_KEYS
+  const savedTvTags = localStorage.getItem(CONFIG.STORAGE_KEYS.TV_TAGS);   // 使用 CONFIG.STORAGE_KEYS
+
+  // 初始化标签 - 使用全局定义的 defaultMovieTags 和 defaultTvTags
+  let currentMovieTags = savedMovieTags ? JSON.parse(savedMovieTags) : [...defaultMovieTags]; // 使用全局 defaultMovieTags
+  let currentTvTags = savedTvTags ? JSON.parse(savedTvTags) : [...defaultTvTags];       // 使用全局 defaultTvTags
+
+  // 更新文件顶部的全局 movieTags 和 tvTags 变量
+  // 这些变量被文件的其他函数（如 showTagManageModal, addTag, deleteTag 等）直接使用
+  movieTags = currentMovieTags; // [cite: 5]
+  tvTags = currentTvTags;   // [cite: 5]
+
+  // 使用AppState管理状态 (可选，但如果您打算这样做，请保持)
+  AppState.set('doubanMovieTags', currentMovieTags);
+  AppState.set('doubanTvTags', currentTvTags);
+  AppState.set('doubanMovieTvCurrentSwitch', CONFIG.MEDIA_TYPES.MOVIE); // 默认显示电影, 使用 CONFIG.MEDIA_TYPES
+
+  // 设置当前标签，确保 currentMovieTags 不是 undefined 并且有元素
+  if (currentMovieTags && currentMovieTags.length > 0) {
+      AppState.set('doubanCurrentTag', currentMovieTags[0]); // 默认使用第一个标签
+  } else {
+      // 如果 currentMovieTags 为空或 undefined，则设置一个安全的回退值或处理逻辑
+      AppState.set('doubanCurrentTag', CONFIG.DEFAULT_TAG); // 使用 CONFIG.DEFAULT_TAG 作为回退
+      console.warn("Movie tags are empty or undefined after initialization. Falling back to default tag.");
+  }
+  
+  AppState.set('doubanPageStart', 0); // 默认从第0页开始
+  
+  // 初始化UI
+  initDoubanUI(); // 确保这个函数存在并被正确调用
+
+  // 加载推荐
+  // 检查豆瓣功能是否启用
+  const isDoubanEnabled = utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, true); // 默认为 true
+  if (isDoubanEnabled) {
+      loadDoubanRecommendations();
+  } else {
+      updateDoubanVisibility(); // 确保如果禁用则隐藏
+  }
+}
+
+// 确保 initDoubanUI 函数也被定义和调用，它负责设置事件监听器和初始渲染
+function initDoubanUI() {
+  // 缓存关键DOM元素
+  ['doubanToggle', 'doubanArea', 'douban-movie-toggle', 'douban-tv-toggle',
+   'douban-tags', 'douban-refresh', 'douban-results', 'searchInput'].forEach(id => {
+      utils.getElement(id);
+  });
+
+  const doubanToggle = utils.getElement('doubanToggle');
+  if (doubanToggle) {
+      const isEnabled = utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, true); // 默认为 true
+      doubanToggle.checked = isEnabled;
+
+      // 如果localStorage中没有设置过，则写入默认值
+      if (localStorage.getItem(CONFIG.STORAGE_KEYS.ENABLED) === null) {
+          utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, true);
+      }
+
+      // 更新开关视觉状态 (如果您的HTML结构是 input + sibling for bg + sibling for dot)
+      const toggleBg = doubanToggle.nextElementSibling;
+      const toggleDot = toggleBg ? toggleBg.nextElementSibling : null;
+      if (toggleBg && toggleDot) {
+          if (isEnabled) {
+              toggleBg.classList.add('bg-pink-600'); // Or your active class
+              toggleDot.classList.add('translate-x-full'); // Or your active class for dot
+          } else {
+              toggleBg.classList.remove('bg-pink-600');
+              toggleDot.classList.remove('translate-x-full');
+          }
+      }
+
+
+      doubanToggle.addEventListener('change', function (e) {
+          const isChecked = e.target.checked;
+          utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, isChecked);
+          updateDoubanVisibility(); // 这个函数会根据isEnabled决定是否加载和显示豆瓣内容
+           if (isChecked && utils.getElement('douban-results') && utils.getElement('douban-results').children.length === 0) {
+              loadDoubanRecommendations(); // 如果启用且内容为空，则加载
+          }
+      });
+  }
+  
+  // 初始化电影/电视剧切换按钮
+  const movieToggle = utils.getElement('douban-movie-toggle');
+  const tvToggle = utils.getElement('douban-tv-toggle');
+  if (movieToggle && tvToggle) {
+      movieToggle.addEventListener('click', () => switchMovieTV(CONFIG.MEDIA_TYPES.MOVIE));
+      tvToggle.addEventListener('click', () => switchMovieTV(CONFIG.MEDIA_TYPES.TV));
+      // 设置初始状态
+      updateMovieTVSwitchUI(AppState.get('doubanMovieTvCurrentSwitch') || CONFIG.MEDIA_TYPES.MOVIE);
+  }
+
+  // 渲染初始标签
+  const initialTags = AppState.get('doubanMovieTvCurrentSwitch') === CONFIG.MEDIA_TYPES.MOVIE ? 
+                      (AppState.get('doubanMovieTags') || []) : 
+                      (AppState.get('doubanTvTags') || []);
+  const initialCurrentTag = AppState.get('doubanCurrentTag');
+  renderDoubanTags(initialTags, initialCurrentTag);
+
+
+  // 设置换一批按钮
+  setupDoubanRefreshBtn();
+
+  // 设置标签管理按钮 (如果您的HTML中有这个按钮的话)
+  // 例如: utils.getElement('manage-douban-tags-btn')?.addEventListener('click', showTagManageModal);
+
+  updateDoubanVisibility(); // 调用一次以确保初始状态正确
+}
+
+// 确保 updateMovieTVSwitchUI 函数被定义
+function updateMovieTVSwitchUI(activeType) {
+  const movieToggle = utils.getElement('douban-movie-toggle');
+  const tvToggle = utils.getElement('douban-tv-toggle');
+
+  if (movieToggle && tvToggle) {
+      if (activeType === CONFIG.MEDIA_TYPES.MOVIE) {
+          movieToggle.classList.add(CONFIG.CLASSES.ACTIVE);
+          movieToggle.classList.remove(CONFIG.CLASSES.INACTIVE);
+          tvToggle.classList.add(CONFIG.CLASSES.INACTIVE);
+          tvToggle.classList.remove(CONFIG.CLASSES.ACTIVE);
+      } else {
+          tvToggle.classList.add(CONFIG.CLASSES.ACTIVE);
+          tvToggle.classList.remove(CONFIG.CLASSES.INACTIVE);
+          movieToggle.classList.add(CONFIG.CLASSES.INACTIVE);
+          movieToggle.classList.remove(CONFIG.CLASSES.ACTIVE);
+      }
+  }
 }
 
 // 加载豆瓣推荐
