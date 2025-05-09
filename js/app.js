@@ -501,114 +501,138 @@ async function performSearch(query, selectedAPIs) {
     return Promise.all(searchPromises);
 }
 
-
+// 在 new3.txt/js/app.js
 function renderSearchResults(results, doubanSearchedTitle = null) {
-    const searchResultsContainer = DOMCache.get('searchResults');
-    if (!searchResultsContainer) return;
+    const searchResultsContainer = DOMCache.get('searchResults'); // 用于显示结果卡片
+    const resultsArea = getElement('resultsArea');             // 包裹结果卡片和计数的外层div
+    const searchResultsCountElement = getElement('searchResultsCount');
+    const searchFeedbackArea = getElement('searchFeedbackArea'); // 我们新增的提示区域
 
-    // ... (合并结果和错误信息的逻辑保持不变 - Source 850-855) ...
-    let allResults = [];
-    let errors = [];
-
-    results.forEach(result => {
-        if (result.code === 200 && Array.isArray(result.list)) {
-            const resultsWithSource = result.list.map(item => ({
-                ...item,
-                source_name: result.apiName || (typeof API_SITES !== 'undefined' && API_SITES[result.apiId]?.name) || '未知来源',
-                source_code: result.apiId.startsWith('custom_') ? 'custom' : result.apiId,
-                api_url: result.apiId.startsWith('custom_') && typeof APISourceManager !== 'undefined' ?
-                    APISourceManager.getCustomApiInfo(parseInt(result.apiId.replace('custom_', '')))?.url : ''
-            }));
-            allResults = allResults.concat(resultsWithSource);
-        } else if (result.msg) {
-            errors.push(result.msg);
-        }
-    });
-
-    const yellowFilterEnabled = getBoolConfig('yellowFilterEnabled', true);
-    if (yellowFilterEnabled) {
-        allResults = allResults.filter(item => {
-            const title = item.vod_name || '';
-            const type = item.type_name || '';
-            // 更宽松的过滤词，避免误杀
-            return !/(伦理片|福利片|写真)/.test(type) && !/(伦理|写真|福利|成人|情色|AV)/i.test(title);
-        });
-    }
-
-    // 更新结果区域的可见性和数量显示 (Source 856-861)
-    const resultsArea = getElement('resultsArea');
-    if (resultsArea) {
-        // 只要有错误、有结果，或者明确是豆瓣搜索（即使无结果也需要显示提示），就显示结果区
-        if (errors.length > 0 || allResults.length > 0 || doubanSearchedTitle) {
-            resultsArea.classList.remove('hidden');
-        } else {
-            resultsArea.classList.add('hidden');
-        }
-    }
-    const searchResultsCount = getElement('searchResultsCount');
-    if (searchResultsCount) {
-        searchResultsCount.textContent = allResults.length.toString();
-    }
-
-    searchResultsContainer.innerHTML = ''; // 清空
-
-    if (allResults.length === 0) {
-        let message;
-        if (doubanSearchedTitle) {
-            message = `您点击的豆瓣影视剧 <strong class="text-pink-400">《${sanitizeText(doubanSearchedTitle)}》</strong> 在当前已选的数据源中未找到。`;
-        } else {
-            message = '没有找到相关内容。';
-        }
-
-        if (errors.length > 0) {
-            const errorMessages = errors.map(err => sanitizeText(err)).join('<br>');
-            message += `<div class="mt-3 text-xs text-red-300">${errorMessages}</div>`;
-        }
-        searchResultsContainer.innerHTML = `<div class="text-center py-8 px-4 text-gray-400">${message}</div>`;
-        // 调整搜索区布局
-        const searchArea = getElement('searchArea');
-        if (searchArea) {
-            searchArea.classList.add('flex-1'); // 重新撑满
-            searchArea.classList.remove('mb-8'); // 移除边距
-        }
+    if (!searchResultsContainer || !resultsArea || !searchResultsCountElement || !searchFeedbackArea) {
+        console.error("一个或多个必要的DOM元素未找到，无法渲染结果。");
         return;
     }
 
-    // ... (渲染实际结果的逻辑 - Source 864-876) ...
+    // 先隐藏所有相关的区域，后续按需显示
+    resultsArea.classList.add('hidden');
+    searchFeedbackArea.classList.add('hidden');
+    searchFeedbackArea.innerHTML = ''; // 清空旧提示
+    searchResultsContainer.innerHTML = ''; // 清空旧结果卡片
+
+    // ... (合并结果和错误信息的逻辑，填充 allResults 和 errors 数组) ...
+     let allResults = [];
+     let errors = [];
+     results.forEach(result => {
+         if (result.code === 200 && Array.isArray(result.list)) {
+             const resultsWithSource = result.list.map(item => ({
+                 ...item,
+                 source_name: result.apiName || (typeof API_SITES !== 'undefined' && API_SITES[result.apiId]?.name) || '未知来源',
+                 source_code: result.apiId.startsWith('custom_') ? 'custom' : result.apiId,
+                 api_url: result.apiId.startsWith('custom_') && typeof APISourceManager !== 'undefined' ?
+                     APISourceManager.getCustomApiInfo(parseInt(result.apiId.replace('custom_', '')))?.url : ''
+             }));
+             allResults = allResults.concat(resultsWithSource);
+         } else if (result.msg) {
+             errors.push(result.msg);
+         }
+     });
+
+     const yellowFilterEnabled = getBoolConfig('yellowFilterEnabled', true);
+     if (yellowFilterEnabled) {
+         // ... (过滤逻辑)
+         allResults = allResults.filter(item => {
+             const title = item.vod_name || '';
+             const type = item.type_name || '';
+             return !/(伦理片|福利片|写真)/.test(type) && !/(伦理|写真|福利|成人|情色|AV)/i.test(title);
+         });
+     }
+
+
+    if (allResults.length === 0) {
+        // **处理无结果的情况**
+        searchFeedbackArea.classList.remove('hidden'); // 显示我们新的提示区域
+
+        let messageTitle;
+        let messageSuggestion;
+
+        if (doubanSearchedTitle) {
+            messageTitle = `关于 <strong class="text-pink-400">《${sanitizeText(doubanSearchedTitle)}》</strong> 未找到结果`;
+            messageSuggestion = "请尝试使用其他关键词搜索，或检查您的数据源选择。";
+        } else {
+            messageTitle = '没有找到匹配的结果';
+            messageSuggestion = "请尝试其他关键词或更换数据源。";
+        }
+
+        let errorBlockHTML = '';
+        if (errors.length > 0) {
+            const errorMessages = errors.map(err => sanitizeText(err)).join('<br>');
+            errorBlockHTML = `<div class="mt-4 text-xs text-red-300">${errorMessages}</div>`;
+        }
+
+        // 将提示内容放入 searchFeedbackArea
+        searchFeedbackArea.innerHTML = `
+            <div class="py-6 sm:py-10"> {/* 调整内边距以在视觉上居中 */}
+                <svg class="mx-auto h-10 w-10 text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 class="text-md font-medium text-gray-300"><span class="math-inline">\{messageTitle\}</h3\>
+<p class\="mt\-1 text\-sm text\-gray\-500"\></span>{messageSuggestion}</p>
+                ${errorBlockHTML}
+            </div>
+        `;
+
+        // 确保 searchArea 主搜索区回到初始的撑满状态，豆瓣区隐藏
+        const searchArea = getElement('searchArea');
+        if (searchArea) {
+            searchArea.classList.add('flex-1'); // 让 searchArea 重新撑满
+            searchArea.classList.remove('mb-8'); // 移除搜索结果时的底部边距
+        }
+        getElement('doubanArea')?.classList.add('hidden'); // 隐藏豆瓣区
+        resultsArea.classList.add('hidden'); // 确保标准结果区是隐藏的
+        searchResultsCountElement.textContent = '0'; // 结果计数归零
+
+        return; // 无结果，处理完毕
+    }
+
+    // **如果有结果，则在 resultsArea 中显示**
+    resultsArea.classList.remove('hidden'); // 显示标准结果区
+    searchFeedbackArea.classList.add('hidden'); // 隐藏专用提示区
+    searchResultsCountElement.textContent = allResults.length.toString();
+
     const gridContainer = document.createElement('div');
-    gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-center';
+    gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'; // 保持您的卡片布局
     const fragment = document.createDocumentFragment();
     allResults.forEach(item => {
         try {
             fragment.appendChild(createResultItemUsingTemplate(item));
         } catch (error) {
             console.error('Error creating result item from template:', error, item);
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'card-hover bg-[#222] rounded-lg overflow-hidden p-2';
-            errorDiv.innerHTML = `<h3 class="text-red-400">加载错误</h3><p class="text-xs text-gray-400">无法显示此项目</p>`;
-            fragment.appendChild(errorDiv);
+            // 可以选择在这里为单个卡片渲染错误占位符
         }
     });
     gridContainer.appendChild(fragment);
-    searchResultsContainer.appendChild(gridContainer);
+    searchResultsContainer.appendChild(gridContainer); // 将卡片网格放入 #searchResults
 
     if (errors.length > 0) {
         const errorDiv = document.createElement('div');
-        errorDiv.className = 'mt-4 p-2 bg-[#333] rounded text-xs text-red-400';
-        errorDiv.innerHTML = errors.map(err => sanitizeText(err)).join('<br>');
-        searchResultsContainer.appendChild(errorDiv);
+        errorDiv.className = 'mt-4 p-3 bg-red-900 bg-opacity-30 rounded text-sm text-red-300 space-y-1';
+        errors.forEach(errMsg => {
+            const errorLine = document.createElement('p');
+            errorLine.textContent = sanitizeText(errMsg);
+            errorDiv.appendChild(errorLine);
+        });
+        searchResultsContainer.appendChild(errorDiv); // 错误信息也放在卡片容器内，在其下方
     }
 
-    // 调整搜索区布局 (确保在有结果时 searchArea 不是 flex-1)
+    // 当有结果时，调整 searchArea 的布局，不再是 flex-1
     const searchArea = getElement('searchArea');
     if (searchArea) {
         searchArea.classList.remove('flex-1');
-        searchArea.classList.add('mb-8'); // 在有结果时添加底部边距
-        searchArea.classList.remove('hidden');
+        searchArea.classList.add('mb-8'); // 为下方的 resultsArea 留出空间
     }
     getElement('doubanArea')?.classList.add('hidden'); // 隐藏豆瓣区
 }
-
 
 /**
  * 获取视频详情
