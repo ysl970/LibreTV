@@ -514,25 +514,16 @@ async function performSearch(query, selectedAPIs) {
 
 // 在 new3.txt/js/app.js
 function renderSearchResults(results, doubanSearchedTitle = null) {
-    const searchResultsContainer = DOMCache.get('searchResults'); // 用于显示结果卡片
-    const resultsArea = getElement('resultsArea');             // 包裹结果卡片和计数的外层div
-    const searchResultsCountElement = getElement('searchResultsCount');
-    const searchFeedbackArea = getElement('searchFeedbackArea'); // 我们新增的提示区域
+    const searchResultsContainer = DOMCache.get('searchResults'); // 这个是放置所有结果卡片或无结果提示的容器
+    const resultsArea = getElement('resultsArea'); // 这个是包含 searchResultsCount 和 searchResultsContainer 的外层区域
+    const searchResultsCountElement = getElement('searchResultsCount'); // “X个结果”的元素
 
-    if (!searchResultsContainer || !resultsArea || !searchResultsCountElement || !searchFeedbackArea) {
-        console.error("一个或多个必要的DOM元素未找到，无法渲染结果。");
-        return;
-    }
+    if (!searchResultsContainer || !resultsArea || !searchResultsCountElement) return;
 
-    // 先隐藏所有相关的区域，后续按需显示
-    resultsArea.classList.add('hidden');
-    searchFeedbackArea.classList.add('hidden');
-    searchFeedbackArea.innerHTML = ''; // 清空旧提示
-    searchResultsContainer.innerHTML = ''; // 清空旧结果卡片
-
-    // ... (合并结果和错误信息的逻辑，填充 allResults 和 errors 数组) ...
+    // ... (合并结果和错误信息的逻辑保持不变) ...
     let allResults = [];
     let errors = [];
+    // (假设 allResults 和 errors 已正确填充)
     results.forEach(result => {
         if (result.code === 200 && Array.isArray(result.list)) {
             const resultsWithSource = result.list.map(item => ({
@@ -559,9 +550,11 @@ function renderSearchResults(results, doubanSearchedTitle = null) {
     }
 
 
+    searchResultsContainer.innerHTML = ''; // 先清空旧内容
+
     if (allResults.length === 0) {
-        // **处理无结果的情况**
-        searchFeedbackArea.classList.remove('hidden'); // 显示我们新的提示区域
+        resultsArea.classList.remove('hidden'); // 确保结果区域可见以显示提示
+        searchResultsCountElement.textContent = '0'; // 更新结果计数为0
 
         let messageTitle;
         let messageSuggestion;
@@ -580,69 +573,66 @@ function renderSearchResults(results, doubanSearchedTitle = null) {
             errorBlockHTML = `<div class="mt-4 text-xs text-red-300">${errorMessages}</div>`;
         }
 
-        // 将提示内容放入 searchFeedbackArea
-        searchFeedbackArea.innerHTML = `
-            <div class="py-6 sm:py-10"> {/* 调整内边距以在视觉上居中 */}
-                <svg class="mx-auto h-10 w-10 text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        // 使用类似老代码的结构和样式 (Tailwind CSS)
+        searchResultsContainer.innerHTML = `
+            <div class="col-span-full text-center py-10 sm:py-16">
+                <svg class="mx-auto h-12 w-12 text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                           d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h3 class="text-md font-medium text-gray-300"><span class="math-inline">\{messageTitle\}</h3\>
-<p class\="mt\-1 text\-sm text\-gray\-500"\></span>{messageSuggestion}</p>
+                <h3 class="mt-2 text-lg font-medium text-gray-300">${messageTitle}</h3>
+                <p class="mt-1 text-sm text-gray-500">${messageSuggestion}</p>
                 ${errorBlockHTML}
             </div>
         `;
-
-        // 确保 searchArea 主搜索区回到初始的撑满状态，豆瓣区隐藏
+        // 确保 searchArea 布局正确
         const searchArea = getElement('searchArea');
         if (searchArea) {
-            searchArea.classList.add('flex-1'); // 让 searchArea 重新撑满
-            searchArea.classList.remove('mb-8'); // 移除搜索结果时的底部边距
+            searchArea.classList.add('flex-1');
+            searchArea.classList.remove('mb-8');
         }
-        getElement('doubanArea')?.classList.add('hidden'); // 隐藏豆瓣区
-        resultsArea.classList.add('hidden'); // 确保标准结果区是隐藏的
-        searchResultsCountElement.textContent = '0'; // 结果计数归零
-
-        return; // 无结果，处理完毕
+        return;
     }
 
-    // **如果有结果，则在 resultsArea 中显示**
-    resultsArea.classList.remove('hidden'); // 显示标准结果区
-    searchFeedbackArea.classList.add('hidden'); // 隐藏专用提示区
+    // 如果有结果，正常渲染
+    resultsArea.classList.remove('hidden');
     searchResultsCountElement.textContent = allResults.length.toString();
 
     const gridContainer = document.createElement('div');
-    gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'; // 保持您的卡片布局
+    // 确保这里的 class 与 index.html 中 #results 的 class 一致或兼容
+    gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4';
+
     const fragment = document.createDocumentFragment();
-    allResults.forEach(item => {
+    allResults.forEach(item => { /* ... 渲染卡片 ... */
         try {
             fragment.appendChild(createResultItemUsingTemplate(item));
         } catch (error) {
-            console.error('Error creating result item from template:', error, item);
-            // 可以选择在这里为单个卡片渲染错误占位符
+            // ... error handling for card creation
         }
     });
     gridContainer.appendChild(fragment);
-    searchResultsContainer.appendChild(gridContainer); // 将卡片网格放入 #searchResults
+    searchResultsContainer.appendChild(gridContainer);
 
     if (errors.length > 0) {
+        // ... (显示 API 错误信息)
         const errorDiv = document.createElement('div');
-        errorDiv.className = 'mt-4 p-3 bg-red-900 bg-opacity-30 rounded text-sm text-red-300 space-y-1';
+        errorDiv.className = 'mt-4 p-3 bg-red-900 bg-opacity-30 rounded text-sm text-red-300 space-y-1'; // 优化错误显示
         errors.forEach(errMsg => {
             const errorLine = document.createElement('p');
             errorLine.textContent = sanitizeText(errMsg);
             errorDiv.appendChild(errorLine);
         });
-        searchResultsContainer.appendChild(errorDiv); // 错误信息也放在卡片容器内，在其下方
+        searchResultsContainer.appendChild(errorDiv); // 将错误信息也放入 searchResultsContainer
     }
 
-    // 当有结果时，调整 searchArea 的布局，不再是 flex-1
+    // 调整搜索区域布局
     const searchArea = getElement('searchArea');
     if (searchArea) {
         searchArea.classList.remove('flex-1');
-        searchArea.classList.add('mb-8'); // 为下方的 resultsArea 留出空间
+        searchArea.classList.add('mb-8');
+        searchArea.classList.remove('hidden');
     }
-    getElement('doubanArea')?.classList.add('hidden'); // 隐藏豆瓣区
+    getElement('doubanArea')?.classList.add('hidden');
 }
 
 /**
