@@ -749,42 +749,62 @@ function handleResultClick(event) {
  * @param {string} title - 视频标题
  * @param {string} sourceCode - 来源代码
  */
-function showVideoEpisodesModal(id, title, sourceCode) {
+// 在 app.js 中
+
+async function showVideoEpisodesModal(id, title, sourceCode) { 
     showLoading('加载剧集信息...');
-    
-    // 获取当前选中的API
-    const selectedApi = APISourceManager.getSelectedApi(sourceCode); 
+
+    const selectedApi = APISourceManager.getSelectedApi(sourceCode);
 
     if (!selectedApi) {
         hideLoading();
-        showToast('未找到有效的数据源', 'error');
+        showToast('未找到有效的数据源 (selectedApi is null)', 'error');
         return;
     }
-    
-    // 调用API获取详情
-    fetchVideoDetail(id, sourceCode)
-        .then(data => {
-            hideLoading();
-            if (!data || !data.episodes || data.episodes.length === 0) {
-                showToast('未找到剧集信息', 'warning');
-                return;
+
+    try {
+        // 构建详情页的 API URL
+        let detailApiUrl = `/api/detail?id=${encodeURIComponent(id)}&source=${encodeURIComponent(sourceCode)}`;
+        if (selectedApi.isCustom && selectedApi.url) {
+
+        }
+
+        const response = await fetch(detailApiUrl); // 直接 fetch
+        if (!response.ok) {
+            throw new Error(`API请求失败: ${response.status}`);
+        }
+        const data = await response.json();
+
+        hideLoading();
+
+        if (data.code !== 200 || !data.episodes || data.episodes.length === 0) {
+            // 尝试从 videoInfo 中获取更详细的错误信息
+            let errorMessage = '未找到剧集信息';
+            if (data.msg) {
+                errorMessage = data.msg;
+            } else if (data.videoInfo && data.videoInfo.msg) {
+                errorMessage = data.videoInfo.msg;
+            } else if (data.list && data.list.length > 0 && data.list[0] && data.list[0].msg) {
+                errorMessage = data.list[0].msg;
             }
-            
-            // 保存当前剧集信息到状态
-            AppState.set('currentEpisodes', data.episodes);
-            AppState.set('currentVideoTitle', title);
-            AppState.set('currentSourceName', selectedApi.name);
-            AppState.set('currentSourceCode', sourceCode);
-            
-            // 渲染剧集按钮并显示模态框
-            const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode);
-            showModal(episodeButtonsHtml, title);
-        })
-        .catch(error => {
-            hideLoading();
-            console.error('获取剧集信息失败:', error);
-            showToast('获取剧集信息失败', 'error');
-        });
+            showToast(errorMessage, 'warning');
+            console.warn('获取剧集详情数据问题:', data);
+            return;
+        }
+
+        AppState.set('currentEpisodes', data.episodes);
+        AppState.set('currentVideoTitle', title); // 确保使用传入的 title
+        AppState.set('currentSourceName', selectedApi.name);
+        AppState.set('currentSourceCode', sourceCode);
+
+        const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode);
+        showModal(episodeButtonsHtml, title);
+
+    } catch (error) {
+        hideLoading();
+        console.error('获取剧集信息失败 (catch block):', error);
+        showToast(`获取剧集信息失败: ${error.message}`, 'error');
+    }
 }
 
 /**
