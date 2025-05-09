@@ -119,7 +119,18 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
     const playerUrl = new URL('player.html', window.location.origin);
     playerUrl.searchParams.set('url', url);
     playerUrl.searchParams.set('title', title);
-    playerUrl.searchParams.set('ep', episodeIndex.toString());
+
+    playerUrl.searchParams.set('index', episodeIndex.toString()); // 统一用 index
+
+    // 追加完整剧集列表，player.html 拿不到 localStorage 时也能渲染
+    const eps = AppState.get('currentEpisodes');
+    if (Array.isArray(eps) && eps.length) {
+        playerUrl.searchParams.set(
+            'episodes',
+            encodeURIComponent(JSON.stringify(eps))
+        );
+    }
+
     if (sourceName) playerUrl.searchParams.set('source', sourceName);
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
 
@@ -477,7 +488,7 @@ async function performSearch(query, selectedAPIs) {
  */
 function renderSearchResults(results) {
     const searchResultsContainer = DOMCache.get('searchResults'); // Use cached element 
-    if (!searchResultsContainer) return; 
+    if (!searchResultsContainer) return;
 
     // 合并所有结果
     let allResults = [];
@@ -511,69 +522,69 @@ function renderSearchResults(results) {
 
     // Show/hide results area 
     const resultsArea = getElement('resultsArea'); // Use getElement 
-    if (resultsArea) { 
-        if (errors.length > 0 || allResults.length > 0) { 
-            resultsArea.classList.remove('hidden'); 
-        } else { 
-            resultsArea.classList.add('hidden'); 
-        } 
-    } 
+    if (resultsArea) {
+        if (errors.length > 0 || allResults.length > 0) {
+            resultsArea.classList.remove('hidden');
+        } else {
+            resultsArea.classList.add('hidden');
+        }
+    }
 
     // Update count 
     const searchResultsCount = getElement('searchResultsCount'); // Use getElement 
-    if (searchResultsCount) { 
-        searchResultsCount.textContent = allResults.length.toString(); 
-    } 
+    if (searchResultsCount) {
+        searchResultsCount.textContent = allResults.length.toString();
+    }
 
     searchResultsContainer.innerHTML = ''; // Clear previous results 
 
-    if (allResults.length === 0) { 
-        let message = '没有找到相关内容'; 
-        if (errors.length > 0) { 
-            message += `<div class="mt-2 text-xs text-red-400">${errors.join('<br>')}</div>`; 
-        } 
-        searchResultsContainer.innerHTML = `<div class="text-center py-4 text-gray-400">${message}</div>`; 
-        return; 
-    } 
+    if (allResults.length === 0) {
+        let message = '没有找到相关内容';
+        if (errors.length > 0) {
+            message += `<div class="mt-2 text-xs text-red-400">${errors.join('<br>')}</div>`;
+        }
+        searchResultsContainer.innerHTML = `<div class="text-center py-4 text-gray-400">${message}</div>`;
+        return;
+    }
 
     // Create a container for the grid 
-    const gridContainer = document.createElement('div'); 
+    const gridContainer = document.createElement('div');
     // ** Important: Make sure these grid classes match your index.html and desired layout ** 
     gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-center'; // Added justify-center 
 
     const fragment = document.createDocumentFragment(); // Use a fragment for better performance 
-    allResults.forEach(item => { 
-        try { 
+    allResults.forEach(item => {
+        try {
             // Use the NEW template function here 
-            fragment.appendChild(createResultItemUsingTemplate(item)); 
-        } catch (error) { 
-            console.error('Error creating result item from template:', error, item); 
+            fragment.appendChild(createResultItemUsingTemplate(item));
+        } catch (error) {
+            console.error('Error creating result item from template:', error, item);
             // Append an error placeholder element 
-            const errorDiv = document.createElement('div'); 
-            errorDiv.className = 'card-hover bg-[#222] rounded-lg overflow-hidden p-2'; 
-            errorDiv.innerHTML = `<h3 class="text-red-400">加载错误</h3><p class="text-xs text-gray-400">无法显示此项目</p>`; 
-            fragment.appendChild(errorDiv); 
-        } 
-    }); 
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'card-hover bg-[#222] rounded-lg overflow-hidden p-2';
+            errorDiv.innerHTML = `<h3 class="text-red-400">加载错误</h3><p class="text-xs text-gray-400">无法显示此项目</p>`;
+            fragment.appendChild(errorDiv);
+        }
+    });
 
     gridContainer.appendChild(fragment); // Append all items at once from the fragment 
     searchResultsContainer.appendChild(gridContainer); // Add the grid to the main container 
 
     // Display API errors if any 
-    if (errors.length > 0) { 
-        const errorDiv = document.createElement('div'); 
-        errorDiv.className = 'mt-4 p-2 bg-[#333] rounded text-xs text-red-400'; 
-        errorDiv.innerHTML = errors.join('<br>'); 
-        searchResultsContainer.appendChild(errorDiv); 
-    } 
+    if (errors.length > 0) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'mt-4 p-2 bg-[#333] rounded text-xs text-red-400';
+        errorDiv.innerHTML = errors.join('<br>');
+        searchResultsContainer.appendChild(errorDiv);
+    }
 
     // Adjust search area visibility/layout 
-    const searchArea = getElement('searchArea'); 
-    if (searchArea) { 
-        searchArea.classList.remove('flex-1'); 
+    const searchArea = getElement('searchArea');
+    if (searchArea) {
+        searchArea.classList.remove('flex-1');
         // searchArea.classList.add('mb-8'); // Add margin if needed 
         searchArea.classList.remove('hidden'); // Ensure search area stays visible 
-    } 
+    }
     getElement('doubanArea')?.classList.add('hidden'); // Keep hiding Douban 
 }
 
@@ -646,12 +657,12 @@ async function getVideoDetail(id, sourceCode, apiUrl = '') {
  * 重置到首页
  */
 function resetToHome() {
-    const searchInput  = DOMCache.get('searchInput');
+    const searchInput = DOMCache.get('searchInput');
     const searchResults = DOMCache.get('searchResults');
-    const resultsArea  = getElement('resultsArea');
-    const doubanArea   = getElement('doubanArea');
+    const resultsArea = getElement('resultsArea');
+    const doubanArea = getElement('doubanArea');
 
-    if (searchInput)  searchInput.value = '';
+    if (searchInput) searchInput.value = '';
     if (searchResults) searchResults.innerHTML = '';
 
     // 回到「初始版面」
@@ -732,19 +743,19 @@ function createResultItemUsingTemplate(item) {
 }
 
 // Add the handler function (if not already present) 
-function handleResultClick(event) { 
-    const card = event.currentTarget; 
-    const id = card.dataset.id; 
-    const name = card.dataset.name; 
-    const sourceCode = card.dataset.sourceCode; 
-    const apiUrl = card.dataset.apiUrl || ''; 
+function handleResultClick(event) {
+    const card = event.currentTarget;
+    const id = card.dataset.id;
+    const name = card.dataset.name;
+    const sourceCode = card.dataset.sourceCode;
+    const apiUrl = card.dataset.apiUrl || '';
 
-    if (typeof showVideoEpisodesModal === 'function') { 
-        showVideoEpisodesModal(id, name, sourceCode, apiUrl); 
-    } else { 
-        console.error('showVideoEpisodesModal function not found!'); 
-    } 
-} 
+    if (typeof showVideoEpisodesModal === 'function') {
+        showVideoEpisodesModal(id, name, sourceCode, apiUrl);
+    } else {
+        console.error('showVideoEpisodesModal function not found!');
+    }
+}
 // Make handler globally accessible if needed (though better to delegate if possible) 
 // window.handleResultClick = handleResultClick; 
 
@@ -756,7 +767,7 @@ function handleResultClick(event) {
  */
 // 在 app.js 中
 
-async function showVideoEpisodesModal(id, title, sourceCode) { 
+async function showVideoEpisodesModal(id, title, sourceCode) {
     showLoading('加载剧集信息...');
 
     const selectedApi = APISourceManager.getSelectedApi(sourceCode);
@@ -821,7 +832,7 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
  */
 function renderEpisodeButtons(episodes, title, sourceCode) {
     if (!episodes || episodes.length === 0) return '<p class="text-center text-gray-500">暂无剧集信息</p>';
-    
+
     // 排序控制UI
     let html = `
     <div class="mb-4 flex justify-between items-center">
@@ -834,7 +845,7 @@ function renderEpisodeButtons(episodes, title, sourceCode) {
         </button>
     </div>
     <div id="episodeButtonsContainer" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">`;
-    
+
     // 生成剧集按钮
     episodes.forEach((episode, index) => {
         html += `
@@ -846,7 +857,7 @@ function renderEpisodeButtons(episodes, title, sourceCode) {
             ${index + 1}
         </button>`;
     });
-    
+
     html += '</div>';
     return html;
 }
@@ -858,17 +869,17 @@ function toggleEpisodeOrderUI() {
     const container = document.getElementById('episodeButtonsContainer');
     const orderText = document.getElementById('orderText');
     if (!container || !orderText) return;
-    
+
     // 获取所有剧集按钮并转换为数组
     const buttons = Array.from(container.querySelectorAll('.episode-btn'));
     if (buttons.length === 0) return;
-    
+
     // 判断当前排序方式
     const isAscending = orderText.textContent === '正序';
-    
+
     // 更新排序文本
     orderText.textContent = isAscending ? '倒序' : '正序';
-    
+
     // 反转按钮顺序
     buttons.reverse().forEach(button => {
         container.appendChild(button);

@@ -125,8 +125,8 @@
                 <span>上一集</span>
             </button>
 
-            <!-- Position 4: Episode Info -->
-            <span id="episode-info-span" class="text-lg font-medium text-gray-300">第 1 / 30 集</span>
+            <!-- Position 4: Episode Info（内容由 JS 动态填充） -->
+            <span id="episode-info-span" class="text-lg font-medium text-gray-300"></span>
 
             <button id="next-episode"
                 class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg flex items-center gap-2 transition-colors"
@@ -194,8 +194,8 @@
         <div id="episodes-container" class="mt-2 mx-4 mb-4 hidden" role="navigation" aria-label="剧集选择">
             <div class="flex justify-between items-center mb-2">
                 <h2 class="text-xl font-bold">选集</h2>
-                <!-- 移除或注释掉下面这行 -->
-                <!-- <span id="episodes-count" class="text-gray-400"></span> -->
+                <span id="episodes-count" class="text-gray-400"></span>
+
             </div>
             <div id="episode-grid" class="episode-grid grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2"></div>
         </div>

@@ -91,8 +91,14 @@ function initializePageContent() {
     }
     title = title ? fullyDecode(title) : '';
     const sourceCode = urlParams.get('source_code');
-    let index = parseInt(urlParams.get('index') || '0', 10);
-    const episodesListParam = urlParams.get('episodes'); // Check if episodes are passed via URL
+    // 兼容旧链接里的 ep=
+    let index = parseInt(
+        urlParams.get('index') || urlParams.get('ep') || '0',
+        10
+    );
+
+    // 先用 URL ⟨episodes=⟩，没有再退回 localStorage
+    const episodesListParam = urlParams.get('episodes');
 
     currentVideoTitle = title || localStorage.getItem('currentVideoTitle') || '未知视频';
     window.currentVideoTitle = currentVideoTitle;
@@ -819,11 +825,12 @@ function updateEpisodeInfo() {
         const totalEpisodes = window.currentEpisodes.length;
         // Determine current number based on reversed state for display
         let currentDisplayNumber = window.currentEpisodeIndex + 1;
-        // If you want the "第 X 集" to reflect the visual order (1st button, 2nd button etc.)
-        // then currentDisplayNumber might need adjustment if episodesReversed is true.
-        // However, currentEpisodeIndex always refers to the actual index in the currentEpisodes array.
-        // For now, `${window.currentEpisodeIndex + 1}` seems correct as it's the actual episode number.
-        episodeInfoSpan.textContent = `第 ${currentDisplayNumber} 集 / 共 ${totalEpisodes} 集`;
+
+        episodeInfoSpan.textContent = `第 ${currentDisplayNumber} / ${totalEpisodes} 集`;
+
+        // 同时刷新列表顶部 “共 n 集” 小字
+        const episodesCountEl = document.getElementById('episodes-count');
+        if (episodesCountEl) episodesCountEl.textContent = `共 ${totalEpisodes} 集`;
     } else {
         episodeInfoSpan.textContent = '';
     }
