@@ -661,13 +661,29 @@ function resetToHome() {
     const searchResults = DOMCache.get('searchResults');
     const resultsArea = getElement('resultsArea');
     const doubanArea = getElement('doubanArea');
+    const searchArea = getElement('searchArea');
 
     if (searchInput) searchInput.value = '';
     if (searchResults) searchResults.innerHTML = '';
 
     // 回到「初始版面」
+    /* ---- 恢复搜索区默认样式 ---- */
+    if (searchArea) {
+        searchArea.classList.add('flex-1');   // 重新撑满页面
+        searchArea.classList.remove('mb-8');  // 移除搜索结果页加的外边距
+        searchArea.classList.remove('hidden');
+    }
+
+    /* ---- 隐藏结果区 ---- */
     resultsArea?.classList.add('hidden');
-    doubanArea?.classList.remove('hidden');   // 如果你默认展示豆瓣
+
+    /* ---- 视用户设置决定是否显示豆瓣区 ---- */
+    if (doubanArea) {
+        // 如果用户关闭了豆瓣推荐开关则保持隐藏
+        const showDouban = getBoolConfig('doubanToggle', true);
+        doubanArea.classList.toggle('hidden', !showDouban);
+    }
+
     renderSearchHistory();
 }
 
