@@ -646,15 +646,20 @@ async function getVideoDetail(id, sourceCode, apiUrl = '') {
  * 重置到首页
  */
 function resetToHome() {
-    const searchInput = DOMCache.get('searchInput');
+    const searchInput  = DOMCache.get('searchInput');
     const searchResults = DOMCache.get('searchResults');
+    const resultsArea  = getElement('resultsArea');
+    const doubanArea   = getElement('doubanArea');
 
-    if (searchInput) searchInput.value = '';
+    if (searchInput)  searchInput.value = '';
     if (searchResults) searchResults.innerHTML = '';
 
-    // 显示搜索历史
+    // 回到「初始版面」
+    resultsArea?.classList.add('hidden');
+    doubanArea?.classList.remove('hidden');   // 如果你默认展示豆瓣
     renderSearchHistory();
 }
+
 
 // 导出需要在全局访问的函数
 window.search = search;

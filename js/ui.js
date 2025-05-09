@@ -21,14 +21,17 @@ const domCache = new Map();
  * @param {string} id 元素ID
  * @returns {HTMLElement|null} DOM元素
  */
+// ui.js 里替换 getElement 的实现 —— 失效即更新缓存
 function getElement(id) {
-    if (!domCache.has(id)) {
-        const element = document.getElementById(id);
-        if (element) domCache.set(id, element);
-        return element;
+    const cached = domCache.get(id);
+    if (cached && cached.isConnected) {
+        return cached;
     }
-    return domCache.get(id);
+    const fresh = document.getElementById(id);
+    if (fresh) domCache.set(id, fresh);
+    return fresh;
 }
+
 
 /**
  * 检查密码保护
