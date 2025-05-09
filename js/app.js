@@ -1124,4 +1124,4 @@ if (config.auth.enabled) {
 }
 
 // 或者针对特定路由
-app。use('/api', authMiddleware);
+app.use('/api', authMiddleware);
