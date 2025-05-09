@@ -97,7 +97,7 @@ function initializePageContent() {
         10
     );
 
-    // 先用 URL ⟨episodes=⟩，没有再退回 localStorage
+    // 先用 URL⟨episodes=⟩ → 再退回 localStorage（双保险）
     const episodesListParam = urlParams.get('episodes');
 
     currentVideoTitle = title || localStorage.getItem('currentVideoTitle') || '未知视频';
@@ -821,20 +821,26 @@ function renderEpisodes() {
 function updateEpisodeInfo() {
     const episodeInfoSpan = document.getElementById('episode-info-span');
     if (!episodeInfoSpan) return;
+
+    // 只有在剧集总数 > 1 时才显示题注
     if (window.currentEpisodes && window.currentEpisodes.length > 1) {
         const totalEpisodes = window.currentEpisodes.length;
-        // Determine current number based on reversed state for display
-        let currentDisplayNumber = window.currentEpisodeIndex + 1;
+        const currentDisplayNumber = window.currentEpisodeIndex + 1; // 1-based
 
+        // 题注样式：第 x / y 集
         episodeInfoSpan.textContent = `第 ${currentDisplayNumber} / ${totalEpisodes} 集`;
 
-        // 同时刷新列表顶部 “共 n 集” 小字
+        // 同步顶部 “共 n 集” 小字
         const episodesCountEl = document.getElementById('episodes-count');
-        if (episodesCountEl) episodesCountEl.textContent = `共 ${totalEpisodes} 集`;
+        if (episodesCountEl) {
+            episodesCountEl.textContent = `共 ${totalEpisodes} 集`;
+        }
     } else {
+        // 如果只有单集或数据缺失，就清空题注
         episodeInfoSpan.textContent = '';
     }
 }
+
 
 function toggleEpisodeOrder() {
     episodesReversed = !episodesReversed;
@@ -972,16 +978,33 @@ function playEpisode(index) {
     //------------------------------------------------------------------
     // 新的方法：直接用 location.href 带 index/url 重新加载 player.html
     //------------------------------------------------------------------
-    const playerUrl = new URL(window.location.origin + window.location.pathname);
+    const playerUrl = new URL(
+        window.location.origin + window.location.pathname
+    );
+
     playerUrl.searchParams.set('url', episodeUrl);
     playerUrl.searchParams.set('title', currentVideoTitle);
     playerUrl.searchParams.set('index', index.toString());
+
+    /* 把完整剧集数组塞进 URL，保证新页面即使拿不到
+       localStorage 也能渲染选集按钮                */
+    if (Array.isArray(currentEpisodes) && currentEpisodes.length) {
+        playerUrl.searchParams.set(
+            'episodes',
+            encodeURIComponent(JSON.stringify(currentEpisodes))
+        );
+    }
     // 如果你还想保 source_code，也可以加：
     const sourceCode = new URLSearchParams(window.location.search).get('source_code');
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
 
-    // 如果你确实需要在 URL 里带整个剧集列表（不依赖 localStorage），也可以加：
-    // playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(currentEpisodes)));
+    try {
+        localStorage.setItem(
+            'currentEpisodes',
+            JSON.stringify(currentEpisodes)
+        );
+        localStorage.setItem('currentVideoTitle', currentVideoTitle);
+    } catch (_) { }
 
     window.location.href = playerUrl.toString();
 }
