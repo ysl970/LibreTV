@@ -12,7 +12,7 @@ const PASSWORD_CONFIG = {
 
 // 网站信息配置
 const SITE_CONFIG = {
-    name: 'LibreTV',
+    name: 'yaodaoTV',
     url: 'https://libretv.is-an.org',
     description: '免费在线视频搜索与观看平台',
     logo: 'https://images.icon-icons.com/38/PNG/512/retrotv_5520.png',
@@ -131,12 +131,12 @@ const API_SITES = {
     },
         guaizi: {
         api: 'https://gz360.tv/',
-        name: '瓜子影视',
+        name: '瓜子影视'
     },
     dashixio: {
         api: 'https://dsxys.pro/',
         name: '大师兄影视' ,
-        detail: 'https://dsxys.com',
+        detail: 'https://dsxys.com'
     },
 };
 
