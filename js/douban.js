@@ -244,7 +244,6 @@ document.addEventListener('DOMContentLoaded', initDouban, { once: true });
       renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
     }, 500); // 延迟500毫秒加载
   }
-}
 
 // 更新豆瓣区域显示状态
 function updateDoubanVisibility() {
