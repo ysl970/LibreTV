@@ -12,7 +12,7 @@ let currentVideoTitle = '';
 let episodesReversed = false;
 
 // 页面初始化
-document.addEventListener('DOMContentLoaded', function() {
+document。addEventListener('DOMContentLoaded', function() {
     // 初始化API复选框
     initAPICheckboxes();
     
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem(PLAYER_CONFIG.adFilteringStorage, 'true');
         
         // 默认启用豆瓣功能
-        localStorage.setItem('doubanEnabled', 'true');
+        localStorage.setItem('doubanEnabled', 'false');
 
         // 标记已初始化默认值
         localStorage.setItem('hasInitializedDefaults', 'true');
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 设置黄色内容过滤开关初始状态
     const yellowFilterToggle = document.getElementById('yellowFilterToggle');
     if (yellowFilterToggle) {
-        yellowFilterToggle.checked = localStorage.getItem('yellowFilterEnabled') === 'true';
+        yellowFilterToggle.checked = localStorage.getItem('yellowFilterEnabled') === 'false';
     }
     
     // 设置广告过滤开关初始状态
