@@ -852,17 +852,3 @@ function toggleEpisodeOrderUI() {
 // 将函数暴露给全局作用域
 window.showVideoEpisodesModal = showVideoEpisodesModal;
 window.toggleEpisodeOrderUI = toggleEpisodeOrderUI;
-
-// 移除或注释掉旧的getVideoDetail函数
-// function getVideoDetail(id, sourceCode) {
-//     // 旧代码...
-// }
-
-// 确保createResultItemUsingTemplate函数中设置了点击事件
-function createResultItemUsingTemplate(result) {
-    // 设置点击事件
-    cardElement.onclick = handleResultClick;
-    
-    return cardElement;
-}
-
