@@ -667,76 +667,64 @@ window.showDetails = showDetails;
 window.playFromHistory = playFromHistory;
 
 
-function createResultItemUsingTemplate(item) { 
-    const template = document.getElementById('search-result-template'); 
-    if (!template) { 
-        console.error("Search result template not found!"); 
-        return document.createDocumentFragment(); // Return empty fragment 
-    } 
+function createResultItemUsingTemplate(item) {
+    const template = document.getElementById('search-result-template');
+    if (!template) {
+        console.error("搜索结果模板未找到！");
+        return document.createDocumentFragment();
+    }
 
-    const clone = template.content.cloneNode(true); // Clone the template content 
-    const cardElement = clone.querySelector('.card-hover'); // Get the main element 
+    const clone = template.content.cloneNode(true);
+    const cardElement = clone.querySelector('.card-hover');
 
-    // --- Populate Data Safely --- 
-    const imgElement = clone.querySelector('.result-img'); 
-    const imgContainer = clone.querySelector('.search-card-img-container'); 
-    if (item.vod_pic && item.vod_pic.startsWith('http')) { 
-        imgElement.src = item.vod_pic; 
-        imgElement.alt = item.vod_name || ''; 
-        imgElement.onerror = function() { // Error handling for images 
-            this.onerror = null; 
-            this.src = 'https://via.placeholder.com/300x450?text=无封面'; 
-            imgContainer?.classList.add('bg-[#333]', 'flex', 'items-center', 'justify-center'); // Add styles for placeholder 
-            this.classList.add('object-contain', 'w-auto', 'h-auto', 'max-w-full', 'max-h-full'); // Adjust image styles 
-        }; 
-    } else { 
-         imgContainer?.remove(); // Remove image container if no image 
-    } 
+    // 添加检查，确保cardElement存在
+    if (!cardElement) {
+        console.error("卡片元素 (.card-hover) 在模板克隆中未找到，项目:", item);
+        // 返回一个空的错误占位元素
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'card-hover bg-[#222] rounded-lg overflow-hidden p-2';
+        errorDiv.innerHTML = `<h3 class="text-red-400">加载错误</h3><p class="text-xs text-gray-400">无法显示此项目</p>`;
+        return errorDiv;
+    }
 
-    const titleElement = clone.querySelector('.result-title'); 
-    titleElement.textContent = item.vod_name || ''; 
-    titleElement.title = item.vod_name || ''; // Set title attribute for tooltips 
+    // 填充数据
+    const imgElement = clone.querySelector('.result-img');
+    if (imgElement) {
+        imgElement.src = item.vod_pic || 'img/default-poster.jpg';
+        imgElement.alt = item.vod_name || '未知标题';
+    }
 
-    const typeSpan = clone.querySelector('.result-type'); 
-    if (item.type_name) { 
-        typeSpan.textContent = item.type_name; 
-    } else { 
-        typeSpan.style.display = 'none'; // Hide if no type 
-    } 
+    const titleElement = clone.querySelector('.result-title');
+    if (titleElement) {
+        titleElement.textContent = item.vod_name || '未知标题';
+    }
 
-    const yearSpan = clone.querySelector('.result-year'); 
-    if (item.vod_year) { 
-        yearSpan.textContent = item.vod_year; 
-    } else { 
-        yearSpan.style.display = 'none'; // Hide if no year 
-    } 
-     // Hide meta container if both type and year are missing 
-    if (!item.type_name && !item.vod_year) { 
-        clone.querySelector('.result-meta')?.remove(); 
-    } 
+    const typeElement = clone.querySelector('.result-type');
+    if (typeElement) {
+        typeElement.textContent = item.type_name || '未知类型';
+    }
 
-    clone.querySelector('.result-remarks').textContent = item.vod_remarks || '暂无介绍'; 
+    const yearElement = clone.querySelector('.result-year');
+    if (yearElement) {
+        yearElement.textContent = item.vod_year || '未知年份';
+    }
 
-    const sourceSpan = clone.querySelector('.result-source-name'); 
-     if(item.source_name){ 
-         sourceSpan.textContent = item.source_name; 
-     } else { 
-          clone.querySelector('.result-source')?.remove(); // Remove source row if no name 
-     } 
+    const sourceElement = clone.querySelector('.result-source');
+    if (sourceElement) {
+        sourceElement.textContent = item.source_name || '未知来源';
+    }
 
-    // --- Add Event Listener/Data Attributes --- 
-    if (cardElement) { 
-         cardElement.dataset.id = item.vod_id || ''; 
-         cardElement.dataset.name = item.vod_name || ''; 
-         cardElement.dataset.sourceCode = item.source_code || ''; 
-         if (item.api_url) { 
-            cardElement.dataset.apiUrl = item.api_url; 
-         } 
-         cardElement.onclick = handleResultClick; // Assign a named handler 
-    } 
+    // 设置数据属性和点击事件
+    cardElement.dataset.id = item.vod_id || '';
+    cardElement.dataset.name = item.vod_name || '';
+    cardElement.dataset.sourceCode = item.source_code || '';
+    if (item.api_url) {
+        cardElement.dataset.apiUrl = item.api_url;
+    }
+    cardElement.onclick = handleResultClick;
 
-    return clone; // Return the populated document fragment 
-} 
+    return clone;
+}
 
 // Add the handler function (if not already present) 
 function handleResultClick(event) { 
