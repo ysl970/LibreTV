@@ -2,7 +2,7 @@ version: '3'
 services:
   libretv:
     image: bestzwei/libretv:latest
-    container_name: libretv
+    container_name: yaodaotv
     ports:
       - "8899:80"
     environment:
