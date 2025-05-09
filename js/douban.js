@@ -302,41 +302,48 @@ function fillAndSearchWithDouban(title) {
   if (!title) return;
 
   const safeTitle = utils.safeText(title);
+  const input = utils.getElement('searchInput');
 
-  // 检查并选择豆瓣资源API
-  if (typeof selectedAPIs !== 'undefined' && !selectedAPIs.includes('dbzy')) {
-    const doubanCheckbox = document.querySelector('input[id="api_dbzy"]');
-    if (doubanCheckbox) {
-      doubanCheckbox.checked = true;
+  // 自动勾选豆瓣数据源的逻辑 (Source 1002-1008)
+  if (typeof APISourceManager !== 'undefined' && typeof API_SITES !== 'undefined' && API_SITES['dbzy']) { // 确保 APISourceManager 和 API_SITES 可用
+      const selectedAPIs = AppState.get('selectedAPIs') || []; // 从 AppState 获取
+      if (!selectedAPIs.includes('dbzy')) {
+          const doubanCheckbox = document.querySelector('input[id="api_dbzy"]');
+          if (doubanCheckbox) {
+              doubanCheckbox.checked = true;
+              if (typeof APISourceManager.updateSelectedAPIs === 'function') {
+                  APISourceManager.updateSelectedAPIs(); // 更新选中的API
+              } else if (typeof updateSelectedAPIs === 'function') { // 兼容旧的全局函数
+                   updateSelectedAPIs();
+              }
+              if (typeof showToast === 'function') showToast('已自动选择豆瓣资源API', 'info');
+          }
+      }
+  }
 
-      if (typeof updateSelectedAPIs === 'function') {
-        updateSelectedAPIs();
-      } else {
-        selectedAPIs.push('dbzy');
-        utils.storage.set('selectedAPIs', selectedAPIs);
+  if (input) {
+      input.value = safeTitle; // 填充搜索框
 
-        const countEl = document.getElementById('selectedAPICount');
-        if (countEl) {
-          countEl.textContent = selectedAPIs.length;
-        }
+      if (typeof showLoading === 'function') {
+          showLoading(`正在搜索“${safeTitle}”...`); // <--- 关键步骤1：显示全局加载提示
       }
 
-      showToast('已自动选择豆瓣资源API', 'info');
-    }
-  }
-
-  const input = utils.getElement('searchInput');
-  if (input) {
-    input.value = safeTitle;
-    if (typeof search === 'function') {
-      search();
-    } else {
-      console.error('search函数不可用');
-      showToast('搜索功能暂不可用', 'error');
-    }
+      if (typeof search === 'function') {
+          // 传递一个回调，用于在搜索完成后隐藏loading
+          search({ doubanQuery: safeTitle, onComplete: hideGlobalLoadingAfterSearch });
+      } else {
+          console.error('search函数不可用');
+          if (typeof showToast === 'function') showToast('搜索功能暂不可用', 'error');
+          if (typeof hideLoading === 'function') hideLoading(); // 如果 search 不可用，也要隐藏 loading
+      }
   }
 }
-
+// 新增一个辅助函数，用于在搜索完成后隐藏全局 loading
+function hideGlobalLoadingAfterSearch() {
+  if (typeof hideLoading === 'function') {
+      hideLoading();
+  }
+}
 
 // 渲染电影/电视剧切换器
 function renderDoubanMovieTvSwitch() {

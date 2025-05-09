@@ -396,39 +396,58 @@ function initializeUIComponents() {
     // 初始化任何需要的UI组件
 }
 
+// 在 new3.txt/js/app.js
+
 /**
  * 执行搜索
+ * @param {object} options - 搜索选项，可以包含 doubanQuery 和 onComplete 回调
  */
-function search() {
+function search(options = {}) {
     const searchInput = DOMCache.get('searchInput');
-    const searchResults = DOMCache.get('searchResults');
+    const searchResultsContainer = DOMCache.get('searchResults'); // 改名为 searchResultsContainer 更清晰
 
-    if (!searchInput || !searchResults) return;
-
-    const query = searchInput.value.trim();
-    if (!query) {
-        showToast('请输入搜索内容', 'warning');
+    if (!searchInput || !searchResultsContainer) {
+        if (typeof options.onComplete === 'function') options.onComplete(); // 确保回调执行
         return;
     }
 
-    // 保存搜索历史
-    saveSearchHistory(query);
+    const query = options.doubanQuery || searchInput.value.trim();
+    const originalSearchTerm = searchInput.value.trim();
 
-    // 显示加载状态
-    searchResults.innerHTML = '<div class="text-center py-4"><div class="spinner"></div><p class="mt-2 text-gray-400">正在搜索，请稍候...</p></div>';
+    if (!query) {
+        if (typeof showToast === 'function') showToast('请输入搜索内容', 'warning');
+        if (typeof options.onComplete === 'function') options.onComplete(); // 确保回调执行
+        return;
+    }
 
-    // 获取选中的API
+    // 保存搜索历史逻辑 (保留或按需调整)
+    if (!options.doubanQuery || (options.doubanQuery && originalSearchTerm === query)) {
+        if (typeof saveSearchHistory === 'function') saveSearchHistory(query);
+    }
+
+    // 不再在这里设置 "正在搜索，请稍候..."，由全局 showLoading() 处理
+    // searchResultsContainer.innerHTML = '<div class="text-center py-4">...</div>';
+
     const selectedAPIs = AppState.get('selectedAPIs');
     if (!selectedAPIs || selectedAPIs.length === 0) {
-        searchResults.innerHTML = '<div class="text-center py-4 text-gray-400">请至少选择一个API源</div>';
+        if (searchResultsContainer) searchResultsContainer.innerHTML = '<div class="text-center py-4 text-gray-400">请至少选择一个API源</div>';
+        if (typeof options.onComplete === 'function') options.onComplete(); // 确保回调执行
         return;
     }
 
-    // 执行搜索请求
     performSearch(query, selectedAPIs)
-        .then(renderSearchResults)
+        .then(resultsData => {
+            // 将豆瓣查询标题传递给 renderSearchResults
+            renderSearchResults(resultsData, options.doubanQuery ? query : null);
+        })
         .catch(error => {
-            searchResults.innerHTML = `<div class="text-center py-4 text-red-400">搜索出错: ${error.message}</div>`;
+            if (searchResultsContainer) searchResultsContainer.innerHTML = `<div class="text-center py-4 text-red-400">搜索出错: ${error.message}</div>`;
+        })
+        .finally(() => {
+            // <--- 关键步骤2：在搜索的最后（无论成功失败）调用回调
+            if (typeof options.onComplete === 'function') {
+                options.onComplete();
+            }
         });
 }
 
@@ -482,26 +501,22 @@ async function performSearch(query, selectedAPIs) {
     return Promise.all(searchPromises);
 }
 
-/**
- * 渲染搜索结果
- * @param {Array} results - 搜索结果数组
- */
-function renderSearchResults(results) {
-    const searchResultsContainer = DOMCache.get('searchResults'); // Use cached element 
+
+function renderSearchResults(results, doubanSearchedTitle = null) {
+    const searchResultsContainer = DOMCache.get('searchResults');
     if (!searchResultsContainer) return;
 
-    // 合并所有结果
+    // ... (合并结果和错误信息的逻辑保持不变 - Source 850-855) ...
     let allResults = [];
     let errors = [];
 
     results.forEach(result => {
         if (result.code === 200 && Array.isArray(result.list)) {
-            // 为每个结果添加来源信息
             const resultsWithSource = result.list.map(item => ({
                 ...item,
-                source_name: result.apiName || API_SITES[result.apiId]?.name || '未知来源',
+                source_name: result.apiName || (typeof API_SITES !== 'undefined' && API_SITES[result.apiId]?.name) || '未知来源',
                 source_code: result.apiId.startsWith('custom_') ? 'custom' : result.apiId,
-                api_url: result.apiId.startsWith('custom_') ?
+                api_url: result.apiId.startsWith('custom_') && typeof APISourceManager !== 'undefined' ?
                     APISourceManager.getCustomApiInfo(parseInt(result.apiId.replace('custom_', '')))?.url : ''
             }));
             allResults = allResults.concat(resultsWithSource);
@@ -510,82 +525,88 @@ function renderSearchResults(results) {
         }
     });
 
-    // 过滤结果（如果启用了黄色内容过滤）
     const yellowFilterEnabled = getBoolConfig('yellowFilterEnabled', true);
     if (yellowFilterEnabled) {
         allResults = allResults.filter(item => {
             const title = item.vod_name || '';
             const type = item.type_name || '';
-            return !/(伦理|写真|福利|成人|情色|色情|三级|美女|性感|倮|AV|av|福利|诱惑|裸|情趣|情色|成人|性爱|性感|美女|女优)/.test(title + type);
+            // 更宽松的过滤词，避免误杀
+            return !/(伦理片|福利片|写真)/.test(type) && !/(伦理|写真|福利|成人|情色|AV)/i.test(title);
         });
     }
 
-    // Show/hide results area 
-    const resultsArea = getElement('resultsArea'); // Use getElement 
+    // 更新结果区域的可见性和数量显示 (Source 856-861)
+    const resultsArea = getElement('resultsArea');
     if (resultsArea) {
-        if (errors.length > 0 || allResults.length > 0) {
+        // 只要有错误、有结果，或者明确是豆瓣搜索（即使无结果也需要显示提示），就显示结果区
+        if (errors.length > 0 || allResults.length > 0 || doubanSearchedTitle) {
             resultsArea.classList.remove('hidden');
         } else {
             resultsArea.classList.add('hidden');
         }
     }
-
-    // Update count 
-    const searchResultsCount = getElement('searchResultsCount'); // Use getElement 
+    const searchResultsCount = getElement('searchResultsCount');
     if (searchResultsCount) {
         searchResultsCount.textContent = allResults.length.toString();
     }
 
-    searchResultsContainer.innerHTML = ''; // Clear previous results 
+    searchResultsContainer.innerHTML = ''; // 清空
 
     if (allResults.length === 0) {
-        let message = '没有找到相关内容';
-        if (errors.length > 0) {
-            message += `<div class="mt-2 text-xs text-red-400">${errors.join('<br>')}</div>`;
+        let message;
+        if (doubanSearchedTitle) {
+            message = `您点击的豆瓣影视剧 <strong class="text-pink-400">《${sanitizeText(doubanSearchedTitle)}》</strong> 在当前已选的数据源中未找到。`;
+        } else {
+            message = '没有找到相关内容。';
         }
-        searchResultsContainer.innerHTML = `<div class="text-center py-4 text-gray-400">${message}</div>`;
+
+        if (errors.length > 0) {
+            const errorMessages = errors.map(err => sanitizeText(err)).join('<br>');
+            message += `<div class="mt-3 text-xs text-red-300">${errorMessages}</div>`;
+        }
+        searchResultsContainer.innerHTML = `<div class="text-center py-8 px-4 text-gray-400">${message}</div>`;
+        // 调整搜索区布局
+        const searchArea = getElement('searchArea');
+        if (searchArea) {
+            searchArea.classList.add('flex-1'); // 重新撑满
+            searchArea.classList.remove('mb-8'); // 移除边距
+        }
         return;
     }
 
-    // Create a container for the grid 
+    // ... (渲染实际结果的逻辑 - Source 864-876) ...
     const gridContainer = document.createElement('div');
-    // ** Important: Make sure these grid classes match your index.html and desired layout ** 
-    gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-center'; // Added justify-center 
-
-    const fragment = document.createDocumentFragment(); // Use a fragment for better performance 
+    gridContainer.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-center';
+    const fragment = document.createDocumentFragment();
     allResults.forEach(item => {
         try {
-            // Use the NEW template function here 
             fragment.appendChild(createResultItemUsingTemplate(item));
         } catch (error) {
             console.error('Error creating result item from template:', error, item);
-            // Append an error placeholder element 
             const errorDiv = document.createElement('div');
             errorDiv.className = 'card-hover bg-[#222] rounded-lg overflow-hidden p-2';
             errorDiv.innerHTML = `<h3 class="text-red-400">加载错误</h3><p class="text-xs text-gray-400">无法显示此项目</p>`;
             fragment.appendChild(errorDiv);
         }
     });
+    gridContainer.appendChild(fragment);
+    searchResultsContainer.appendChild(gridContainer);
 
-    gridContainer.appendChild(fragment); // Append all items at once from the fragment 
-    searchResultsContainer.appendChild(gridContainer); // Add the grid to the main container 
-
-    // Display API errors if any 
     if (errors.length > 0) {
         const errorDiv = document.createElement('div');
         errorDiv.className = 'mt-4 p-2 bg-[#333] rounded text-xs text-red-400';
-        errorDiv.innerHTML = errors.join('<br>');
+        errorDiv.innerHTML = errors.map(err => sanitizeText(err)).join('<br>');
         searchResultsContainer.appendChild(errorDiv);
     }
 
-    // Adjust search area visibility/layout 
+    // 调整搜索区布局 (确保在有结果时 searchArea 不是 flex-1)
     const searchArea = getElement('searchArea');
     if (searchArea) {
         searchArea.classList.remove('flex-1');
-        // searchArea.classList.add('mb-8'); // Add margin if needed 
-        searchArea.classList.remove('hidden'); // Ensure search area stays visible 
+        searchArea.classList.add('mb-8'); // 在有结果时添加底部边距
+        searchArea.classList.remove('hidden');
     }
-    getElement('doubanArea')?.classList.add('hidden'); // Keep hiding Douban 
+    getElement('doubanArea')?.classList.add('hidden'); // 隐藏豆瓣区
 }
 
 
@@ -905,4 +926,3 @@ function toggleEpisodeOrderUI() {
 // 将函数暴露给全局作用域
 window.showVideoEpisodesModal = showVideoEpisodesModal;
 window.toggleEpisodeOrderUI = toggleEpisodeOrderUI;
-window.resetToHome = resetToHome;
