@@ -212,7 +212,3 @@ input:checked+.slider:before {
   justify-content: flex-end;
   align-items: center;
 }
-/* 隐藏选集区域的总集数文本 */
-#episodes-count {
-  display: none !important; /* 使用 !important 确保覆盖其他可能的样式 */
-}
