@@ -536,63 +536,94 @@ function renderDoubanTags(tags, currentTag) {
 }
 
 // 渲染豆瓣卡片 - 使用事件委托
-function renderDoubanCards(data, resultsContainer) {
-  const resultsContainer = utils.getElement('douban-results');
-  if (!resultsContainer) return;
+function renderDoubanCards(data, container) { // 将参数名修改为 container，或者确保不重复声明
+  // 如果参数名仍为 resultsContainer，则删除下一行
+  // const resultsContainer = utils.getElement('douban-results'); // <<<--- 删除或注释掉这一行
 
-  // 清空容器
-  resultsContainer.innerHTML = '';
-
-  // 创建卡片容器
-  const cardsContainer = document.createElement('div');
-  cardsContainer.className = 'douban-cards-container';
-
-  // 添加卡片
-  items.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'douban-card';
-    card.dataset.id = item.id;
-    card.dataset.title = item.title;
-
-    // 使用安全的文本处理
-    const safeTitle = utils.safeText(item.title);
-    const safeRate = utils.safeText(item.rate);
-
-    card.innerHTML = `
-            <div class="douban-card-poster">
-                <img src="${PROXY_URL}${encodeURIComponent(item.cover)}" alt="${safeTitle}" 
-                     onerror="this.src='./img/default-poster.jpg'">
-                <div class="douban-card-rate">${safeRate}</div>
-            </div>
-            <div class="douban-card-title">${safeTitle}</div>
-        `;
-
-    cardsContainer.appendChild(card);
-  });
-
-  resultsContainer.appendChild(cardsContainer);
-
-  // 移除旧的事件监听器（如果有）
-  if (resultsContainer._cardClickHandler) {
-    resultsContainer.removeEventListener('click', resultsContainer._cardClickHandler);
+  // 直接使用传入的 container 参数
+  if (!container) {
+      console.error("renderDoubanCards: 传入的容器 (container) 无效");
+      return;
   }
 
-  // 使用事件委托添加点击事件
-  const cardClickHandler = function (e) {
-    const card = e.target.closest('.douban-card');
-    if (!card) return;
+  // 清空容器
+  container.innerHTML = '';
 
-    const id = card.dataset.id;
-    const title = card.dataset.title;
-    if (!id || !title) return;
+  // 创建卡片容器 (这部分逻辑可能在您的旧代码中，需要恢复或重写)
+  // const cardsContainer = document.createElement('div');
+  // cardsContainer.className = 'douban-cards-container'; // 或者您期望的样式
 
-    // 处理卡片点击
-    fillAndSearchWithDouban(title);
-  };
+  // items 的获取方式也需要注意，data 可能是包含 subjects 的对象
+  const items = data.subjects || (Array.isArray(data) ? data : []); // 兼容 data 直接是数组或包含 subjects
 
-  // 保存事件处理器引用以便后续移除
-  resultsContainer._cardClickHandler = cardClickHandler;
-  resultsContainer.addEventListener('click', cardClickHandler);
+  if (!items || items.length === 0) {
+      container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400">暂无数据，请尝试其他分类或刷新</div>';
+      return;
+  }
+  
+  const fragment = document.createDocumentFragment(); // 使用 fragment 提高性能
+
+  items.forEach(item => {
+      const card = document.createElement('div');
+      // 应用旧样式或您期望的卡片样式
+      card.className = 'card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md'; // 示例：使用旧的 card-hover 样式
+      card.dataset.id = item.id;
+      card.dataset.title = item.title;
+
+      const safeTitle = utils.safeText(item.title);
+      const safeRate = utils.safeText(item.rate || "暂无"); // "暂无" 作为评分的默认值
+      const originalCoverUrl = item.cover || "";
+      // 全局 PROXY_URL 来自 config.js
+      const proxiedCoverUrl = (typeof PROXY_URL !== 'undefined' ? PROXY_URL : '') + encodeURIComponent(originalCoverUrl);
+
+
+      // 这里是卡片内部 HTML 的结构，请参考老代码 (old.txt 的 index.html 中关于豆瓣卡片的样式) 或您的目标样式进行调整
+      card.innerHTML = `
+          <div class="relative w-full aspect-[2/3] overflow-hidden douban-card-cover">
+              <img src="${originalCoverUrl}" alt="${safeTitle}"
+                   class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                   onerror="this.onerror=null; this.src='https://via.placeholder.com/200x300?text=${encodeURIComponent(safeTitle)}'; this.classList.add('object-contain');"
+                   loading="lazy" referrerpolicy="no-referrer">
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-60"></div>
+              ${safeRate !== "暂无" ? `
+              <div class="absolute bottom-1 left-1.5 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded-sm">
+                  <span class="text-yellow-400">★</span> ${safeRate}
+              </div>` : ''}
+              <div class="absolute bottom-1 right-1.5 bg-black/70 text-white text-xs px-1 py-0.5 rounded-sm hover:bg-gray-700 transition-colors" title="在豆瓣查看">
+                  <a href="${utils.safeText(item.url || '#')}" target="_blank" rel="noopener noreferrer" class="douban-link block" onclick="event.stopPropagation();">
+                      🔗
+                  </a>
+              </div>
+          </div>
+          <div class="p-2 text-center">
+              <button class="douban-search-btn text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
+                      title="${safeTitle}">
+                  ${safeTitle}
+              </button>
+          </div>
+      `;
+      fragment.appendChild(card);
+  });
+
+  container.appendChild(fragment);
+
+  // 事件委托 (如果尚未在 loadDoubanRecommendations 中处理)
+  // 注意：根据您的优化 prompt，事件委托应该在父容器上设置一次
+  // 这里假设 resultsContainer (即现在的 container 参数) 是那个父容器
+  if (!container._cardClickHandler) {
+      const cardClickHandler = function (e) {
+          const cardElement = e.target.closest('.douban-card'); // 使用 .douban-card 作为目标
+          if (!cardElement) return;
+
+          // const id = cardElement.dataset.id; // id 可能不需要了
+          const title = cardElement.dataset.title;
+          if (!title) return;
+          
+          fillAndSearchWithDouban(title); // 确保此函数正确定义并可用
+      };
+      container.addEventListener('click', cardClickHandler);
+      container._cardClickHandler = cardClickHandler; // 标记已绑定
+  }
 }
 
 // 设置换一批按钮
@@ -693,80 +724,6 @@ async function renderRecommend(tag, pageLimit, pageStart) {
     }
     container.classList.remove("relative");
   }
-}
-
-// 渲染豆瓣卡片
-function renderDoubanCards(data, container) {
-  const fragment = document.createDocumentFragment();
-
-  if (!data?.subjects?.length) {
-    const emptyEl = document.createElement("div");
-    emptyEl.className = "col-span-full text-center py-8";
-    emptyEl.innerHTML = '<div class="text-pink-500">❌ 暂无数据，请尝试其他分类或刷新</div>';
-    fragment.appendChild(emptyEl);
-  } else {
-    data.subjects.forEach(item => {
-      const safeTitle = utils.safeText(item.title);
-      const safeRate = utils.safeText(item.rate || "暂无");
-      const safeUrl = item.url || "#";
-      const originalCoverUrl = item.cover || "";
-      const proxiedCoverUrl = typeof PROXY_URL !== 'undefined' ?
-        PROXY_URL + encodeURIComponent(originalCoverUrl) :
-        originalCoverUrl;
-
-      const card = document.createElement("div");
-      card.className = CONFIG.CLASSES.CARD;
-
-      // 使用数据属性传递数据，而不是直接在onclick中使用
-      card.setAttribute('data-title', safeTitle);
-
-      card.innerHTML = `
-        <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer douban-card-cover">
-          <img src="${originalCoverUrl}" alt="${safeTitle}"
-              class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-              onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; this.classList.add('object-contain');"
-              loading="lazy" referrerpolicy="no-referrer">
-          <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
-          <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
-              <span class="text-yellow-400">★</span> ${safeRate}
-          </div>
-          <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors">
-              <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" class="douban-link">
-                  🔗
-              </a>
-          </div>
-        </div>
-        <div class="p-2 text-center bg-[#111]">
-          <button class="douban-search-btn text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
-                  title="${safeTitle}">
-              ${safeTitle}
-          </button>
-        </div>
-      `;
-
-      // 使用事件委托而非内联事件
-      const coverEl = card.querySelector('.douban-card-cover');
-      const buttonEl = card.querySelector('.douban-search-btn');
-      const linkEl = card.querySelector('.douban-link');
-
-      if (coverEl) {
-        coverEl.addEventListener('click', () => fillAndSearchWithDouban(safeTitle));
-      }
-
-      if (buttonEl) {
-        buttonEl.addEventListener('click', () => fillAndSearchWithDouban(safeTitle));
-      }
-
-      if (linkEl) {
-        linkEl.addEventListener('click', (e) => e.stopPropagation());
-      }
-
-      fragment.appendChild(card);
-    });
-  }
-
-  container.innerHTML = "";
-  container.appendChild(fragment);
 }
 
 // 显示标签管理模态框
