@@ -633,14 +633,15 @@ async function search() {
 
         let selectedAPIsNew = []
         if (query.match(matchPattern)) {
+            // 提取并清洗 query 中的 @xxx@ 内容
+            query = query.replace(/@([^@]+)@/g, '$1');
             // 添加所有 adult: true 的 API
             Object.entries(API_SITES).forEach(([key, site]) => {
                 if (site.adult && !selectedAPIsNew.includes(key)) {
                     selectedAPIsNew.push(key);
                 }
             });
-            // 移除 @xxx@ 片段，更新 query 变量
-            query = query.replace(matchPattern, '').trim();
+
         } else {
             selectedAPIsNew = selectedAPIs;
         }
