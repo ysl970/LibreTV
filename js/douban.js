@@ -173,49 +173,76 @@ function initDouban() {
       utils.getElement(id);
     });
 
+  // 初始化关键UI元素
+  initDoubanToggle();
+  
+  // 延迟初始化非关键功能
+  setTimeout(() => {
+    loadUserTags();
+    renderDoubanMovieTvSwitch();
+    renderDoubanTags();
+    setupDoubanRefreshBtn();
+    
+    // 进一步延迟加载豆瓣推荐内容
+    if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true) {
+      setTimeout(() => {
+        renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
+      }, 300);
+    }
+  }, 100);
+}
+
+// 分离豆瓣开关初始化
+function initDoubanToggle() {
   const doubanToggle = utils.getElement('doubanToggle');
-  if (doubanToggle) {
-    const isEnabled = utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, true) === true;
-    doubanToggle.checked = isEnabled;
+  if (!doubanToggle) return;
+  
+  const isEnabled = utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, true) === true;
+  doubanToggle.checked = isEnabled;
 
-    // 如果是首次加载且 localStorage 中没有设置过，则强制写入 true
-    if (localStorage.getItem(CONFIG.STORAGE_KEYS.ENABLED) === null) {
-      utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, true);
-    }
-
-    const toggleBg = doubanToggle.nextElementSibling;
-    const toggleDot = toggleBg.nextElementSibling;
-
-    if (isEnabled) {
-      toggleBg.classList.add('bg-pink-600');
-      toggleDot.classList.add('translate-x-6');
-    }
-
-    doubanToggle.addEventListener('change', function (e) {
-      const isChecked = e.target.checked;
-      utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, isChecked);
-
-      if (isChecked) {
-        toggleBg.classList.add('bg-pink-600');
-        toggleDot.classList.add('translate-x-6');
-      } else {
-        toggleBg.classList.remove('bg-pink-600');
-        toggleDot.classList.remove('translate-x-6');
-      }
-
-      updateDoubanVisibility();
-    });
-
-    updateDoubanVisibility();
+  // 如果是首次加载且 localStorage 中没有设置过，则强制写入 true
+  if (localStorage.getItem(CONFIG.STORAGE_KEYS.ENABLED) === null) {
+    utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, true);
   }
 
+  const toggleBg = doubanToggle.nextElementSibling;
+  const toggleDot = toggleBg.nextElementSibling;
+
+  if (isEnabled) {
+    toggleBg.classList.add('bg-pink-600');
+    toggleDot.classList.add('translate-x-6');
+  }
+
+  doubanToggle.addEventListener('change', function (e) {
+    const isChecked = e.target.checked;
+    utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, isChecked);
+
+    if (isChecked) {
+      toggleBg.classList.add('bg-pink-600');
+      toggleDot.classList.add('translate-x-6');
+    } else {
+      toggleBg.classList.remove('bg-pink-600');
+      toggleDot.classList.remove('translate-x-6');
+    }
+
+    updateDoubanVisibility();
+  });
+
+  updateDoubanVisibility();
+}
+
+// 使用更高效的事件监听方式
+document.addEventListener('DOMContentLoaded', initDouban, { once: true });
   loadUserTags();
   renderDoubanMovieTvSwitch();
   renderDoubanTags();
   setupDoubanRefreshBtn();
 
+  // 延迟加载豆瓣推荐内容
   if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true) {
-    renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
+    setTimeout(() => {
+      renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
+    }, 500); // 延迟500毫秒加载
   }
 }
 
@@ -519,9 +546,11 @@ function renderDoubanCards(data, container) {
 
       card.innerHTML = `
         <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer douban-card-cover">
-          <img src="${originalCoverUrl}" alt="${safeTitle}"
-              class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-              onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; this.classList.add('object-contain');"
+          <div class="w-full h-full bg-[#222] flex items-center justify-center">
+            <div class="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <img data-src="${originalCoverUrl}" alt="${safeTitle}"
+              class="w-full h-full object-cover transition-transform duration-500 hover:scale-110 absolute top-0 left-0 opacity-0"
               loading="lazy" referrerpolicy="no-referrer">
           <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
           <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
@@ -564,8 +593,54 @@ function renderDoubanCards(data, container) {
 
   container.innerHTML = "";
   container.appendChild(fragment);
+  
+  // 实现真正的懒加载
+  initLazyLoading();
 }
 
+// 添加懒加载初始化函数
+function initLazyLoading() {
+  const lazyImages = document.querySelectorAll('img[data-src]');
+  
+  if ('IntersectionObserver' in window) {
+    const imageObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          const src = img.getAttribute('data-src');
+          
+          img.onload = function() {
+            img.classList.remove('opacity-0');
+          };
+          
+          img.onerror = function() {
+            this.onerror = null;
+            const proxiedUrl = PROXY_URL + encodeURIComponent(src);
+            this.src = proxiedUrl;
+            this.classList.add('object-contain');
+            this.classList.remove('opacity-0');
+          };
+          
+          img.src = src;
+          img.removeAttribute('data-src');
+          imageObserver.unobserve(img);
+        }
+      });
+    });
+    
+    lazyImages.forEach(img => {
+      imageObserver.observe(img);
+    });
+  } else {
+    // 回退方案，为不支持IntersectionObserver的浏览器
+    lazyImages.forEach(img => {
+      const src = img.getAttribute('data-src');
+      img.src = src;
+      img.removeAttribute('data-src');
+      img.classList.remove('opacity-0');
+    });
+  }
+}
 // 显示标签管理模态框
 function showTagManageModal() {
   let modal = document.getElementById('tagManageModal');
