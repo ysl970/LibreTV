@@ -309,37 +309,37 @@ async function loadDoubanRecommendations() {
   const resultsContainer = utils.getElement('douban-results');
   if (!resultsContainer) return;
 
-  // 显示加载状态
-  resultsContainer.innerHTML = '<div class="douban-loading">加载中...</div>';
+  resultsContainer.innerHTML = '<div class="text-center py-4"><div class="spinner"></div><p class="mt-2 text-gray-400">正在加载豆瓣推荐...</p></div>'; // 改进加载提示
 
-  // 从AppState获取状态
   const currentSwitch = AppState.get('doubanMovieTvCurrentSwitch');
   const currentTag = AppState.get('doubanCurrentTag');
   const pageStart = AppState.get('doubanPageStart');
+  const pageLimit = CONFIG.PAGE_SIZE; // 从 CONFIG 获取
+
+  // 构建请求 URL
+  const targetUrl = `https://movie.douban.com/j/search_subjects?type=${currentSwitch}&tag=${encodeURIComponent(currentTag)}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`;
 
   try {
-    let items = [];
+      const data = await fetchDoubanData(targetUrl); // 使用您已有的 fetchDoubanData 函数
 
-    if (currentSwitch === 'movie') {
-      const data = await WorkspaceDoubanData.getDoubanMovieRecommendations(currentTag, pageStart);
-      items = data.subjects || [];
-    } else {
-      const data = await WorkspaceDoubanData.getDoubanTVRecommendations(currentTag, pageStart);
-      items = data.subjects || [];
-    }
+      const items = data.subjects || [];
 
-    if (items.length === 0) {
-      resultsContainer.innerHTML = '<div class="douban-empty">没有找到相关内容</div>';
-      return;
-    }
+      if (items.length === 0) {
+          resultsContainer.innerHTML = '<div class="text-center py-4 text-gray-400">没有找到相关内容</div>'; // 改进空状态提示
+          return;
+      }
 
-    // 渲染卡片
-    renderDoubanCards(items);
+      // 渲染卡片 (确保 renderDoubanCards 函数能正确处理 items)
+      renderDoubanCards(items, resultsContainer); // 之前 renderDoubanCards 有两个参数
 
   } catch (error) {
-    console.error('加载豆瓣推荐失败:', error);
-    resultsContainer.innerHTML = `<div class="douban-error">加载失败: ${error.message}</div>`;
-    showToast(`加载豆瓣推荐失败: ${error.message}`, 'error');
+      console.error('加载豆瓣推荐失败:', error);
+      // 使用 CONFIG 中的错误消息
+      resultsContainer.innerHTML = `<div class="text-center py-4 text-red-400">❌ ${CONFIG.MESSAGES.API_ERROR} (详情: ${error.message})</div>`;
+      // 确保 showToast 函数是全局可用的，并且来自 ui.js
+      if (typeof showToast === 'function') {
+          showToast(`${CONFIG.MESSAGES.API_ERROR}: ${error.message}`, 'error');
+      }
   }
 }
 
@@ -536,7 +536,7 @@ function renderDoubanTags(tags, currentTag) {
 }
 
 // 渲染豆瓣卡片 - 使用事件委托
-function renderDoubanCards(items) {
+function renderDoubanCards(data, resultsContainer) {
   const resultsContainer = utils.getElement('douban-results');
   if (!resultsContainer) return;
 
