@@ -402,49 +402,60 @@ function initializeUIComponents() {
  * 执行搜索
  * @param {object} options - 搜索选项，可以包含 doubanQuery 和 onComplete 回调
  */
+
 function search(options = {}) {
     const searchInput = DOMCache.get('searchInput');
-    const searchResultsContainer = DOMCache.get('searchResults'); // 改名为 searchResultsContainer 更清晰
+    const searchResultsContainer = DOMCache.get('searchResults');
 
     if (!searchInput || !searchResultsContainer) {
-        if (typeof options.onComplete === 'function') options.onComplete(); // 确保回调执行
+        if (typeof options.onComplete === 'function') options.onComplete();
         return;
     }
 
-    const query = options.doubanQuery || searchInput.value.trim();
-    const originalSearchTerm = searchInput.value.trim();
+    const queryFromInput = searchInput.value.trim(); // 用户在输入框实际输入的内容
+    const query = options.doubanQuery || queryFromInput; // 优先用豆瓣的query，否则用输入框的
 
     if (!query) {
         if (typeof showToast === 'function') showToast('请输入搜索内容', 'warning');
-        if (typeof options.onComplete === 'function') options.onComplete(); // 确保回调执行
+        if (typeof options.onComplete === 'function') options.onComplete();
         return;
     }
 
-    // 保存搜索历史逻辑 (保留或按需调整)
-    if (!options.doubanQuery || (options.doubanQuery && originalSearchTerm === query)) {
-        if (typeof saveSearchHistory === 'function') saveSearchHistory(query);
+    // 只有当不是豆瓣触发的搜索时，才调用 showLoading。豆瓣触发时，其调用处已处理。
+    // 或者，如果 options.onComplete 不存在 (意味着不是豆瓣那种带回调的调用方式)，则认为是普通搜索。
+    let isNormalSearch = !options.doubanQuery; // 简单判断是否为普通搜索
+
+    if (isNormalSearch && typeof showLoading === 'function') {
+        showLoading(`正在搜索“${query}”...`); // 普通搜索也显示全局 loading
     }
 
-    // 不再在这里设置 "正在搜索，请稍候..."，由全局 showLoading() 处理
-    // searchResultsContainer.innerHTML = '<div class="text-center py-4">...</div>';
+    if (!options.doubanQuery) { // 只有非豆瓣触发的搜索才保存历史（或按您之前的逻辑调整）
+        if (typeof saveSearchHistory === 'function') saveSearchHistory(query);
+    }
 
     const selectedAPIs = AppState.get('selectedAPIs');
     if (!selectedAPIs || selectedAPIs.length === 0) {
         if (searchResultsContainer) searchResultsContainer.innerHTML = '<div class="text-center py-4 text-gray-400">请至少选择一个API源</div>';
-        if (typeof options.onComplete === 'function') options.onComplete(); // 确保回调执行
+        // 如果是普通搜索触发的loading，这里需要hide
+        if (isNormalSearch && typeof hideLoading === 'function') hideLoading();
+        // 豆瓣的 onComplete 也会处理 hideLoading
+        if (typeof options.onComplete === 'function') options.onComplete();
         return;
     }
 
     performSearch(query, selectedAPIs)
         .then(resultsData => {
-            // 将豆瓣查询标题传递给 renderSearchResults
             renderSearchResults(resultsData, options.doubanQuery ? query : null);
         })
         .catch(error => {
             if (searchResultsContainer) searchResultsContainer.innerHTML = `<div class="text-center py-4 text-red-400">搜索出错: ${error.message}</div>`;
         })
         .finally(() => {
-            // <--- 关键步骤2：在搜索的最后（无论成功失败）调用回调
+            // 如果是普通搜索触发的loading，在这里hide
+            if (isNormalSearch && typeof hideLoading === 'function') {
+                hideLoading();
+            }
+            // 豆瓣的 onComplete 也会处理 hideLoading
             if (typeof options.onComplete === 'function') {
                 options.onComplete();
             }
@@ -520,32 +531,32 @@ function renderSearchResults(results, doubanSearchedTitle = null) {
     searchResultsContainer.innerHTML = ''; // 清空旧结果卡片
 
     // ... (合并结果和错误信息的逻辑，填充 allResults 和 errors 数组) ...
-     let allResults = [];
-     let errors = [];
-     results.forEach(result => {
-         if (result.code === 200 && Array.isArray(result.list)) {
-             const resultsWithSource = result.list.map(item => ({
-                 ...item,
-                 source_name: result.apiName || (typeof API_SITES !== 'undefined' && API_SITES[result.apiId]?.name) || '未知来源',
-                 source_code: result.apiId.startsWith('custom_') ? 'custom' : result.apiId,
-                 api_url: result.apiId.startsWith('custom_') && typeof APISourceManager !== 'undefined' ?
-                     APISourceManager.getCustomApiInfo(parseInt(result.apiId.replace('custom_', '')))?.url : ''
-             }));
-             allResults = allResults.concat(resultsWithSource);
-         } else if (result.msg) {
-             errors.push(result.msg);
-         }
-     });
+    let allResults = [];
+    let errors = [];
+    results.forEach(result => {
+        if (result.code === 200 && Array.isArray(result.list)) {
+            const resultsWithSource = result.list.map(item => ({
+                ...item,
+                source_name: result.apiName || (typeof API_SITES !== 'undefined' && API_SITES[result.apiId]?.name) || '未知来源',
+                source_code: result.apiId.startsWith('custom_') ? 'custom' : result.apiId,
+                api_url: result.apiId.startsWith('custom_') && typeof APISourceManager !== 'undefined' ?
+                    APISourceManager.getCustomApiInfo(parseInt(result.apiId.replace('custom_', '')))?.url : ''
+            }));
+            allResults = allResults.concat(resultsWithSource);
+        } else if (result.msg) {
+            errors.push(result.msg);
+        }
+    });
 
-     const yellowFilterEnabled = getBoolConfig('yellowFilterEnabled', true);
-     if (yellowFilterEnabled) {
-         // ... (过滤逻辑)
-         allResults = allResults.filter(item => {
-             const title = item.vod_name || '';
-             const type = item.type_name || '';
-             return !/(伦理片|福利片|写真)/.test(type) && !/(伦理|写真|福利|成人|情色|AV)/i.test(title);
-         });
-     }
+    const yellowFilterEnabled = getBoolConfig('yellowFilterEnabled', true);
+    if (yellowFilterEnabled) {
+        // ... (过滤逻辑)
+        allResults = allResults.filter(item => {
+            const title = item.vod_name || '';
+            const type = item.type_name || '';
+            return !/(伦理片|福利片|写真)/.test(type) && !/(伦理|写真|福利|成人|情色|AV)/i.test(title);
+        });
+    }
 
 
     if (allResults.length === 0) {
