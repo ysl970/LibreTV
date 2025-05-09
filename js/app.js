@@ -905,3 +905,4 @@ function toggleEpisodeOrderUI() {
 // 将函数暴露给全局作用域
 window.showVideoEpisodesModal = showVideoEpisodesModal;
 window.toggleEpisodeOrderUI = toggleEpisodeOrderUI;
+window.resetToHome = resetToHome;
