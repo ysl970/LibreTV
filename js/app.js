@@ -217,7 +217,7 @@ function getBoolConfig(key, defaultValue) {
 
 // 应用程序初始化
 document.addEventListener('DOMContentLoaded', function () {
-      
+
     // 初始化应用状态
     initializeAppState();
 
@@ -909,6 +909,9 @@ function renderEpisodeButtons(episodes, title, sourceCode) {
     let html = `
     <div class="mb-4 flex justify-between items-center">
         <div class="text-sm text-gray-400">共 ${episodes.length} 集</div>
+        <button onclick="copyLinks()" class="px-4 py-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white text-xs font-semibold rounded-lg transition-all duration-300 transform items-center justify-center flex">
+            <span>复制视频链接</span>
+        </button>
         <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg flex items-center gap-1">
             <span id="orderText">正序</span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -926,12 +929,23 @@ function renderEpisodeButtons(episodes, title, sourceCode) {
             class="episode-btn px-2 py-1 bg-gray-800 hover:bg-gray-700 text-white rounded text-sm transition-colors"
             data-index="${index}"
         >
-            ${index + 1}
+            ${index + 1}         
         </button>`;
     });
 
     html += '</div>';
     return html;
+}
+
+// 复制视频链接到剪贴板
+function copyLinks() {
+    const episodes = episodesReversed ? [...currentEpisodes].reverse() : currentEpisodes;
+    const linkList = episodes.join('\r\n');
+    navigator.clipboard.writeText(linkList).then(() => {
+        showToast('视频链接列表已复制到剪贴板', 'success');
+    }).catch(err => {
+        showToast('复制失败，请检查浏览器权限', 'error');
+    });
 }
 
 /**

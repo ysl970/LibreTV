@@ -841,6 +841,17 @@ function updateEpisodeInfo() {
     }
 }
 
+// 复制播放链接
+function copyLinks() {
+    // 尝试从URL中获取参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const linkUrl = urlParams.get('url') || '';
+    navigator.clipboard.writeText(linkUrl).then(() => {
+        showToast('视频链接已复制到剪贴板', 'success');
+    }).catch(err => {
+        showToast('复制失败，请检查浏览器权限', 'error');
+    });
+}
 
 function toggleEpisodeOrder() {
     episodesReversed = !episodesReversed;
