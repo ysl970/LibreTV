@@ -909,7 +909,10 @@ function renderEpisodeButtons(episodes, title, sourceCode) {
     let html = `
     <div class="mb-4 flex justify-between items-center">
         <div class="text-sm text-gray-400">共 ${episodes.length} 集</div>
-        <button onclick="copyLinks()" class="px-4 py-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white text-xs font-semibold rounded-lg transition-all duration-300 transform items-center justify-center flex">
+        <button onclick="copyLinks()" class="px-4 py-1 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors flex items-center space-x-1 mr-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
             <span>复制视频链接</span>
         </button>
         <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg flex items-center gap-1">
