@@ -695,11 +695,11 @@ function attachEventListeners() {
     if (settingsButton) {
         settingsButton.addEventListener('click', toggleSettings);
     }
-    
+
     // 观看历史按钮
     const historyButton = getElement('historyButton');
     if (historyButton) {
-      historyButton.addEventListener('click', toggleHistory);
+        historyButton.addEventListener('click', toggleHistory);
     }
 
     // 关闭设置面板按钮
@@ -733,6 +733,12 @@ function attachEventListeners() {
         historyList.addEventListener('click', handleHistoryListClick);
     }
 
+    // “首页”按钮
+    document.getElementById('homeButton')?.addEventListener('click', e => {
+        e.preventDefault();   // 防止 form 提交
+        resetToHome();
+    });
+    
     // 初始化其他可能的事件监听器
     initializeAdditionalListeners();
 }
@@ -794,27 +800,27 @@ window.renderSearchHistory = renderSearchHistory;
  * 当用户点击面板外区域时自动关闭面板
  */
 function setupPanelAutoClose() {
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', function (event) {
         // 检查是否点击了设置按钮或历史按钮
         const settingsButton = document.getElementById('settingsButton');
         const historyButton = document.getElementById('historyButton');
         const settingsPanel = document.getElementById('settingsPanel');
         const historyPanel = document.getElementById('historyPanel');
-        
+
         // 如果点击的是设置按钮或设置面板内部，不做处理
         if (settingsButton && settingsButton.contains(event.target)) return;
         if (settingsPanel && settingsPanel.contains(event.target)) return;
-        
+
         // 如果点击的是历史按钮或历史面板内部，不做处理
         if (historyButton && historyButton.contains(event.target)) return;
         if (historyPanel && historyPanel.contains(event.target)) return;
-        
+
         // 关闭设置面板
         if (settingsPanel && settingsPanel.classList.contains('show')) {
             settingsPanel.classList.remove('show');
             settingsPanel.setAttribute('aria-hidden', 'true');
         }
-        
+
         // 关闭历史面板
         if (historyPanel && historyPanel.classList.contains('show')) {
             historyPanel.classList.remove('show');
@@ -824,6 +830,6 @@ function setupPanelAutoClose() {
 }
 
 // 在DOMContentLoaded事件中调用setupPanelAutoClose
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     setupPanelAutoClose();
 });
