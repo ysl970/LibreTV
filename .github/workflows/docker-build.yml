@@ -1,4 +1,4 @@
-name: 'Build LibreTV image'
+name: 'Build yaodaoTV image'
 
 on:
   push:
@@ -8,10 +8,10 @@ on:
 
 jobs:
   build:
-    name: 'Build LibreTV image'
+    name: 'Build yaodaoTV image'
     runs-on: ubuntu-latest
     # Modified to run on both repositories
-    if: github.repository == 'LibreSpark/LibreTV' || github.repository == 'bestZwei/libretv'
+    if: github.repository == 'LibreSpark/yaodaoTV' || github.repository == 'bestZwei/yaodaotv'
     env:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
@@ -24,7 +24,7 @@ jobs:
       - name: 'Set Docker image tag based on repository'
         id: set-tag
         run: |
-          if [ "${{ github.repository }}" = "LibreSpark/LibreTV" ]; then
+          if [ "${{ github.repository }}" = "LibreSpark/yaodaoeTV" ]; then
             echo "IMAGE_TAG=libretv:latest" >> $GITHUB_OUTPUT
           else
             echo "IMAGE_TAG=libretv-beta:latest" >> $GITHUB_OUTPUT
@@ -42,7 +42,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: 'Build and push LibreTV image'
+      - name: 'Build and push yaodaoTV image'
         uses: docker/build-push-action@v6.14.0
         with:
           context: .
