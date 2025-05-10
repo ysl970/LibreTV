@@ -539,22 +539,25 @@ body {
 
 /* 搜索记录标签样式 (从旧代码恢复) */
 .search-tag {
-  background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end));
-  color: var(--text-color);
-  padding: 0.25rem 0.75rem; /* 调整内边距以适应卡片右下角 */
-  border-radius: 0.375rem; /* 对应 rounded-md */
-  font-size: 0.75rem;    /* 对应 text-xs */
+  /* background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end)); */ /* 旧的背景，可能太暗 */
+  background-color: var(--secondary-color); /* 改为使用较深的背景色变量，或者一个具体的颜色值如 #2D3748 (示例) */
+  /* color: var(--text-color); */ /* 旧的文字颜色，可能太亮 */
+  color: var(--text-muted); /* 改为使用柔和一些的文字颜色变量，或者一个具体的颜色值如 #A0AEC0 (示例) */
+  padding: 0.25rem 0.75rem; 
+  border-radius: 0.375rem; 
+  font-size: 0.75rem;   
   border: 1px solid var(--border-color);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* 稍微减小阴影 */
-  transition: background 0.3s ease, border-color 0.3s ease;
-  cursor: default; /* 在卡片上时不需要指针手势，除非它可点击 */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); 
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease; /* 添加 color 过渡 */
+  cursor: default; 
   display: inline-block;
-  /* margin: 0.25rem; */ /* 在卡片内部不需要额外 margin */
 }
 
-.search-tag:hover { /* 如果希望在卡片上的标签也有悬停效果 */
-  background: linear-gradient(135deg, var(--card-gradient-end), var(--card-gradient-start));
+.search-tag:hover { 
+  /* background: linear-gradient(135deg, var(--card-gradient-end), var(--card-gradient-start)); */
+  background-color: var(--card-gradient-start); /* 悬停时可以略微改变背景 */
   border-color: var(--primary-color);
+  color: var(--primary-light); /* 悬停时文字可以更亮一些 */
 }
 
 /* 搜索卡片结果居中*/
@@ -806,7 +809,7 @@ body {
 .result-remarks {
   /* 在 index.html 的模板中已使用 Tailwind 类 text-xs text-cyan-400 mb-2 line-clamp-1 */
   /* 如果需要更复杂的样式，可以在这里添加 */
-  font-weight: 500; /* 例如，加粗一点 */
+  font-weight: normal; /* 例如，加粗一点 */
 }
 
 /* 确保卡片标题和元信息有足够空间 */

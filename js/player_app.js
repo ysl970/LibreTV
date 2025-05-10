@@ -842,12 +842,12 @@ function updateEpisodeInfo() {
 }
 
 // 复制播放链接
-ifunction copyLinks() {
+function copyLinks() {
     const urlParams = new URLSearchParams(window.location.search);
     const linkUrl = urlParams.get('url') || (dp && dp.video && dp.video.src) || ''; // 尝试从播放器获取当前链接作为备选
 
     if (!linkUrl) {
-        f (typeof showToast === 'function') {
+        if (typeof showToast === 'function') {
             showToast('没有可复制的视频链接', 'warning');
         } else {
             alert('没有可复制的视频链接');
