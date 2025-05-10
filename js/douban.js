@@ -175,14 +175,14 @@ function initDouban() {
 
   // 初始化关键UI元素
   initDoubanToggle();
-  
+
   // 延迟初始化非关键功能
   setTimeout(() => {
     loadUserTags();
     renderDoubanMovieTvSwitch();
     renderDoubanTags();
     setupDoubanRefreshBtn();
-    
+
     // 进一步延迟加载豆瓣推荐内容
     if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true) {
       setTimeout(() => {
@@ -196,7 +196,7 @@ function initDouban() {
 function initDoubanToggle() {
   const doubanToggle = utils.getElement('doubanToggle');
   if (!doubanToggle) return;
-  
+
   const isEnabled = utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, true) === true;
   doubanToggle.checked = isEnabled;
 
@@ -229,21 +229,24 @@ function initDoubanToggle() {
   });
 
   updateDoubanVisibility();
+
+  // 滚动到页面顶部
+  window.scrollTo(0, 0);
 }
 
 // 使用更高效的事件监听方式
 document.addEventListener('DOMContentLoaded', initDouban, { once: true });
-  loadUserTags();
-  renderDoubanMovieTvSwitch();
-  renderDoubanTags();
-  setupDoubanRefreshBtn();
+loadUserTags();
+renderDoubanMovieTvSwitch();
+renderDoubanTags();
+setupDoubanRefreshBtn();
 
-  // 延迟加载豆瓣推荐内容
-  if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true) {
-    setTimeout(() => {
-      renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
-    }, 500); // 延迟500毫秒加载
-  }
+// 延迟加载豆瓣推荐内容
+if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true) {
+  setTimeout(() => {
+    renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
+  }, 500); // 延迟500毫秒加载
+}
 
 // 更新豆瓣区域显示状态
 function updateDoubanVisibility() {
@@ -306,42 +309,42 @@ function fillAndSearchWithDouban(title) {
 
   // 自动勾选豆瓣数据源的逻辑 (Source 1002-1008)
   if (typeof APISourceManager !== 'undefined' && typeof API_SITES !== 'undefined' && API_SITES['dbzy']) { // 确保 APISourceManager 和 API_SITES 可用
-      const selectedAPIs = AppState.get('selectedAPIs') || []; // 从 AppState 获取
-      if (!selectedAPIs.includes('dbzy')) {
-          const doubanCheckbox = document.querySelector('input[id="api_dbzy"]');
-          if (doubanCheckbox) {
-              doubanCheckbox.checked = true;
-              if (typeof APISourceManager.updateSelectedAPIs === 'function') {
-                  APISourceManager.updateSelectedAPIs(); // 更新选中的API
-              } else if (typeof updateSelectedAPIs === 'function') { // 兼容旧的全局函数
-                   updateSelectedAPIs();
-              }
-              if (typeof showToast === 'function') showToast('已自动选择豆瓣资源API', 'info');
-          }
+    const selectedAPIs = AppState.get('selectedAPIs') || []; // 从 AppState 获取
+    if (!selectedAPIs.includes('dbzy')) {
+      const doubanCheckbox = document.querySelector('input[id="api_dbzy"]');
+      if (doubanCheckbox) {
+        doubanCheckbox.checked = true;
+        if (typeof APISourceManager.updateSelectedAPIs === 'function') {
+          APISourceManager.updateSelectedAPIs(); // 更新选中的API
+        } else if (typeof updateSelectedAPIs === 'function') { // 兼容旧的全局函数
+          updateSelectedAPIs();
+        }
+        if (typeof showToast === 'function') showToast('已自动选择豆瓣资源API', 'info');
       }
+    }
   }
 
   if (input) {
-      input.value = safeTitle; // 填充搜索框
+    input.value = safeTitle; // 填充搜索框
 
-      if (typeof showLoading === 'function') {
-          showLoading(`正在搜索“${safeTitle}”...`); // <--- 关键步骤1：显示全局加载提示
-      }
+    if (typeof showLoading === 'function') {
+      showLoading(`正在搜索“${safeTitle}”...`); // <--- 关键步骤1：显示全局加载提示
+    }
 
-      if (typeof search === 'function') {
-          // 传递一个回调，用于在搜索完成后隐藏loading
-          search({ doubanQuery: safeTitle, onComplete: hideGlobalLoadingAfterSearch });
-      } else {
-          console.error('search函数不可用');
-          if (typeof showToast === 'function') showToast('搜索功能暂不可用', 'error');
-          if (typeof hideLoading === 'function') hideLoading(); // 如果 search 不可用，也要隐藏 loading
-      }
+    if (typeof search === 'function') {
+      // 传递一个回调，用于在搜索完成后隐藏loading
+      search({ doubanQuery: safeTitle, onComplete: hideGlobalLoadingAfterSearch });
+    } else {
+      console.error('search函数不可用');
+      if (typeof showToast === 'function') showToast('搜索功能暂不可用', 'error');
+      if (typeof hideLoading === 'function') hideLoading(); // 如果 search 不可用，也要隐藏 loading
+    }
   }
 }
 // 新增一个辅助函数，用于在搜索完成后隐藏全局 loading
 function hideGlobalLoadingAfterSearch() {
   if (typeof hideLoading === 'function') {
-      hideLoading();
+    hideLoading();
   }
 }
 
@@ -390,7 +393,7 @@ function renderDoubanTags() {
 
   // 添加标签管理按钮
   const manageBtn = document.createElement('button');
-  manageBtn.className = 'py-1.5 px-3.5 rounded text-sm font-medium transition-all duration-300 bg-[#1a1a1a] text-gray-300 hover:bg-pink-700 hover:text-white';
+  manageBtn.className = 'py-1.5 px-3.5 rounded text-sm font-medium transition-all duration-300 bg-[#1a1a1a] text-gray-300 hover:bg-pink-700 hover:text-white border border-[#333] hover:border-white';
   manageBtn.innerHTML = `
     <span class="flex items-center">
       <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -405,7 +408,7 @@ function renderDoubanTags() {
   // 添加标签按钮
   currentTags.forEach(tag => {
     const btn = document.createElement('button');
-    btn.className = `py-1.5 px-3.5 rounded text-sm font-medium transition-all duration-300 ${tag === doubanCurrentTag ? CONFIG.CLASSES.ACTIVE : 'bg-[#1a1a1a] text-gray-300 hover:bg-pink-700 hover:text-white'
+    btn.className = `py-1.5 px-3.5 rounded text-sm font-medium transition-all duration-300 border ${tag === doubanCurrentTag ? CONFIG.CLASSES.ACTIVE : 'bg-[#1a1a1a] text-gray-300 hover:bg-pink-700 border-[#333] hover:border-white'
       }`;
     btn.textContent = tag;
 
@@ -599,7 +602,7 @@ function renderDoubanCards(data, container) {
 
   container.innerHTML = "";
   container.appendChild(fragment);
-  
+
   // 实现真正的懒加载
   initLazyLoading();
 }
@@ -607,33 +610,33 @@ function renderDoubanCards(data, container) {
 // 添加懒加载初始化函数
 function initLazyLoading() {
   const lazyImages = document.querySelectorAll('img[data-src]');
-  
+
   if ('IntersectionObserver' in window) {
     const imageObserver = new IntersectionObserver((entries, observer) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const img = entry.target;
           const src = img.getAttribute('data-src');
-          
-          img.onload = function() {
+
+          img.onload = function () {
             img.classList.remove('opacity-0');
           };
-          
-          img.onerror = function() {
+
+          img.onerror = function () {
             this.onerror = null;
             const proxiedUrl = PROXY_URL + encodeURIComponent(src);
             this.src = proxiedUrl;
             this.classList.add('object-contain');
             this.classList.remove('opacity-0');
           };
-          
+
           img.src = src;
           img.removeAttribute('data-src');
           imageObserver.unobserve(img);
         }
       });
     });
-    
+
     lazyImages.forEach(img => {
       imageObserver.observe(img);
     });
@@ -659,7 +662,7 @@ function showTagManageModal() {
 
   modal = document.createElement('div');
   modal.id = 'tagManageModal';
-  modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+  modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-40';
 
   const modalContent = `
     <div class="bg-[#191919] rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto relative">
@@ -830,7 +833,7 @@ function resetTagsToDefault() {
 //function resetToHome() {
 //  if (typeof resetSearchArea === 'function') {
 //    resetSearchArea();
- // }
+// }
 //  updateDoubanVisibility();
 //}
 

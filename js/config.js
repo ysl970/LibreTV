@@ -32,6 +32,7 @@ const API_SITES = {
         detail: 'http://ffzy5.tv',
     },
 
+    dyttzy: { api: 'http://caiji.dyttzyapi.com', name: '电影天堂资源', detail: 'http://caiji.dyttzyapi.com' },
     tyyszy: { api: 'https://tyyszy.com', name: '天涯资源' },
     zy360: { api: 'https://360zy.com', name: '360资源' },
     wolong: { api: 'https://wolongzyw.com', name: '卧龙资源' },
