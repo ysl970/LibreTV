@@ -147,6 +147,8 @@ const utils = {
     }
   }
 };
+// —— 将 utils 暴露到全局，供 app.js 使用 —— 
+window.utils = utils
 
 // 加载用户标签
 function loadUserTags() {
