@@ -88,20 +88,9 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
         showToast('无效的视频链接', 'error');
         return;
     }
-
-    // 更新相关状态
     AppState.set('currentEpisodeIndex', episodeIndex);
     AppState.set('currentVideoTitle', title);
 
-    // 如果sourceName或sourceCode未提供，尝试从AppState获取
-    if (!sourceName && AppState.get('currentSourceName')) {
-        sourceName = AppState.get('currentSourceName');
-    }
-    if (!sourceCode && AppState.get('currentSourceCode')) {
-        sourceCode = AppState.get('currentSourceCode');
-    }
-
-    // 保存到观看历史 - 构建单一videoInfo对象
     if (typeof addToViewingHistory === 'function') {
         const videoInfoForHistory = {
             url: url,
@@ -110,33 +99,29 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
             sourceName: sourceName,
             sourceCode: sourceCode,
             episodes: AppState.get('currentEpisodes') || []
-            // 可以添加其他相关字段，如duration, playbackPosition等
         };
         addToViewingHistory(videoInfoForHistory);
     }
 
-    // 构建播放页面URL
     const playerUrl = new URL('player.html', window.location.origin);
     playerUrl.searchParams.set('url', url);
     playerUrl.searchParams.set('title', title);
+    playerUrl.searchParams.set('index', episodeIndex.toString());
 
-    playerUrl.searchParams.set('index', episodeIndex.toString()); // 统一用 index
-
-    // 追加完整剧集列表，player.html 拿不到 localStorage 时也能渲染
     const eps = AppState.get('currentEpisodes');
     if (Array.isArray(eps) && eps.length) {
-        playerUrl.searchParams.set(
-            'episodes',
-            encodeURIComponent(JSON.stringify(eps))
-        );
+        playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(eps)));
     }
+
+    const currentReversedStateForPlayer = AppState.get('episodesReversed') || false;
+    playerUrl.searchParams.set('reversed', currentReversedStateForPlayer.toString());
 
     if (sourceName) playerUrl.searchParams.set('source', sourceName);
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
 
-    // 跳转到播放页面
     window.location.href = playerUrl.toString();
 }
+
 
 /**
  * 播放上一集
@@ -765,44 +750,72 @@ function createResultItemUsingTemplate(item) {
     const clone = template.content.cloneNode(true);
     const cardElement = clone.querySelector('.card-hover');
 
-    // 添加检查，确保cardElement存在
     if (!cardElement) {
         console.error("卡片元素 (.card-hover) 在模板克隆中未找到，项目:", item);
-        // 返回一个空的错误占位元素
         const errorDiv = document.createElement('div');
-        errorDiv.className = 'card-hover bg-[#222] rounded-lg overflow-hidden p-2';
-        errorDiv.innerHTML = `<h3 class="text-red-400">加载错误</h3><p class="text-xs text-gray-400">无法显示此项目</p>`;
+        errorDiv.className = 'card-hover bg-[#222] rounded-lg overflow-hidden p-2 text-red-400';
+        errorDiv.innerHTML = `<h3>加载错误</h3><p class="text-xs">无法显示此项目</p>`;
         return errorDiv;
     }
 
-    // 填充数据
     const imgElement = clone.querySelector('.result-img');
     if (imgElement) {
-        imgElement.src = item.vod_pic || 'img/default-poster.jpg';
+        imgElement.src = item.vod_pic && item.vod_pic.startsWith('http') ? item.vod_pic : 'https://via.placeholder.com/100x150/191919/555555?text=No+Image';
         imgElement.alt = item.vod_name || '未知标题';
+        imgElement.onerror = function () {
+            this.onerror = null;
+            this.src = 'https://via.placeholder.com/100x150/191919/555555?text=Error';
+            this.classList.add('object-contain');
+        };
     }
 
     const titleElement = clone.querySelector('.result-title');
     if (titleElement) {
         titleElement.textContent = item.vod_name || '未知标题';
+        titleElement.title = item.vod_name || '未知标题';
     }
 
     const typeElement = clone.querySelector('.result-type');
     if (typeElement) {
-        typeElement.textContent = item.type_name || '未知类型';
+        if (item.type_name) {
+            typeElement.textContent = item.type_name;
+            typeElement.classList.remove('hidden');
+        } else {
+            typeElement.classList.add('hidden');
+        }
     }
 
     const yearElement = clone.querySelector('.result-year');
     if (yearElement) {
-        yearElement.textContent = item.vod_year || '未知年份';
+        if (item.vod_year) {
+            yearElement.textContent = item.vod_year;
+            yearElement.classList.remove('hidden');
+        } else {
+            yearElement.classList.add('hidden');
+        }
     }
 
-    const sourceElement = clone.querySelector('.result-source');
-    if (sourceElement) {
-        sourceElement.textContent = item.source_name || '未知来源';
+    const remarksElement = clone.querySelector('.result-remarks');
+    if (remarksElement) {
+        if (item.vod_remarks) {
+            remarksElement.textContent = item.vod_remarks;
+            remarksElement.classList.remove('hidden');
+        } else {
+            remarksElement.classList.add('hidden');
+        }
     }
 
-    // 设置数据属性和点击事件
+    const sourceNameElement = clone.querySelector('.result-source-name');
+    if (sourceNameElement) {
+        if (item.source_name) {
+            sourceNameElement.textContent = item.source_name;
+            sourceNameElement.classList.add('search-tag');
+            sourceNameElement.classList.remove('hidden');
+        } else {
+            sourceNameElement.classList.add('hidden');
+        }
+    }
+
     cardElement.dataset.id = item.vod_id || '';
     cardElement.dataset.name = item.vod_name || '';
     cardElement.dataset.sourceCode = item.source_code || '';
@@ -826,10 +839,10 @@ function handleResultClick(event) {
         showVideoEpisodesModal(id, name, sourceCode, apiUrl);
     } else {
         console.error('showVideoEpisodesModal function not found!');
+        showToast('无法加载剧集信息', 'error');
     }
 }
-// Make handler globally accessible if needed (though better to delegate if possible) 
-// window.handleResultClick = handleResultClick; 
+
 
 /**
  * 显示视频剧集模态框
@@ -842,55 +855,57 @@ function handleResultClick(event) {
 async function showVideoEpisodesModal(id, title, sourceCode) {
     showLoading('加载剧集信息...');
 
+    // 确保 APISourceManager 和 getSelectedApi 方法可用
+    if (typeof APISourceManager === 'undefined' || typeof APISourceManager.getSelectedApi !== 'function') {
+        hideLoading();
+        showToast('数据源管理器不可用', 'error');
+        console.error('APISourceManager or getSelectedApi is not defined.');
+        return;
+    }
     const selectedApi = APISourceManager.getSelectedApi(sourceCode);
 
     if (!selectedApi) {
         hideLoading();
-        showToast('未找到有效的数据源 (selectedApi is null)', 'error');
+        showToast('未找到有效的数据源', 'error');
+        console.error('Selected API is null for sourceCode:', sourceCode);
         return;
     }
 
     try {
-        // 构建详情页的 API URL
         let detailApiUrl = `/api/detail?id=${encodeURIComponent(id)}&source=${encodeURIComponent(sourceCode)}`;
         if (selectedApi.isCustom && selectedApi.url) {
-
+            detailApiUrl += `&customApi=${encodeURIComponent(selectedApi.url)}`;
         }
 
-        const response = await fetch(detailApiUrl); // 直接 fetch
+        const response = await fetch(detailApiUrl);
         if (!response.ok) {
-            throw new Error(`API请求失败: ${response.status}`);
+            throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
 
         hideLoading();
 
         if (data.code !== 200 || !data.episodes || data.episodes.length === 0) {
-            // 尝试从 videoInfo 中获取更详细的错误信息
-            let errorMessage = '未找到剧集信息';
-            if (data.msg) {
-                errorMessage = data.msg;
-            } else if (data.videoInfo && data.videoInfo.msg) {
-                errorMessage = data.videoInfo.msg;
-            } else if (data.list && data.list.length > 0 && data.list[0] && data.list[0].msg) {
-                errorMessage = data.list[0].msg;
-            }
+            let errorMessage = data.msg || (data.videoInfo && data.videoInfo.msg) || (data.list && data.list.length > 0 && data.list[0] && data.list[0].msg) || '未找到剧集信息';
             showToast(errorMessage, 'warning');
-            console.warn('获取剧集详情数据问题:', data);
+            console.warn('获取剧集详情数据问题:', data, `Requested URL: ${detailApiUrl}`);
             return;
         }
 
         AppState.set('currentEpisodes', data.episodes);
-        AppState.set('currentVideoTitle', title); // 确保使用传入的 title
+        AppState.set('currentVideoTitle', title);
         AppState.set('currentSourceName', selectedApi.name);
         AppState.set('currentSourceCode', sourceCode);
 
-        const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode);
-        showModal(episodeButtonsHtml, title);
+        // episodesReversed 状态直接从 AppState 读取，用于初次渲染
+        // AppState.get('episodesReversed') 会在 renderEpisodeButtons 中被读取
+
+        const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode, selectedApi.name);
+        showModal(episodeButtonsHtml, `${title} (${selectedApi.name})`);
 
     } catch (error) {
         hideLoading();
-        console.error('获取剧集信息失败 (catch block):', error);
+        console.error('获取剧集信息失败 (catch block):', error, `Requested URL: ${detailApiUrl}`);
         showToast(`获取剧集信息失败: ${error.message}`, 'error');
     }
 }
@@ -898,83 +913,120 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
 /**
  * 渲染剧集按钮HTML
  * @param {Array} episodes - 剧集列表
- * @param {string} title - 视频标题
+ * @param {string} videoTitle - 视频标题
  * @param {string} sourceCode - 来源代码
+ * @param {string} sourceName - 来源名称
  * @returns {string} - 剧集按钮HTML
  */
-function renderEpisodeButtons(episodes, title, sourceCode) {
+function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
     if (!episodes || episodes.length === 0) return '<p class="text-center text-gray-500">暂无剧集信息</p>';
 
-    // 排序控制UI
+    const currentReversedState = AppState.get('episodesReversed') || false;
+
     let html = `
-    <div class="mb-4 flex justify-between items-center">
-        <div class="text-sm text-gray-400">共 ${episodes.length} 集</div>
-        <button onclick="copyLinks()" class="px-4 py-1 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors flex items-center space-x-1 mr-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div class="mb-4 flex justify-end items-center space-x-2">
+        <div class="text-sm text-gray-400 mr-auto">共 ${episodes.length} 集</div>
+        <button onclick="copyLinks()"
+                title="复制所有剧集链接"
+                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
             </svg>
-            <span>复制视频链接</span>
         </button>
-        <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" class="text-sm px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg flex items-center gap-1">
-            <span id="orderText">正序</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" 
+                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1">
+            <svg id="orderIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transition: transform 0.3s ease;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
             </svg>
+            <span id="orderText" class="hidden sm:inline">${currentReversedState ? '倒序' : '正序'}</span>
         </button>
     </div>
-    <div id="episodeButtonsContainer" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">`;
+    <div id="episodeButtonsContainer" class="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">`;
 
-    // 生成剧集按钮
-    episodes.forEach((episode, index) => {
+    const displayEpisodes = currentReversedState ? [...episodes].reverse() : [...episodes];
+
+    displayEpisodes.forEach((episodeUrl, displayIndex) => {
+        const originalIndex = currentReversedState ? (episodes.length - 1 - displayIndex) : displayIndex;
+        const safeVideoTitle = encodeURIComponent(videoTitle);
+        const safeSourceName = encodeURIComponent(sourceName);
+
         html += `
         <button 
-            onclick="playVideo('${episode}', '${title}', ${index}, '${AppState.get('currentSourceName')}', '${sourceCode}')" 
-            class="episode-btn px-2 py-1 bg-gray-800 hover:bg-gray-700 text-white rounded text-sm transition-colors"
-            data-index="${index}"
+            onclick="playVideo('${episodeUrl}', decodeURIComponent('${safeVideoTitle}'), ${originalIndex}, decodeURIComponent('${safeSourceName}'), '${sourceCode}')" 
+            class="episode-btn px-2 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs sm:text-sm transition-colors truncate"
+            data-index="${originalIndex}"
+            title="第 ${originalIndex + 1} 集" 
         >
-            ${index + 1}         
+            第 ${originalIndex + 1} 集      
         </button>`;
     });
 
     html += '</div>';
+
+    requestAnimationFrame(() => {
+        const orderIcon = document.getElementById('orderIcon');
+        if (orderIcon) {
+            orderIcon.style.transform = currentReversedState ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+    });
     return html;
 }
 
 // 复制视频链接到剪贴板
 function copyLinks() {
-    const episodes = episodesReversed ? [...currentEpisodes].reverse() : currentEpisodes;
-    const linkList = episodes.join('\r\n');
+    const reversed = AppState.get('episodesReversed') || false;
+    const episodesToCopy = AppState.get('currentEpisodes');
+
+    if (!episodesToCopy || episodesToCopy.length === 0) {
+        showToast('没有可复制的链接', 'warning');
+        return;
+    }
+
+    const actualEpisodes = reversed ? [...episodesToCopy].reverse() : [...episodesToCopy];
+    const linkList = actualEpisodes.join('\r\n');
+
     navigator.clipboard.writeText(linkList).then(() => {
-        showToast('视频链接列表已复制到剪贴板', 'success');
+        showToast('所有剧集链接已复制', 'success');
     }).catch(err => {
+        console.error('复制链接失败:', err);
         showToast('复制失败，请检查浏览器权限', 'error');
     });
 }
 
 /**
- * 切换剧集排序UI
+ * 切换剧集排序UI并更新状态
  */
 function toggleEpisodeOrderUI() {
     const container = document.getElementById('episodeButtonsContainer');
-    const orderText = document.getElementById('orderText');
-    if (!container || !orderText) return;
+    const orderTextElement = document.getElementById('orderText');
+    const orderIcon = document.getElementById('orderIcon');
 
-    // 获取所有剧集按钮并转换为数组
-    const buttons = Array.from(container.querySelectorAll('.episode-btn'));
-    if (buttons.length === 0) return;
+    if (!container || !orderTextElement || !orderIcon) return;
 
-    // 判断当前排序方式
-    const isAscending = orderText.textContent === '正序';
+    let currentReversedState = AppState.get('episodesReversed') || false;
+    currentReversedState = !currentReversedState;
+    AppState.set('episodesReversed', currentReversedState);
+    // 移除了对模块级 episodesReversed 的更新
 
-    // 更新排序文本
-    orderText.textContent = isAscending ? '倒序' : '正序';
+    orderTextElement.textContent = currentReversedState ? '倒序' : '正序';
+    orderIcon.style.transform = currentReversedState ? 'rotate(180deg)' : 'rotate(0deg)';
 
-    // 反转按钮顺序
-    buttons.reverse().forEach(button => {
-        container.appendChild(button);
-    });
+    const episodes = AppState.get('currentEpisodes');
+    const title = AppState.get('currentVideoTitle');
+    const sourceName = AppState.get('currentSourceName');
+    const sourceCode = AppState.get('currentSourceCode');
+
+    if (episodes && title && sourceCode) {
+        const newButtonsHtml = renderEpisodeButtons(episodes, title, sourceCode, sourceName || '');
+        const buttonsOnlyHtml = new DOMParser().parseFromString(newButtonsHtml, 'text/html').getElementById('episodeButtonsContainer').innerHTML;
+        container.innerHTML = buttonsOnlyHtml;
+    } else {
+        console.error("无法重新渲染剧集按钮：缺少必要的状态信息。");
+    }
 }
 
 // 将函数暴露给全局作用域
 window.showVideoEpisodesModal = showVideoEpisodesModal;
+window.handleResultClick = handleResultClick;
+window.copyLinks = copyLinks;
 window.toggleEpisodeOrderUI = toggleEpisodeOrderUI;

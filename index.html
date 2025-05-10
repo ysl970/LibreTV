@@ -454,24 +454,25 @@
             class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md">
             <div class="flex h-full">
                 <div class="search-card-img-container relative flex-shrink-0">
-                    <img src="" alt=""
+                    <img src="https://via.placeholder.com/100x150/191919/555555?text=No+Image" alt="视频封面"
                         class="result-img h-full w-full object-cover transition-transform hover:scale-110"
-                        loading="lazy">
+                        loading="lazy"
+                        onerror="this.onerror=null; this.src='https://via.placeholder.com/100x150/191919/555555?text=Error'; this.classList.add('object-contain');">
                     <div class="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent"></div>
                 </div>
-                <div class="p-2 flex flex-col flex-grow">
+                <div class="p-3 flex flex-col flex-grow">
                     <div class="flex-grow">
-                        <h3 class="result-title font-semibold mb-2 break-words line-clamp-2"></h3>
-                        <div class="result-meta flex flex-wrap gap-1 mb-2">
+                        <h3 class="result-title font-semibold text-base mb-1.5 break-words line-clamp-2" title="视频标题">
+                            视频标题</h3>
+                        <div class="result-meta flex flex-wrap items-center gap-x-2 gap-y-1 mb-1.5"> <span
+                                class="result-type hidden text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300">类型</span>
                             <span
-                                class="result-type text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300"></span>
-                            <span
-                                class="result-year text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300"></span>
+                                class="result-year hidden text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300">年份</span>
                         </div>
-                        <p class="result-remarks text-gray-400 line-clamp-2 overflow-hidden mb-2"></p>
+                        <p class="result-remarks hidden text-xs text-cyan-400 mb-2 line-clamp-1">更新状态</p>
                     </div>
-                    <div class="result-source flex justify-between items-center mt-1 pt-1 border-t border-gray-800">
-                        <span class="result-source-name bg-[#222] text-xs px-1.5 py-0.5 rounded-full"></span>
+                    <div class="result-source flex justify-end items-center mt-auto pt-1.5 border-t border-gray-800">
+                        <span class="result-source-name hidden search-tag">数据源</span>
                     </div>
                 </div>
             </div>

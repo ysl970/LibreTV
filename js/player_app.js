@@ -842,14 +842,34 @@ function updateEpisodeInfo() {
 }
 
 // 复制播放链接
-function copyLinks() {
-    // 尝试从URL中获取参数
+ifunction copyLinks() {
     const urlParams = new URLSearchParams(window.location.search);
-    const linkUrl = urlParams.get('url') || '';
+    const linkUrl = urlParams.get('url') || (dp && dp.video && dp.video.src) || ''; // 尝试从播放器获取当前链接作为备选
+
+    if (!linkUrl) {
+        f (typeof showToast === 'function') {
+            showToast('没有可复制的视频链接', 'warning');
+        } else {
+            alert('没有可复制的视频链接');
+        }
+        return;
+    }
+
     navigator.clipboard.writeText(linkUrl).then(() => {
-        showToast('视频链接已复制到剪贴板', 'success');
+        if (typeof showToast === 'function') { // 检查 showToast 是否可用
+            showToast('当前视频链接已复制', 'success');
+        } else {
+            console.error("showToast function is not available in player_app.js");
+            alert('当前视频链接已复制 (showToast unavailable)'); // 降级提示
+        }
     }).catch(err => {
-        showToast('复制失败，请检查浏览器权限', 'error');
+        console.error('复制链接失败:', err);
+        if (typeof showToast === 'function') {
+            showToast('复制失败，请检查浏览器权限', 'error');
+        } else {
+            console.error("showToast function is not available in player_app.js");
+            alert('复制失败 (showToast unavailable)'); // 降级提示
+        }
     });
 }
 

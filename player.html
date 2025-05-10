@@ -116,9 +116,7 @@
 
         <!-- Position 3, 5: Controls and Lock Button -->
         <div class="p-4 bg-gray-900 rounded-lg mx-4 mb-4">
-            <!-- 这里加 player-control-bar，删除 justify-between -->
             <div class="player-control-bar">
-                <!-- Autoplay Next -->
                 <div class="flex items-center gap-2">
                     <span id="autoplay-label" class="control-label">自动播放</span>
                     <label class="switch">
@@ -127,7 +125,6 @@
                     </label>
                 </div>
 
-                <!-- Remember Progress -->
                 <div class="flex items-center gap-2">
                     <span id="remember-progress-label" class="control-label">记住进度</span>
                     <label class="switch">
@@ -136,37 +133,32 @@
                     </label>
                 </div>
 
-                <!-- 复制链接按钮 -->
-                <button onclick="copyLinks()"
-                    class="px-3 py-1 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors flex items-center space-x-1 flex-shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
+                <button onclick="copyLinks()" title="复制当前视频链接"
+                    class="icon-btn bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors"
+                    aria-label="复制链接">
+                    <svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" class="h-5 w-5" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                     </svg>
-                    <span>复制链接</span>
                 </button>
 
-                <!-- Episode Order Button：只留图标 -->
                 <button id="order-button"
                     class="icon-btn bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors"
-                    aria-label="切换剧集顺序">
-                    <!-- 替换为 SVG 图标 -->
-                    <svg id="order-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
+                    aria-label="切换剧集顺序" onclick="toggleEpisodeOrder()"> <svg id="order-icon"
+                        xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="20" height="20"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" style="transition: transform 0.3s ease;">
                         <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                 </button>
 
-                <!-- Position 5: Lock Button -->
                 <button id="lock-button"
                     class="icon-btn bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors"
-                    aria-label="锁定/解锁">
-                    <svg id="lock-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    aria-label="锁定/解锁屏幕控制" onclick="toggleLockScreen()"> <svg id="lock-icon"
+                        xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="20" height="20"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
-                        <!-- 默认：锁定图标 -->
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                     </svg>

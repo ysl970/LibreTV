@@ -541,25 +541,18 @@ body {
 .search-tag {
   background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end));
   color: var(--text-color);
-  padding: 0.5rem 1rem;
-  /* 8px 16px */
-  border-radius: 0.5rem;
-  /* 8px */
-  font-size: 0.875rem;
-  /* 14px */
+  padding: 0.25rem 0.75rem; /* 调整内边距以适应卡片右下角 */
+  border-radius: 0.375rem; /* 对应 rounded-md */
+  font-size: 0.75rem;    /* 对应 text-xs */
   border: 1px solid var(--border-color);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* 稍微减小阴影 */
   transition: background 0.3s ease, border-color 0.3s ease;
-  /* 添加过渡效果 */
-  cursor: pointer;
-  /* 明确指针样式 */
+  cursor: default; /* 在卡片上时不需要指针手势，除非它可点击 */
   display: inline-block;
-  /* 确保作为标签显示 */
-  margin: 0.25rem;
-  /* 可选：保持间距 */
+  /* margin: 0.25rem; */ /* 在卡片内部不需要额外 margin */
 }
 
-.search-tag:hover {
+.search-tag:hover { /* 如果希望在卡片上的标签也有悬停效果 */
   background: linear-gradient(135deg, var(--card-gradient-end), var(--card-gradient-start));
   border-color: var(--primary-color);
 }
@@ -807,4 +800,44 @@ body {
 /* 优化卡片内元素间距 */
 .card-hover .p-2 {
   padding: 0.5rem;
+}
+
+/* -------- 卡片内集数/备注样式 (图14) -------- */
+.result-remarks {
+  /* 在 index.html 的模板中已使用 Tailwind 类 text-xs text-cyan-400 mb-2 line-clamp-1 */
+  /* 如果需要更复杂的样式，可以在这里添加 */
+  font-weight: 500; /* 例如，加粗一点 */
+}
+
+/* 确保卡片标题和元信息有足够空间 */
+.card-hover h3.result-title {
+    min-height: 2.4em; /* 约两行文字的高度，确保对齐 */
+    margin-bottom: 0.375rem; /* 对应 mb-1.5 */
+}
+
+.card-hover .result-meta {
+    min-height: 1.5em; /* 约一行标签的高度 */
+    margin-bottom: 0.375rem; /* 对应 mb-1.5 */
+}
+
+/* -------- 模态框内按钮样式 (图12) -------- */
+/* 确保复制和排序按钮的容器使用 flex justify-end items-center space-x-2 */
+/* 按钮本身的样式已在 app.js 中通过 Tailwind 类指定为 p-2 bg-gray-700 hover:bg-gray-600 ... */
+/* 如果需要进一步统一，可以定义一个通用类 */
+.modal-icon-button {
+  padding: 0.5rem; /* p-2 */
+  background-color: #374151; /* bg-gray-700 */
+  color: white;
+  border-radius: 0.5rem; /* rounded-lg */
+  transition: background-color 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-icon-button:hover {
+  background-color: #4B5563; /* bg-gray-600 */
+}
+.modal-icon-button svg {
+  width: 1.25rem; /* w-5 */
+  height: 1.25rem; /* h-5 */
 }
