@@ -217,6 +217,16 @@ function getBoolConfig(key, defaultValue) {
 
 // 应用程序初始化
 document.addEventListener('DOMContentLoaded', function () {
+
+    // 初始化豆瓣开关
+    if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED) === null) {
+        utils.storage.set(
+          CONFIG.STORAGE_KEYS.ENABLED,
+          CONFIG.DEFAULTS.doubanEnabled
+        );
+      }
+      
+      
     // 初始化应用状态
     initializeAppState();
 

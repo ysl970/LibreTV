@@ -197,13 +197,9 @@ function initDoubanToggle() {
   const doubanToggle = utils.getElement('doubanToggle');
   if (!doubanToggle) return;
 
+  // 读取本地开关，第二个参数 true 表示默认值
   const isEnabled = utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, true) === true;
   doubanToggle.checked = isEnabled;
-
-  // 如果是首次加载且 localStorage 中没有设置过，则强制写入 true
-  if (localStorage.getItem(CONFIG.STORAGE_KEYS.ENABLED) === null) {
-    utils.storage.set(CONFIG.STORAGE_KEYS.ENABLED, true);
-  }
 
   const toggleBg = doubanToggle.nextElementSibling;
   const toggleDot = toggleBg.nextElementSibling;
@@ -236,10 +232,6 @@ function initDoubanToggle() {
 
 // 使用更高效的事件监听方式
 document.addEventListener('DOMContentLoaded', initDouban, { once: true });
-loadUserTags();
-renderDoubanMovieTvSwitch();
-renderDoubanTags();
-setupDoubanRefreshBtn();
 
 // 延迟加载豆瓣推荐内容
 if (utils.storage.get(CONFIG.STORAGE_KEYS.ENABLED, false) === true) {

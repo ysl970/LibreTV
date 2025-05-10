@@ -82,12 +82,23 @@ const M3U8_PATTERN = /\$https?:\/\/[^"'\s]+?\.m3u8/g;
 // 自定义播放器URL
 const CUSTOM_PLAYER_URL = 'player.html'; // 使用相对路径引用本地player.html
 
-// 默认配置值（便于维护）
+// 预加载集数开关
 const DEFAULTS = {
     enablePreloading: true, // 预加载
     preloadCount: 2,       // 预加载集数
-    debugMode: true      // 调试模式
+    debugMode: false      // 调试模式
 };
+
+// 豆瓣热门开关
+const CONFIG = {
+    STORAGE_KEYS: {
+      ENABLED: 'doubanEnabled'
+    },
+    DEFAULTS: {
+      doubanEnabled: false    //默认开启
+    }
+  };
+  
 
 // 播放器配置
 const PLAYER_CONFIG = {
