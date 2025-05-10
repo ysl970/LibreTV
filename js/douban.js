@@ -827,12 +827,12 @@ function resetTagsToDefault() {
 }
 
 // 重置到首页
-function resetToHome() {
-  if (typeof resetSearchArea === 'function') {
-    resetSearchArea();
-  }
-  updateDoubanVisibility();
-}
+//function resetToHome() {
+//  if (typeof resetSearchArea === 'function') {
+//    resetSearchArea();
+ // }
+//  updateDoubanVisibility();
+//}
 
 // 初始化：页面加载完成时执行
 document.addEventListener('DOMContentLoaded', initDouban);

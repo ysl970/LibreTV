@@ -429,9 +429,15 @@ function search(options = {}) {
         showLoading(`正在搜索“${query}”...`); // 普通搜索也显示全局 loading
     }
 
-    if (!options.doubanQuery) { // 只有非豆瓣触发的搜索才保存历史（或按您之前的逻辑调整）
+    // 只有非豆瓣触发的搜索才保存历史（或按您之前的逻辑调整）
+    if (!options.doubanQuery) {
         if (typeof saveSearchHistory === 'function') saveSearchHistory(query);
     }
+
+    // Always record the search, including Douban queries
+    // if (typeof saveSearchHistory === 'function') {
+    //     saveSearchHistory(query);
+    // }
 
     const selectedAPIs = AppState.get('selectedAPIs');
     if (!selectedAPIs || selectedAPIs.length === 0) {
