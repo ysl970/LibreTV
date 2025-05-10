@@ -1040,3 +1040,6 @@ function playEpisode(index) {
     window.location.href = playerUrl.toString();
 }
 window.playEpisode = playEpisode; // Expose globally
+window.copyLinks = copyLinks;
+window.toggleEpisodeOrder = toggleEpisodeOrder;
+window.toggleLockScreen = toggleLockScreen;
