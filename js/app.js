@@ -217,14 +217,6 @@ function getBoolConfig(key, defaultValue) {
 
 // 应用程序初始化
 document.addEventListener('DOMContentLoaded', function () {
-
-        // —— 默认新用户首次写入豆瓣开关 —— 
-        if (localStorage.getItem(CONFIG.STORAGE_KEYS.ENABLED) === null) {
-            localStorage.setItem(
-              CONFIG.STORAGE_KEYS.ENABLED,
-              JSON.stringify(CONFIG.DEFAULTS.doubanEnabled)
-            );
-        }
       
     // 初始化应用状态
     initializeAppState();

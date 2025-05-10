@@ -89,13 +89,6 @@ const DEFAULTS = {
     debugMode: false      // 调试模式
 };
 
-// 豆瓣热门开关
-const CONFIG = {
-    STORAGE_KEYS: { ENABLED: 'doubanEnabled' },
-    DEFAULTS: { doubanEnabled: false }
-};
-
-
 // 播放器配置
 const PLAYER_CONFIG = {
     autoplay: true,
