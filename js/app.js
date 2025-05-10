@@ -275,7 +275,8 @@ function initializeDOMCache() {
 
     // 缓存预加载相关元素
     DOMCache.set('preloadingToggle', document.getElementById('preloadingToggle'));
-    DOMCache.set('preloadCountInput', document.getElementById('preloadCount'));
+    // (fix) ID is preloadCountInput, not preloadCount
+    DOMCache.set('preloadCountInput', document.getElementById('preloadCountInput'));
 }
 
 /**
@@ -381,7 +382,7 @@ function initializeEventListeners() {
 
         // 初始化预加载数量
         const savedCount = localStorage.getItem('preloadCount');
-        const preloadCount = savedCount ? parseInt(savedCount) : 3;
+        const preloadCount = savedCount ? parseInt(savedCount) : 2;
         preloadCountInput.value = preloadCount;
 
         // 注意：这里直接修改PLAYER_CONFIG。更健壮的解决方案可能涉及在config.js模块中使用setter
