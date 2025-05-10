@@ -202,8 +202,9 @@ function initDoubanToggle() {
   // 读取本地开关，默认值来自全局 config.js 中的 DEFAULTS.doubanEnabled
   const isEnabled = utils.storage.get(
     CONFIG.STORAGE_KEYS.ENABLED,
-    window.CONFIG.DEFAULTS.doubanEnabled
-  ) === false;
+    CONFIG.DEFAULTS.doubanEnabled
+  ) === true;
+  
   doubanToggle.checked = isEnabled;
 
   const toggleBg = doubanToggle.nextElementSibling;
