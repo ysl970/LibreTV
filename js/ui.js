@@ -128,7 +128,7 @@ function showNextToast() {
 
     // 设置样式
     const bg = TOAST_BG_COLORS[type] || TOAST_BG_COLORS.error;
-    toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${bg} text-white`;
+    toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${bg} text-white z-50`;
     toastMessage.textContent = message;
 
     toast.style.opacity = '1';
