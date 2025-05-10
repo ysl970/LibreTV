@@ -308,7 +308,7 @@ function initPlayer(videoUrl, sourceCode) {
             airplay: true, chromecast: true,
             video: {
                 url: videoUrl, type: 'hls',
-                pic: (window.SITE_CONFIG && window.SITE_CONFIG.logo) || 'https://img.picgo.net/2025/04/12/image362e7d38b4af4a74.png',
+                // pic: (window.SITE_CONFIG && window.SITE_CONFIG.logo) || 'https://img.picgo.net/2025/04/12/image362e7d38b4af4a74.png',
                 customType: {
                     hls: function (video, player) {
                         if (currentHls && currentHls.destroy) {
