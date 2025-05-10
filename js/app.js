@@ -591,6 +591,8 @@ function renderSearchResults(results, doubanSearchedTitle = null) {
             searchArea.classList.add('flex-1');
             searchArea.classList.remove('mb-8');
         }
+        // 一定要把豆瓣区收起来
+        getElement('doubanArea')?.classList.add('hidden');
         return;
     }
 
