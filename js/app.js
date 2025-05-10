@@ -12,7 +12,7 @@ let currentVideoTitle = '';
 let episodesReversed = false;
 
 // 页面初始化
-document。addEventListener('DOMContentLoaded'， function() {
+document.addEventListener('DOMContentLoaded', function() {
     // 初始化API复选框
     initAPICheckboxes();
     
