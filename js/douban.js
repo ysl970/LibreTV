@@ -820,14 +820,3 @@ function resetTagsToDefault() {
   renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
   showToast('已恢复默认标签', 'success');
 }
-
-// 重置到首页
-//function resetToHome() {
-//  if (typeof resetSearchArea === 'function') {
-//    resetSearchArea();
-// }
-//  updateDoubanVisibility();
-//}
-
-// 初始化：页面加载完成时执行
-document.addEventListener('DOMContentLoaded', initDouban);

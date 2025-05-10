@@ -91,14 +91,10 @@ const DEFAULTS = {
 
 // 豆瓣热门开关
 const CONFIG = {
-    STORAGE_KEYS: {
-      ENABLED: 'doubanEnabled'
-    },
-    DEFAULTS: {
-      doubanEnabled: false    //默认开启
-    }
-  };
-  
+    STORAGE_KEYS: { ENABLED: 'doubanEnabled' },
+    DEFAULTS: { doubanEnabled: false }
+};
+
 
 // 播放器配置
 const PLAYER_CONFIG = {

@@ -427,11 +427,12 @@
     <script src="js/ui.js" defer></script>
     <script src="js/api.js" defer></script>
     <script src="js/api_source_manager.js" defer></script>
+    <!-- 先以 module 方式加载 douban.js，使其内部 CONFIG 不泄露到全局 -->
+    <script type="module" src="js/douban.js"></script>
+    <!-- 再加载 app.js -->
     <script src="js/app.js" defer></script>
-    <script src="js/douban.js" defer></script>
     <script src="js/sha256.js" defer></script>
     <script src="js/password.js" defer></script>
-
 
     <!-- 服务端环境变量注入（Cloudflare Pages场景兼容） -->
     <script>
