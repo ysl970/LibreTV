@@ -68,7 +68,7 @@
 
     <!-- 历史记录面板 -->
     <aside id="historyPanel"
-        class="history-panel fixed left-0 top-0 h-full bg-[#111] border-r border-[#333] p-6 z-40 transform -translate-x-full transition-transform duration-300"
+        class="history-panel fixed left-0 top-0 h-full bg-[#111] p-6 z-40 transform -translate-x-full transition-transform duration-300"
         aria-label="观看历史" tabindex="-1">
         <div class="flex justify-between items-center mb-6">
             <button id="closeHistoryPanelButton" class="text-gray-400 hover:text-white" aria-label="关闭历史"
@@ -104,6 +104,8 @@
                 <label class="block text-sm font-medium text-gray-400 mb-3 border-b border-[#333] pb-1">
                     数据源设置
                 </label>
+
+                <!-- 批量操作按钮 -->
                 <div class="flex space-x-2 mb-3">
                     <button onclick="selectAllAPIs(true)"
                         class="px-2 py-1 bg-[#333] hover:bg-[#444] text-white text-xs rounded" type="button">全选</button>
@@ -114,9 +116,12 @@
                         class="px-2 py-1 bg-[#333] hover:bg-[#444] text-white text-xs rounded"
                         type="button">全选普通资源</button>
                 </div>
+
+                <!-- API选择区域 -->
                 <div class="max-h-40 overflow-y-auto bg-[#191919] p-2 rounded-lg mb-3">
                     <div id="apiCheckboxes" class="grid grid-cols-2 gap-2" role="group" aria-label="API选择列表"></div>
                 </div>
+
                 <div class="text-xs text-gray-500 flex justify-between items-center">
                     <span>已选API数量：<span id="selectedApiCount" class="text-white">0</span></span>
                     <span id="siteStatus"></span>

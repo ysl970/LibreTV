@@ -708,6 +708,12 @@ function attachEventListeners() {
         closeSettingsPanelButton.addEventListener('click', toggleSettings);
     }
 
+    // 关闭历史面板按钮  ← 新增这一段
+    const closeHistoryPanelButton = getElement('closeHistoryPanelButton');
+    if (closeHistoryPanelButton) {
+        closeHistoryPanelButton.addEventListener('click', toggleHistory);
+    }
+
     // 清空观看历史按钮
     const clearViewingHistoryButton = getElement('clearViewingHistoryButton');
     if (clearViewingHistoryButton) {
@@ -733,12 +739,6 @@ function attachEventListeners() {
         historyList.addEventListener('click', handleHistoryListClick);
     }
 
-    // “首页”按钮
-    document.getElementById('homeButton')?.addEventListener('click', e => {
-        e.preventDefault();   // 防止 form 提交
-        resetToHome();
-    });
-    
     // 初始化其他可能的事件监听器
     initializeAdditionalListeners();
 }
