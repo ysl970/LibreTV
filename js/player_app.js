@@ -39,6 +39,27 @@ let shortcutHintTimeout = null;
 let progressSaveInterval = null;
 let isScreenLocked = false;
 
+const REMEMBER_EPISODE_PROGRESS_STORAGE_KEY = 'playerRememberEpisodeProgressEnabled'; // 开关状态的键名
+const VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY = 'videoEpisodeProgresses'; // 各视频各集进度的键名
+
+// 辅助函数：格式化时间 (如果 player_app.js 中还没有，可以从 ui.js 借鉴或新建一个)
+function formatPlaybackTimeForPlayer(seconds) {
+    if (isNaN(seconds) || seconds < 0) return "00:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// 辅助函数：简单的确认弹窗 (如果 ui.js 没有提供更美观的)
+// 您也可以在 ui.js 中创建一个更美观的模态框，然后在 player_app.js 中调用 window.UI.showConfirmation(...)
+function showPlayerConfirmationDialog(message, onConfirm, onCancel) {
+    if (confirm(message)) { // confirm 是浏览器自带的简单弹窗
+        if (onConfirm) onConfirm();
+    } else {
+        if (onCancel) onCancel();
+    }
+}
+
 // 将需要在 player_preload.js 中访问的变量挂载到 window
 window.currentEpisodes = [];
 window.currentEpisodeIndex = 0;
