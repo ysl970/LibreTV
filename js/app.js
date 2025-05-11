@@ -820,64 +820,72 @@ async function showDetails(id, vod_name, sourceCode) {
         }
         
         const response = await fetch('/api/detail?id=' + encodeURIComponent(id) + apiParams);
-        
         const data = await response.json();
         
-        const modal = document.getElementById('modal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalContent = document.getElementById('modalContent');
-        
-        // 显示来源信息
-        const sourceName = data.videoInfo && data.videoInfo.source_name ? 
-            ` <span class="text-sm font-normal text-gray-400">(${data.videoInfo.source_name})</span>` : '';
-        
-        // 不对标题进行截断处理，允许完整显示
-        modalTitle.innerHTML = `<span class="break-words">${vod_name || '未知视频'}</span>${sourceName}`;
+        // 保存视频标题
         currentVideoTitle = vod_name || '未知视频';
+        
+        // 获取来源名称
+        let sourceName = '';
+        if (data.videoInfo && data.videoInfo.source_name) {
+            sourceName = data.videoInfo.source_name;
+        }
         
         if (data.episodes && data.episodes.length > 0) {
             // 安全处理集数URL
             const safeEpisodes = data.episodes.map(url => {
                 try {
-                    // 确保URL是有效的并且是http或https开头
                     return url && (url.startsWith('http://') || url.startsWith('https://'))
                         ? url.replace(/"/g, '&quot;')
                         : '';
                 } catch (e) {
                     return '';
                 }
-            }).filter(url => url); // 过滤掉空URL
+            }).filter(url => url);
             
             // 保存当前视频的所有集数
             currentEpisodes = safeEpisodes;
-            episodesReversed = false; // 默认正序
-            modalContent.innerHTML = `
-                <div class="flex justify-end mb-2">
-                    <button onclick="toggleEpisodeOrder('${sourceCode}')" class="px-4 py-1 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors flex items-center space-x-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" />
-                        </svg>
-                        <span>倒序排列</span>
-                    </button>
-                    <button title="批量复制播放链接" onclick="copyLinks()" class="ml-2 px-2 py-1 bg-[#222] hover:bg-[#333] border border-[#333] text-white rounded-lg transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                        </svg>
-                    </button>
-                </div>
-                <div id="episodesGrid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                    ${renderEpisodes(vod_name, sourceCode)}
-                </div>
-            `;
+            episodesReversed = false;
+            
+            // 检查本地存储中是否有此视频的观看记录
+            let startEpisodeIndex = 0;
+            try {
+                // 尝试从历史记录中获取观看记录
+                const viewHistory = JSON.parse(localStorage.getItem('viewingHistory') || '[]');
+                const historyItem = viewHistory.find(item => item.title === currentVideoTitle);
+                
+                if (historyItem && typeof historyItem.episodeIndex === 'number' &&
+                    historyItem.episodeIndex >= 0 && historyItem.episodeIndex < safeEpisodes.length) {
+                    startEpisodeIndex = historyItem.episodeIndex;
+                    showToast(`找到历史记录，将播放第${startEpisodeIndex + 1}集`, 'success');
+                    // 延迟1.5秒后播放
+                    setTimeout(() => playEpisode(), 1500);
+                } else {
+                    // 没有历史记录，直接播放
+                    playEpisode();
+                }
+
+                // 提取公共播放逻辑为函数
+                function playEpisode() {
+                    const episodeUrl = safeEpisodes[startEpisodeIndex];
+                    if (episodeUrl) {
+                        playVideo(episodeUrl, currentVideoTitle, sourceCode, startEpisodeIndex);
+                    } else {
+                        showToast('没有找到可播放的视频', 'warning');
+                        hideLoading();
+                    }
+                }
+            } catch (e) {
+                showToast('读取观看历史出错', 'error');
+                hideLoading();
+            }
         } else {
-            modalContent.innerHTML = '<p class="text-center text-gray-400 py-8">没有找到可播放的视频</p>';
+            showToast('没有找到可播放的视频', 'warning');
+            hideLoading();
         }
-        
-        modal.classList.remove('hidden');
     } catch (error) {
         console.error('获取详情错误:', error);
         showToast('获取详情失败，请稍后重试', 'error');
-    } finally {
         hideLoading();
     }
 }
