@@ -37,6 +37,9 @@ function getBaseUrl(urlStr) {
         return `${url.origin}${basePath}/`;
     } catch (e) {
         // 容错处理
+        // 记录日志，表明URL解析失败，使用字符串回退逻辑
+        console.log(`getBaseUrl: new URL() failed for '${urlStr}', using string fallback.`);
+
         const protocolEnd = urlStr.indexOf('://');
         if (protocolEnd === -1) return urlStr;
         const lastSlashIndex = urlStr.lastIndexOf('/');
@@ -158,17 +161,20 @@ function processUriLine(line, baseUrl, resolveCache, logFn) {
         if (!uri) return match;
         const absoluteUri = resolveUrl(baseUrl, uri, resolveCache, logFn);
         logFn(`Processing URI: Original='${uri}', Absolute='${absoluteUri}'`);
-        return `URI="${rewriteUrlToProxy(absoluteUri)}"`;  
+        return `URI="${rewriteUrlToProxy(absoluteUri)}"`;
     });
-    
+
     // 处理其他可能包含URI的属性，如DATA-URI等
+    // 注意: 这里的属性列表(DATA-URI|IV|OTHER-URI-ATTR)是一个通用占位符
+    // 未来可考虑通过环境变量配置这个列表，以支持更多自定义M3U8标签
+    // 例如: env.CUSTOM_URI_ATTRIBUTES="DATA-URI|IV|CUSTOM-ATTR1|CUSTOM-ATTR2"
     processedLine = processedLine.replace(/(DATA-URI|IV|OTHER-URI-ATTR)\s*=\s*"([^"]+)"/gi, (match, attr, uri) => {
         if (!uri || !uri.includes('://')) return match; // 只处理看起来像URL的值
         const absoluteUri = resolveUrl(baseUrl, uri, resolveCache, logFn);
         logFn(`Processing ${attr}: Original='${uri}', Absolute='${absoluteUri}'`);
-        return `${attr}="${rewriteUrlToProxy(absoluteUri)}"`;  
+        return `${attr}="${rewriteUrlToProxy(absoluteUri)}"`;
     });
-    
+
     return processedLine;
 }
 
@@ -261,10 +267,13 @@ async function processMasterPlaylist(targetUrl, content, recursionDepth, context
     );
     if (kvNamespace && processedVariant) {
         try {
-            waitUntil(kvNamespace.put(cacheKey, processedVariant, { expirationTtl: CACHE_TTL }));
-            logFn(`[Cache Write - Processed M3U8]`);
-        } catch (kvError) {
-            logFn(`KV put error: ${kvError.message}`);
+            waitUntil(
+                kvNamespace.put(cacheKey, processedVariant, { expirationTtl: CACHE_TTL })
+                    .catch(kvPutError => logFn(`[Cache Write Error - Processed M3U8 Background]: ${kvPutError.message}`))
+            );
+            logFn(`[Cache Write - Processed M3U8] Operation sent to background.`);
+        } catch (immediateKvPutError) {
+            logFn(`[Cache Write Error - Processed M3U8 Immediate]: ${immediateKvPutError.message}`);
         }
     }
     return processedVariant;
@@ -379,7 +388,7 @@ export async function onRequest(context) {
                 if (cachedRawJson) {
                     log(`[Cache Hit - Raw]`);
                     cachedRawData = safeJsonParse(cachedRawJson, null, log);
-                    if (!cachedRawData || typeof cachedRawData.body !== 'string' || typeof cachedRawData.headers !== 'string') {
+                    if (!cachedRawData || typeof cachedRawData.body !== 'string' || typeof cachedRawData.headers !== 'object') {
                         log(`[Cache Invalid - Raw] Bad format. Ignoring.`);
                         cachedRawData = null;
                     }
@@ -394,8 +403,8 @@ export async function onRequest(context) {
         let content, contentType, responseHeaders;
         if (cachedRawData) {
             content = cachedRawData.body;
-            const parsedHeaders = safeJsonParse(cachedRawData.headers, {}, log);
-            responseHeaders = new Headers(parsedHeaders);
+            // 直接使用headers对象，不需要再解析
+            responseHeaders = new Headers(cachedRawData.headers);
             contentType = responseHeaders.get('content-type') || '';
             log(`Using cached raw content. Content-Type: ${contentType}`);
         } else {
@@ -414,15 +423,24 @@ export async function onRequest(context) {
                 });
                 // 有header就写缓存
                 if (Object.keys(headersObj).length > 0) {
-                    const stringifiedValue = safeJsonStringify({
+                    // 直接存储headers对象，不再进行二次字符串化
+                    const cacheData = {
                         body: content,
-                        headers: safeJsonStringify(headersObj, '{}', log)
-                    }, null, log);
+                        headers: headersObj
+                    };
+                    const stringifiedValue = safeJsonStringify(cacheData, null, log);
                     if (stringifiedValue) {
-                        waitUntil(kvNamespace.put(rawCacheKey, stringifiedValue, { expirationTtl: CACHE_TTL }));
-                        log(`[Cache Write - Raw]`);
+                        try {
+                            waitUntil(
+                                kvNamespace.put(rawCacheKey, stringifiedValue, { expirationTtl: CACHE_TTL })
+                                    .catch(kvPutError => log(`[Cache Write Error - Raw KV Background]: ${kvPutError.message}`))
+                            );
+                            log(`[Cache Write - Raw] Operation sent to background.`);
+                        } catch (immediateKvPutError) {
+                            log(`[Cache Write Error - Raw KV Immediate]: ${immediateKvPutError.message}`);
+                        }
                     } else {
-                        log(`[Cache Write Error - Raw] stringify failed`);
+                        log(`[Cache Write Skipped - Raw] Stringification of value failed.`);
                     }
                 } else {
                     log(`[Cache Write Error - Raw] serialize headers fail`);
