@@ -325,14 +325,14 @@ function initializePageContent() {
                 if (dp && dp.video) {
                     const positionNum = parseInt(finalPositionToSeek, 10);
                     if (!isNaN(positionNum) && positionNum > 0) {
-                        const handleLoadedMetadataOnce = () => {
-                            if (dp && dp.video && dp.video.duration > 0) {
+                        let hasSeekedOnLoad = false; // 标志位，确保 seek 只执行一次
+                        dp.on('loadedmetadata', () => {
+                            if (!hasSeekedOnLoad && dp && dp.video && dp.video.duration > 0) {
                                 dp.seek(positionNum);
                                 if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(positionNum);
-                                dp.off('loadedmetadata', handleLoadedMetadataOnce); // 执行后立即移除监听
+                                hasSeekedOnLoad = true; // 标记已执行
                             }
-                        };
-                        dp.on('loadedmetadata', handleLoadedMetadataOnce);
+                        });
                     }
                 }
             }, 1500); // Delay seeking slightly
