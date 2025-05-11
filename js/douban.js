@@ -46,6 +46,7 @@ const CONFIG = {
 
 const doubanDataCache = new Map();
 
+
 // 默认标签配置
 const defaultMovieTags = ['热门', '最新', '经典', '豆瓣高分', '冷门佳片', '华语', '欧美', '韩国', '日本', '动作', '喜剧', '爱情', '科幻', '悬疑', '恐怖', '治愈'];
 const defaultTvTags = ['热门', '美剧', '英剧', '韩剧', '日剧', '国产剧', '港剧', '日本动画', '综艺', '纪录片'];
@@ -407,11 +408,30 @@ function renderDoubanMovieTvSwitch() {
 
 // 渲染豆瓣标签
 function renderDoubanTags() {
+  // 记住上一次渲染的内容
+  if (!renderDoubanTags.prev) renderDoubanTags.prev = { key: '', active: '' };
+
   const tagContainer = utils.getElement('douban-tags');
   if (!tagContainer) return;
 
   const currentTags = doubanMovieTvCurrentSwitch === CONFIG.MEDIA_TYPES.MOVIE ? movieTags : tvTags;
   const fragment = document.createDocumentFragment();
+
+  const keyNow = currentTags.join('|');   // 数组内容
+  const activeNow = doubanCurrentTag;        // 当前选中
+
+  // 如果上一次的键值与这次完全一样，则直接更新高亮样式并返回
+  if (renderDoubanTags.prev.key === keyNow && renderDoubanTags.prev.active === activeNow) {
+    // 只切换 active class，其他 DOM 不动
+    tagContainer.querySelectorAll('button').forEach(btn => {
+      const isActive = btn.textContent === activeNow;
+      btn.classList.toggle(CONFIG.CLASSES.ACTIVE.split(' ')[0], isActive); // bg-pink-600
+      btn.classList.toggle('text-white', isActive);
+    });
+    return;   // 跳过完整重绘
+  }
+  // —— 走到这里说明标签列表或选中项发生了变化 —— //
+  renderDoubanTags.prev = { key: keyNow, active: activeNow };
 
   // 添加标签管理按钮
   const manageBtn = document.createElement('button');
@@ -540,9 +560,6 @@ async function renderRecommend(tag, pageLimit, pageStart) {
     container.appendChild(loadingOverlay);    // 只插一次
   }
 
-  container.classList.add("relative");
-  container.appendChild(loadingOverlay);
-
   try {
     const target = `https://movie.douban.com/j/search_subjects?type=${doubanMovieTvCurrentSwitch}&tag=${encodeURIComponent(tag)}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`;
     const data = await fetchDoubanData(target);
@@ -559,7 +576,6 @@ async function renderRecommend(tag, pageLimit, pageStart) {
     if (container.contains(loadingOverlay)) {
       container.removeChild(loadingOverlay);
     }
-    container.classList.remove("relative");
   }
 }
 
