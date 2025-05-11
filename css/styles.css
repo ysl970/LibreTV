@@ -16,7 +16,11 @@
 }
 
 /* -------- 2. 统一滚动条样式（全局应用） -------- */
-html, body, .history-panel, .episode-grid, .custom-title-scroll {
+html,
+body,
+.history-panel,
+.episode-grid,
+.custom-title-scroll {
   scrollbar-width: thin;
   scrollbar-color: #444 #222;
 }
@@ -339,13 +343,23 @@ body {
 
 /* -------- 13. 模态框动画（保留） -------- */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes fadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
 }
 
 #modal.show {
@@ -385,26 +399,32 @@ body {
   box-sizing: border-box;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
-  scrollbar-color: #333 #111; 
+  scrollbar-color: #333 #111;
 }
 
 /* 为历史面板定制滚动条样式，使其更接近 old4 的全局效果或确保背景融合 */
 .history-panel::-webkit-scrollbar {
-  width: 6px; /* 与 new4 全局一致，或者如果 old4 是 8px 可以改为 8px */
+  width: 6px;
+  /* 与 new4 全局一致，或者如果 old4 是 8px 可以改为 8px */
 }
 
 .history-panel::-webkit-scrollbar-track {
-  background: #111; /* 关键：确保轨道背景和面板背景一致 #111 */
-  border-radius: 4px; /* 可选，保持与全局一致 */
+  background: #111;
+  /* 关键：确保轨道背景和面板背景一致 #111 */
+  border-radius: 4px;
+  /* 可选，保持与全局一致 */
 }
 
 .history-panel::-webkit-scrollbar-thumb {
-  background-color: #333; /* 使用 old4 的滑块颜色，或者一个与 #111 对比不那么强烈的颜色 */
-  border-radius: 4px; /* 可选，保持与全局一致 */
+  background-color: #333;
+  /* 使用 old4 的滑块颜色，或者一个与 #111 对比不那么强烈的颜色 */
+  border-radius: 4px;
+  /* 可选，保持与全局一致 */
 }
 
 .history-panel::-webkit-scrollbar-thumb:hover {
-  background-color: #444; /* old4 的滑块悬停颜色 (new4 全局是 #555) */
+  background-color: #444;
+  /* old4 的滑块悬停颜色 (new4 全局是 #555) */
 }
 
 .history-panel.show {
@@ -482,10 +502,12 @@ body {
 }
 
 /* 历史分隔符样式 */
-.history-separator { 
-    color: #666; 
-    margin-left: 0.25rem; /* Equivalent to mx-1 */ 
-    margin-right: 0.25rem; /* Equivalent to mx-1 */ 
+.history-separator {
+  color: #666;
+  margin-left: 0.25rem;
+  /* Equivalent to mx-1 */
+  margin-right: 0.25rem;
+  /* Equivalent to mx-1 */
 }
 
 .history-thumbnail {
@@ -576,25 +598,32 @@ body {
 
 /* 搜索记录标签样式 (从旧代码恢复) */
 .search-tag {
-  /* background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end)); */ /* 旧的背景，可能太暗 */
-  background-color: var(--secondary-color); /* 改为使用较深的背景色变量，或者一个具体的颜色值如 #2D3748 (示例) */
-  /* color: var(--text-color); */ /* 旧的文字颜色，可能太亮 */
-  color: var(--text-muted); /* 改为使用柔和一些的文字颜色变量，或者一个具体的颜色值如 #A0AEC0 (示例) */
-  padding: 0.25rem 0.75rem; 
-  border-radius: 0.375rem; 
-  font-size: 0.75rem;   
+  /* background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end)); */
+  /* 旧的背景，可能太暗 */
+  background-color: var(--secondary-color);
+  /* 改为使用较深的背景色变量，或者一个具体的颜色值如 #2D3748 (示例) */
+  /* color: var(--text-color); */
+  /* 旧的文字颜色，可能太亮 */
+  color: var(--text-muted);
+  /* 改为使用柔和一些的文字颜色变量，或者一个具体的颜色值如 #A0AEC0 (示例) */
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
   border: 1px solid var(--border-color);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); 
-  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease; /* 添加 color 过渡 */
-  cursor: default; 
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  /* 添加 color 过渡 */
+  cursor: default;
   display: inline-block;
 }
 
-.search-tag:hover { 
+.search-tag:hover {
   /* background: linear-gradient(135deg, var(--card-gradient-end), var(--card-gradient-start)); */
-  background-color: var(--card-gradient-start); /* 悬停时可以略微改变背景 */
+  background-color: var(--card-gradient-start);
+  /* 悬停时可以略微改变背景 */
   border-color: var(--primary-color);
-  color: var(--primary-light); /* 悬停时文字可以更亮一些 */
+  color: var(--primary-light);
+  /* 悬停时文字可以更亮一些 */
 }
 
 /* 搜索卡片结果居中*/
@@ -823,18 +852,23 @@ body {
 .result-remarks {
   /* 在 index.html 的模板中已使用 Tailwind 类 text-xs text-cyan-400 mb-2 line-clamp-1 */
   /* 如果需要更复杂的样式，可以在这里添加 */
-  font-weight: normal; /* 例如，加粗一点 */
+  font-weight: normal;
+  /* 例如，加粗一点 */
 }
 
 /* 确保卡片标题和元信息有足够空间 */
 .card-hover h3.result-title {
-    min-height: 2.4em; /* 约两行文字的高度，确保对齐 */
-    margin-bottom: 0.375rem; /* 对应 mb-1.5 */
+  min-height: 2.4em;
+  /* 约两行文字的高度，确保对齐 */
+  margin-bottom: 0.375rem;
+  /* 对应 mb-1.5 */
 }
 
 .card-hover .result-meta {
-    min-height: 1.5em; /* 约一行标签的高度 */
-    margin-bottom: 0.375rem; /* 对应 mb-1.5 */
+  min-height: 1.5em;
+  /* 约一行标签的高度 */
+  margin-bottom: 0.375rem;
+  /* 对应 mb-1.5 */
 }
 
 /* -------- 模态框内按钮样式 (图12) -------- */
@@ -842,19 +876,27 @@ body {
 /* 按钮本身的样式已在 app.js 中通过 Tailwind 类指定为 p-2 bg-gray-700 hover:bg-gray-600 ... */
 /* 如果需要进一步统一，可以定义一个通用类 */
 .modal-icon-button {
-  padding: 0.5rem; /* p-2 */
-  background-color: #374151; /* bg-gray-700 */
+  padding: 0.5rem;
+  /* p-2 */
+  background-color: #374151;
+  /* bg-gray-700 */
   color: white;
-  border-radius: 0.5rem; /* rounded-lg */
+  border-radius: 0.5rem;
+  /* rounded-lg */
   transition: background-color 0.2s ease-in-out;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 .modal-icon-button:hover {
-  background-color: #4B5563; /* bg-gray-600 */
+  background-color: #4B5563;
+  /* bg-gray-600 */
 }
+
 .modal-icon-button svg {
-  width: 1.25rem; /* w-5 */
-  height: 1.25rem; /* h-5 */
+  width: 1.25rem;
+  /* w-5 */
+  height: 1.25rem;
+  /* h-5 */
 }

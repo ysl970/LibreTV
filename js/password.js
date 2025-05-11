@@ -46,7 +46,7 @@ window.isPasswordVerified = isPasswordVerified;
 async function verifyPassword(password) {
     const correctHash = window.__ENV__?.PASSWORD;
     if (!correctHash) return false;
-    
+
     try {
         // 直接调用本地 sha256 函数
         const inputHash = await sha256(password);

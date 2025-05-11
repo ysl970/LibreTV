@@ -370,7 +370,7 @@ const APISourceManager = {
     /**
      * 取消添加自定义API
      */
-    cancelAddCustomApi: function() {
+    cancelAddCustomApi: function () {
         const form = DOMCache.get('addCustomApiForm') || document.getElementById('addCustomApiForm');
         if (form) {
             form.classList.add('hidden');
@@ -378,11 +378,11 @@ const APISourceManager = {
             const nameInput = DOMCache.get('customApiName') || document.getElementById('customApiName');
             const urlInput = DOMCache.get('customApiUrl') || document.getElementById('customApiUrl');
             const isAdultInput = DOMCache.get('customApiIsAdult') || document.getElementById('customApiIsAdult');
-            
+
             if (nameInput) nameInput.value = '';
             if (urlInput) urlInput.value = '';
             if (isAdultInput) isAdultInput.checked = false;
-            
+
             // 恢复默认的添加按钮
             const buttonContainer = form.querySelector('div:last-child');
             if (buttonContainer) {
@@ -397,7 +397,7 @@ const APISourceManager = {
     /**
      * 取消编辑自定义API
      */
-    cancelEditCustomApi: function() {
+    cancelEditCustomApi: function () {
         // 复用取消添加的逻辑
         this.cancelAddCustomApi();
     },
@@ -416,13 +416,12 @@ const APISourceManager = {
         `;
     },
 
-
     /**
      * 根据索引获取自定义API信息
      * @param {number} index - 自定义API索引
      * @returns {object|null} - 自定义API信息对象或null
      */
-    getCustomApiInfo: function(index) {
+    getCustomApiInfo: function (index) {
         const customAPIs = AppState.get('customAPIs'); // 从AppState获取自定义API列表
         if (customAPIs && typeof index === 'number' && index >= 0 && index < customAPIs.length) {
             return customAPIs[index]; // 返回格式应为 { name, url, isAdult }

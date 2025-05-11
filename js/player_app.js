@@ -104,7 +104,7 @@ function initializePageContent() {
     // 先用 URL⟨episodes=⟩ → 再退回 localStorage（双保险）
     const episodesListParam = urlParams.get('episodes');
 
-    const reversedFromUrl = urlParams.get('reversed'); 
+    const reversedFromUrl = urlParams.get('reversed');
 
     currentVideoTitle = title || localStorage.getItem('currentVideoTitle') || '未知视频';
     window.currentVideoTitle = currentVideoTitle;
@@ -140,7 +140,7 @@ function initializePageContent() {
         currentEpisodeIndex = index;
         window.currentEpisodeIndex = currentEpisodeIndex; // Expose globally
 
-        if (reversedFromUrl !== null) { 
+        if (reversedFromUrl !== null) {
             episodesReversed = reversedFromUrl === 'true';
             localStorage.setItem('episodesReversed', episodesReversed.toString());
         } else {
@@ -754,7 +754,7 @@ function showMessage(text, type = 'info', duration = 3000) {
 
 function toggleLockScreen() {
     isScreenLocked = !isScreenLocked;
-    const playerContainer = document.querySelector('.player-container'); 
+    const playerContainer = document.querySelector('.player-container');
     const lockButton = document.getElementById('lock-button');
     const lockIcon = document.getElementById('lock-icon'); // 确保SVG元素有此ID
 

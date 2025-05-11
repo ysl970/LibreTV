@@ -220,6 +220,7 @@ input:checked+.slider:before {
   .player-control-bar {
     gap: 0.8rem;
   }
+
   .icon-btn {
     padding: 0.6rem;
   }
@@ -230,6 +231,7 @@ input:checked+.slider:before {
   .player-control-bar {
     gap: 0.6rem;
   }
+
   .icon-btn {
     padding: 0.5rem;
   }
@@ -238,13 +240,16 @@ input:checked+.slider:before {
 /* 600px and below */
 @media (max-width: 600px) {
   .player-control-bar {
-    gap: 0.25rem; /* Equivalent to Tailwind's gap-1 */
+    gap: 0.25rem;
+    /* Equivalent to Tailwind's gap-1 */
   }
+
   .icon-btn {
     padding: 0.2rem;
   }
 }
 
 #episodes-count {
-  display: none !important; /* 使用 !important 确保覆盖 Tailwind 的类 */
+  display: none !important;
+  /* 使用 !important 确保覆盖 Tailwind 的类 */
 }

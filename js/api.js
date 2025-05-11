@@ -370,14 +370,14 @@ window.fetch = async function (input, init) {
         if (window.isPasswordProtected && window.isPasswordVerified) {
             if (window.isPasswordProtected() && !window.isPasswordVerified()) {
                 // 返回401未授权响应，而不是undefined
-                return new Response(JSON.stringify({ 
-                    code: 401, 
-                    msg: 'Unauthorized: 需要密码验证', 
-                    list: [], 
-                    episodes: [] 
-                }), { 
-                    status: 401, 
-                    headers: { 'Content-Type': 'application/json' } 
+                return new Response(JSON.stringify({
+                    code: 401,
+                    msg: 'Unauthorized: 需要密码验证',
+                    list: [],
+                    episodes: []
+                }), {
+                    status: 401,
+                    headers: { 'Content-Type': 'application/json' }
                 });
             }
         }
