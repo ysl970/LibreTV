@@ -1,5 +1,9 @@
 // File: js/player_app.js
 // Add this helper function at the top of js/player_app.js
+window.copyLinks = copyLinks;
+window.toggleEpisodeOrder = toggleEpisodeOrder;
+window.toggleLockScreen = toggleLockScreen;
+
 function SQuery(selector, callback, timeout = 5000, interval = 100) {
     let elapsedTime = 0;
     const check = () => {
@@ -1040,6 +1044,3 @@ function playEpisode(index) {
     window.location.href = playerUrl.toString();
 }
 window.playEpisode = playEpisode; // Expose globally
-window.copyLinks = copyLinks;
-window.toggleEpisodeOrder = toggleEpisodeOrder;
-window.toggleLockScreen = toggleLockScreen;
