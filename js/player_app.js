@@ -543,6 +543,35 @@ function addDPlayerEventListeners() {
 }
 
 function setupPlayerControls() {
+
+    function setupRememberEpisodeProgressToggle() {
+        const rememberEpisodeProgressToggle = document.getElementById('remember-episode-progress-toggle');
+    
+        if (rememberEpisodeProgressToggle) {
+            // 1. 初始化开关状态
+            const savedSetting = localStorage.getItem(REMEMBER_EPISODE_PROGRESS_STORAGE_KEY);
+            if (savedSetting !== null) {
+                rememberEpisodeProgressToggle.checked = savedSetting === 'true';
+            } else {
+                rememberEpisodeProgressToggle.checked = true; // 默认开启
+                localStorage.setItem(REMEMBER_EPISODE_PROGRESS_STORAGE_KEY, 'true');
+            }
+    
+            // 2. 监听开关变化
+            rememberEpisodeProgressToggle.addEventListener('change', function(e) {
+                constisChecked = e.target.checked;
+                localStorage.setItem(REMEMBER_EPISODE_PROGRESS_STORAGE_KEY, isChecked.toString());
+                if (typeof showToast === 'function') { // 假设 showToast 已全局可用
+                    showToast(isChecked ? '将记住本视频的各集播放进度' : '将不再记住本视频的各集播放进度', 'info');
+                }
+                if (!isChecked) {
+                    // （可选）如果用户关闭了此功能，是否清除当前视频已保存的集数进度？
+                    // clearCurrentVideoSpecificEpisodeProgresses(); // 需要实现这个函数
+                }
+            });
+        }
+    }
+
     const backButton = document.getElementById('back-button');
     if (backButton) {
         backButton.addEventListener('click', () => { window.location.href = 'index.html'; });
