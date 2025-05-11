@@ -153,12 +153,23 @@ function createFetchHeaders(originalRequest, targetUrl, userAgents) {
 // --- M3U8处理 ---
 
 function processUriLine(line, baseUrl, resolveCache, logFn) {
-    return line.replace(/URI\s*=\s*"([^"]+)"/, (match, uri) => {
+    // 处理标准URI属性
+    let processedLine = line.replace(/URI\s*=\s*"([^"]+)"/g, (match, uri) => {
         if (!uri) return match;
         const absoluteUri = resolveUrl(baseUrl, uri, resolveCache, logFn);
         logFn(`Processing URI: Original='${uri}', Absolute='${absoluteUri}'`);
-        return `URI="${rewriteUrlToProxy(absoluteUri)}"`;
+        return `URI="${rewriteUrlToProxy(absoluteUri)}"`;  
     });
+    
+    // 处理其他可能包含URI的属性，如DATA-URI等
+    processedLine = processedLine.replace(/(DATA-URI|IV|OTHER-URI-ATTR)\s*=\s*"([^"]+)"/gi, (match, attr, uri) => {
+        if (!uri || !uri.includes('://')) return match; // 只处理看起来像URL的值
+        const absoluteUri = resolveUrl(baseUrl, uri, resolveCache, logFn);
+        logFn(`Processing ${attr}: Original='${uri}', Absolute='${absoluteUri}'`);
+        return `${attr}="${rewriteUrlToProxy(absoluteUri)}"`;  
+    });
+    
+    return processedLine;
 }
 
 function processMediaPlaylist(targetUrl, content, resolveCache, logFn) {
@@ -214,7 +225,12 @@ async function processMasterPlaylist(targetUrl, content, recursionDepth, context
         }
     }
     if (!bestVariantUrl) {
-        logFn(`No suitable variant/sub-playlist URI found, as media playlist fallback`);
+        // 添加更详细的警告日志
+        if (content.includes('#EXT-X-STREAM-INF') || content.includes('#EXT-X-MEDIA:')) {
+            logFn(`WARNING: Playlist appears to be a master playlist with variants, but no valid variant URLs were found. Falling back to media playlist processing for: ${targetUrl}`);
+        } else {
+            logFn(`No suitable variant/sub-playlist URI found, treating as media playlist: ${targetUrl}`);
+        }
         return processMediaPlaylist(targetUrl, content, resolveCache, logFn);
     }
     logFn(`Selected variant/sub-playlist URL: ${bestVariantUrl}`);
