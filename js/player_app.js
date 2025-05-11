@@ -222,7 +222,10 @@ function initializePageContent() {
     }, 1000); // Delay progress bar setup slightly
 
     document.addEventListener('keydown', handleKeyboardShortcuts);
-    window.addEventListener('beforeunload', saveCurrentProgress);
+    window.addEventListener('beforeunload', function () {
+        saveCurrentProgress();
+        saveVideoSpecificProgress();
+    });
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'hidden') {
             saveCurrentProgress();
@@ -458,7 +461,6 @@ function addDPlayerEventListeners() {
         videoHasEnded = false;
         setupProgressBarPreciseClicks();
         setTimeout(saveToHistory, 3000); // Save initial state to history
-        setTimeout(saveVideoSpecificEpisodeProgress, 3500); // 保存特定视频进度
         startProgressSaveInterval(); // Start periodic saving
     });
 
@@ -486,10 +488,16 @@ function addDPlayerEventListeners() {
         setTimeout(() => { isUserSeeking = false; }, 200); // Reset seeking flag after a short delay
     });
 
+    dp.on('pause', function () {
+        if (debugMode) console.log("[PlayerApp] DPlayer event: pause");
+        saveVideoSpecificProgress();
+        // saveCurrentProgress(); // 可选：如果也想在暂停时更新观看历史列表
+    });
+
+
     dp.on('ended', function () {
         videoHasEnded = true;
         saveCurrentProgress(); // Ensure final progress is saved
-        saveVideoSpecificEpisodeProgress(); // 特定视频进度
         clearVideoProgress(); // Clear progress for *this specific video*
         if (!autoplayEnabled) return;       // 用户关掉了自动连播
         const nextIdx = currentEpisodeIndex + 1;   // 始终 +1（上一条回复已统一）
@@ -647,18 +655,12 @@ function setupPlayerControls() {
     if (lockButton) lockButton.addEventListener('click', toggleLockScreen);
 }
 
-// js/player_app.js
-// ... (可以放在 setupRememberEpisodeProgressToggle 函数之后) ...
-
 function saveVideoSpecificProgress() {
     const toggle = document.getElementById('remember-episode-progress-toggle');
     if (!toggle || !toggle.checked) { // 如果开关未勾选，则不保存
         return;
     }
 
-    // 确保 DPlayer 实例 (dp), 视频标题 (currentVideoTitle), 当前集数索引 (currentEpisodeIndex),
-    // 和剧集列表 (currentEpisodes) 都已定义且有效。
-    // 这些变量在 player_app.js 中是模块级变量或已挂载到 window (source:946-949, source:959-974)
     if (!dp || !dp.video || typeof currentVideoTitle === 'undefined' || typeof currentEpisodeIndex !== 'number' || !currentEpisodes || currentEpisodes.length === 0) {
         return;
     }
@@ -1099,16 +1101,10 @@ function saveCurrentProgress() {
 function startProgressSaveInterval() {
     if (progressSaveInterval) clearInterval(progressSaveInterval);
     progressSaveInterval = setInterval(() => {
-        saveCurrentProgress(); // 保存到观看历史列表
-        saveVideoSpecificEpisodeProgress(); // 保存特定视频的集数进度
+        saveCurrentProgress(); // 这个是保存到“观看历史列表”的
+        +       saveVideoSpecificProgress(); // 新增调用，保存特定视频的集数进度
     }, 30000); // Save every 30 seconds
 }
-
-// 并且在 beforeunload 事件中也添加
-window.addEventListener('beforeunload', function () {
-    saveCurrentProgress();
-    saveVideoSpecificEpisodeProgress();
-});
 
 function saveToHistory() { // This is more like an "initial save" or "episode change save"
     if (!dp || !dp.video || !currentVideoTitle || !window.addToViewingHistory || !currentEpisodes[currentEpisodeIndex]) return;
