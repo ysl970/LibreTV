@@ -921,9 +921,9 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
  * @param {string} sourceName - 来源名称
  * @returns {string} - 剧集按钮HTML
  */
+
 function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
     if (!episodes || episodes.length === 0) return '<p class="text-center text-gray-500">暂无剧集信息</p>';
-
     const currentReversedState = AppState.get('episodesReversed') || false;
 
     let html = `
@@ -937,11 +937,13 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
             </svg>
         </button>
         <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" 
-                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1">
+                title="${currentReversedState ? '切换为正序排列' : '切换为倒序排列'}" /* 添加 title 提示 */
+                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center"> {/* 移除了 gap-1 */}
             <svg id="orderIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transition: transform 0.3s ease;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
             </svg>
-            <span id="orderText" class="hidden sm:inline">${currentReversedState ? '倒序' : '正序'}</span>
+            {/* 下面这行文字 span 已被删除 */}
+            {/* <span id="orderText" class="hidden sm:inline">${currentReversedState ? '倒序' : '正序'}</span> */}
         </button>
     </div>
     <div id="episodeButtonsContainer" class="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">`;
@@ -963,7 +965,6 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
             第 ${originalIndex + 1} 集      
         </button>`;
     });
-
     html += '</div>';
 
     requestAnimationFrame(() => {
@@ -971,10 +972,15 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
         if (orderIcon) {
             orderIcon.style.transform = currentReversedState ? 'rotate(180deg)' : 'rotate(0deg)';
         }
+        // 更新 title 提示
+        const toggleBtn = document.getElementById('toggleEpisodeOrderBtn');
+        if (toggleBtn) {
+            const currentReversed = AppState.get('episodesReversed') || false;
+            toggleBtn.title = currentReversed ? '切换为正序排列' : '切换为倒序排列';
+        }
     });
     return html;
 }
-
 // 复制视频链接到剪贴板
 function copyLinks() {
     const reversed = AppState.get('episodesReversed') || false;
@@ -999,30 +1005,51 @@ function copyLinks() {
 /**
  * 切换剧集排序UI并更新状态
  */
+
 function toggleEpisodeOrderUI() {
     const container = document.getElementById('episodeButtonsContainer');
-    const orderTextElement = document.getElementById('orderText');
+    // const orderTextElement = document.getElementById('orderText'); // 该元素已被删除
     const orderIcon = document.getElementById('orderIcon');
+    const toggleBtn = document.getElementById('toggleEpisodeOrderBtn'); // 获取按钮本身
 
-    if (!container || !orderTextElement || !orderIcon) return;
+    if (!container || !orderIcon || !toggleBtn) return; // 确保按钮也存在
 
     let currentReversedState = AppState.get('episodesReversed') || false;
     currentReversedState = !currentReversedState;
     AppState.set('episodesReversed', currentReversedState);
-    // 移除了对模块级 episodesReversed 的更新
 
-    orderTextElement.textContent = currentReversedState ? '倒序' : '正序';
+    // 更新图标的旋转状态
     orderIcon.style.transform = currentReversedState ? 'rotate(180deg)' : 'rotate(0deg)';
 
+    // 更新按钮的 title 属性来提供状态反馈
+    toggleBtn.title = currentReversedState ? '切换为正序排列' : '切换为倒序排列';
+
+    // 重新渲染集数按钮部分 (保持不变)
     const episodes = AppState.get('currentEpisodes');
     const title = AppState.get('currentVideoTitle');
     const sourceName = AppState.get('currentSourceName');
     const sourceCode = AppState.get('currentSourceCode');
 
     if (episodes && title && sourceCode) {
+        // 调用 renderEpisodeButtons 时，它会使用最新的 AppState.get('episodesReversed')
+        // 并正确地重新生成不含文字的排序按钮，同时更新其 title
         const newButtonsHtml = renderEpisodeButtons(episodes, title, sourceCode, sourceName || '');
-        const buttonsOnlyHtml = new DOMParser().parseFromString(newButtonsHtml, 'text/html').getElementById('episodeButtonsContainer').innerHTML;
-        container.innerHTML = buttonsOnlyHtml;
+        // 从返回的完整 HTML（包括外部的控制按钮div）中提取出集数按钮容器的内容
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = newButtonsHtml;
+        const buttonsContainerFromRender = tempDiv.querySelector('#episodeButtonsContainer');
+        if (buttonsContainerFromRender) {
+            container.innerHTML = buttonsContainerFromRender.innerHTML;
+        } else {
+             // 如果 #episodeButtonsContainer 没找到，就用整个 newButtonsHtml 里的 #episodeButtonsContainer 部分
+            const parsedDoc = new DOMParser().parseFromString(newButtonsHtml, 'text/html');
+            const newEpisodeButtonsContent = parsedDoc.getElementById('episodeButtonsContainer');
+            if (newEpisodeButtonsContent) {
+                container.innerHTML = newEpisodeButtonsContent.innerHTML;
+            } else {
+                 console.error("无法从 renderEpisodeButtons 的输出中提取集数按钮。");
+            }
+        }
     } else {
         console.error("无法重新渲染剧集按钮：缺少必要的状态信息。");
     }
