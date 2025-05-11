@@ -600,12 +600,14 @@ async function search() {
                     const customApi = getCustomApiInfo(customIndex);
                     if (!customApi) return [];
                     
-                    apiUrl = customApi.url + API_CONFIG.search.path + encodeURIComponent(query);
+                    apiUrl = customApi.url + API_CONFIG.search.path + encodeURIComponent(query)
+                             + '&h=' + AGGREGATED_SEARCH_CONFIG.maxResults;
                     apiName = customApi.name;
                 } else {
                     // 内置API
                     if (!API_SITES[apiId]) return [];
-                    apiUrl = API_SITES[apiId].api + API_CONFIG.search.path + encodeURIComponent(query);
+                    apiUrl = API_SITES[apiId].api + API_CONFIG.search.path + encodeURIComponent(query)
+                             + '&h=' + AGGREGATED_SEARCH_CONFIG.maxResults;
                     apiName = API_SITES[apiId].name;
                 }
                 
