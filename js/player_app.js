@@ -579,9 +579,9 @@ function setupPlayerControls() {
                 }
             }
             // (可选逻辑) 如果用户关闭功能，是否清除当前视频已保存的特定进度？
-             if (!isChecked) {
-                 clearCurrentVideoAllEpisodeProgresses(); // 需要实现此函数
-             }
+            if (!isChecked) {
+                clearCurrentVideoAllEpisodeProgresses(); // 需要实现此函数
+            }
         });
     }
 
@@ -648,40 +648,48 @@ function setupPlayerControls() {
 }
 
 // js/player_app.js
+// ... (可以放在 setupRememberEpisodeProgressToggle 函数之后) ...
 
-function saveVideoSpecificEpisodeProgress() {
-    const rememberEpisodeProgressToggle = document.getElementById('remember-episode-progress-toggle');
-    // 检查“记住进度”开关是否开启
-    if (!rememberEpisodeProgressToggle || !rememberEpisodeProgressToggle.checked) {
+function saveVideoSpecificProgress() {
+    const toggle = document.getElementById('remember-episode-progress-toggle');
+    if (!toggle || !toggle.checked) { // 如果开关未勾选，则不保存
         return;
     }
 
-    if (!dp || !dp.video || typeof currentVideoTitle === 'undefined' || typeof currentEpisodeIndex === 'undefined' || !currentEpisodes || currentEpisodes.length === 0) {
+    // 确保 DPlayer 实例 (dp), 视频标题 (currentVideoTitle), 当前集数索引 (currentEpisodeIndex),
+    // 和剧集列表 (currentEpisodes) 都已定义且有效。
+    // 这些变量在 player_app.js 中是模块级变量或已挂载到 window (source:946-949, source:959-974)
+    if (!dp || !dp.video || typeof currentVideoTitle === 'undefined' || typeof currentEpisodeIndex !== 'number' || !currentEpisodes || currentEpisodes.length === 0) {
         return;
     }
 
     const currentTime = Math.floor(dp.video.currentTime);
     const duration = Math.floor(dp.video.duration);
     const sourceCodeFromUrl = new URLSearchParams(window.location.search).get('source_code') || 'unknown_source';
-    const videoId = `${currentVideoTitle}_${sourceCodeFromUrl}`; // 视频唯一ID
+    // 构建一个基于标题和数据源的唯一视频ID
+    const videoSpecificId = `${currentVideoTitle}_${sourceCodeFromUrl}`;
 
-    // 只在有意义的进度时保存 (例如播放超过5秒，且未播放完毕)
-    if (currentTime > 5 && duration > 0 && currentTime < duration * 0.98) {
+    // 仅当播放进度有意义时才保存 (例如，播放超过5秒，且未播放到接近末尾)
+    if (currentTime > 5 && duration > 0 && currentTime < duration * 0.95) {
         try {
-            let allVideoProgresses = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY) || '{}');
-            if (!allVideoProgresses[videoId]) {
-                allVideoProgresses[videoId] = {};
-            }
-            allVideoProgresses[videoId][currentEpisodeIndex.toString()] = currentTime; // 保存当前集数进度
-            allVideoProgresses[videoId].lastPlayedEpisodeIndex = currentEpisodeIndex; // 记录这个视频最后播放的是哪一集
-            allVideoProgresses[videoId].totalEpisodes = currentEpisodes.length; // (可选) 记录总集数
-            allVideoProgresses[videoId].lastKnownEpisodeUrls = currentEpisodes.map(ep => ep.split('/').pop()); // (可选) 记录集数URL片段用于校验
+            let allVideosProgresses = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || '{}');
 
-            localStorage.setItem(VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY, JSON.stringify(allVideoProgresses));
-
-            if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) {
-                // console.log(`已保存 '${videoId}' 第 ${currentEpisodeIndex + 1} 集特定进度: ${currentTime}s`);
+            if (!allVideosProgresses[videoSpecificId]) {
+                allVideosProgresses[videoSpecificId] = {};
             }
+            // 保存当前集数的进度
+            allVideosProgresses[videoSpecificId][currentEpisodeIndex.toString()] = currentTime;
+            // 记录这个视频最后播放到哪一集
+            allVideosProgresses[videoSpecificId].lastPlayedEpisodeIndex = currentEpisodeIndex;
+            // (可选) 记录总集数，方便后续判断
+            // allVideosProgresses[videoSpecificId].totalEpisodes = currentEpisodes.length; 
+
+            localStorage.setItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY, JSON.stringify(allVideosProgresses));
+
+            // (可选) 调试日志
+            // if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) {
+            //     console.log(`Saved specific progress for '${videoSpecificId}', Episode ${currentEpisodeIndex + 1}: ${currentTime}s`);
+            // }
         } catch (e) {
             console.error('保存特定视频集数进度失败:', e);
         }
