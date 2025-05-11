@@ -325,10 +325,14 @@ function initializePageContent() {
                 if (dp && dp.video) {
                     const positionNum = parseInt(finalPositionToSeek, 10);
                     if (!isNaN(positionNum) && positionNum > 0) {
-                        dp.once('loadedmetadata', () => { // dp.once 确保只执行一次
-                            dp.seek(positionNum);
-                            if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(positionNum);
-                        });
+                        const handleLoadedMetadataOnce = () => {
+                            if (dp && dp.video && dp.video.duration > 0) {
+                                dp.seek(positionNum);
+                                if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(positionNum);
+                                dp.off('loadedmetadata', handleLoadedMetadataOnce); // 执行后立即移除监听
+                            }
+                        };
+                        dp.on('loadedmetadata', handleLoadedMetadataOnce);
                     }
                 }
             }, 1500); // Delay seeking slightly
