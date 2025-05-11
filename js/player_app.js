@@ -231,9 +231,10 @@ function initializePageContent() {
 
         if (savedProgressData) {
             // ① 决定“要不要提示进度”
+            const resumeIndex = indexForPlayer;   // ← 统一使用这个
             const positionToResume =
-                savedProgressData[indexForPlayer.toString()]      // 只看当前集
-                    ? parseInt(savedProgressData[indexForPlayer.toString()])
+                savedProgressData[resumeIndex.toString()]
+                    ? parseInt(savedProgressData[resumeIndex.toString()])
                     : 0;
 
             // ② 如果 URL *没* 带 index（多半是直接点“继续播放”进入播放器），
@@ -246,14 +247,14 @@ function initializePageContent() {
                 indexForPlayer = savedProgressData.lastPlayedEpisodeIndex;
             }
 
-            if (positionToResume > 5 && currentEpisodes[episodeToResumeIndexOrDefault]) {
-                const wantsToResume = confirm( // 替换为更美观的 showPlayerConfirmationDialog
-                    `发现《${currentVideoTitle}》第 ${episodeToResumeIndexOrDefault + 1} 集的播放记录，是否从 ${formatPlayerTime(positionToResume)} 继续播放？`
+            if (positionToResume > 5 && currentEpisodes[resumeIndex]) {
+                const wantsToResume = confirm(
+                    `发现《${currentVideoTitle}》第 ${resumeIndex + 1} 集的播放记录，是否从 ${formatPlayerTime(positionToResume)} 继续播放？`
                 );
 
                 if (wantsToResume) {
-                    episodeUrlForPlayer = currentEpisodes[episodeToResumeIndexOrDefault];
-                    indexForPlayer = episodeToResumeIndexOrDefault; // 更新要播放的集数
+                    episodeUrlForPlayer = currentEpisodes[resumeIndex];
+                    indexForPlayer = resumeIndex;
 
                     const newUrl = new URL(window.location.href);
                     newUrl.searchParams.set('url', episodeUrlForPlayer);
