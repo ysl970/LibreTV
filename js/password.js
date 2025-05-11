@@ -47,9 +47,9 @@ async function verifyPassword(password) {
     const correctHash = window.__ENV__?.PASSWORD;
     if (!correctHash) return false;
     
-    // 使用全局 sha256 函数
     try {
-        const inputHash = await window.sha256(password);
+        // 直接调用本地 sha256 函数
+        const inputHash = await sha256(password);
         const isValid = inputHash === correctHash;
         if (isValid) {
             localStorage.setItem(PASSWORD_CONFIG.localStorageKey, JSON.stringify({
@@ -65,9 +65,8 @@ async function verifyPassword(password) {
     }
 }
 
-// 移除重复的 sha256 函数实现
 /**
- * Web端/HTTP 用SHA-256实现，可用原生crypto或window._jsSha256兜底。
+ * Web端/HTTP 用SHA-256实现，可用原生crypto或window._jsSha256_fallback兜底。
  * 强烈建议在 cloudflare pages HTTPS 环境下用原生crypto。
  */
 async function sha256(message) {
@@ -80,8 +79,9 @@ async function sha256(message) {
             // 落后浏览器兼容性兜底
         }
     }
-    if (typeof window._jsSha256 === 'function') {
-        return window._jsSha256(message);
+    // 修改：使用 _jsSha256_fallback 作为同步库版本的别名
+    if (typeof window._jsSha256_fallback === 'function') {
+        return window._jsSha256_fallback(message);
     }
     throw new Error('No SHA-256 implementation available.');
 }

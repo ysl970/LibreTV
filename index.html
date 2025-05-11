@@ -416,19 +416,10 @@
     </div>
 
     <!-- SHA-256库与初始化，避免全局冲突 -->
-    <!-- 修改前 -->
     <script src="libs/sha256.min.js" defer></script>
     <script>
-        // 避免 password.js 覆盖全局 js‑sha256 实现
-        window._jsSha256 = window.sha256;
-    </script>
-    
-    <!-- 修改后 -->
-    <script src="libs/sha256.min.js" defer></script>
-    <script>
-        // 确保 window.sha256 (从 libs/sha256.min.js) 也可用作 window._jsSha256
         document.addEventListener('DOMContentLoaded', function() {
-            window._jsSha256 = window.sha256;
+            window._jsSha256_fallback = window.sha256; // 存储同步库版本
         });
     </script>
 
@@ -439,17 +430,8 @@
     <script src="js/api_source_manager.js" defer></script>
     <script src="js/app.js" defer></script>
     <script src="js/douban.js" defer></script>
-    <!-- 删除这行 -->
-    <script src="js/sha256.js" defer></script>
+    <!-- 删除 js/sha256.js 的引用 -->
     <script src="js/password.js" defer></script>
-    <!-- PWA 注册 -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js');
-            });
-        }
-    </script>
 
     <!-- 服务端环境变量注入（Cloudflare Pages场景兼容） -->
     <script>
