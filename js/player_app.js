@@ -748,6 +748,7 @@ function showMessage(text, type = 'info', duration = 3000) {
 function toggleLockScreen() {
     isScreenLocked = !isScreenLocked;
     const playerContainer = document.querySelector('.player-container'); 
+    const lockButton = document.getElementById('lock-button');
     const lockIcon = document.getElementById('lock-icon'); // 确保SVG元素有此ID
 
     if (playerContainer) {
