@@ -370,6 +370,25 @@ body {
   scrollbar-gutter: stable;
 }
 
+/* 为历史面板定制滚动条样式，使其更接近 old4 的全局效果或确保背景融合 */
+.history-panel::-webkit-scrollbar {
+  width: 6px; /* 与 new4 全局一致，或者如果 old4 是 8px 可以改为 8px */
+}
+
+.history-panel::-webkit-scrollbar-track {
+  background: #111; /* 关键：确保轨道背景和面板背景一致 */
+  border-radius: 4px; /* 可选，保持与全局一致 */
+}
+
+.history-panel::-webkit-scrollbar-thumb {
+  background-color: #333; /* 使用 old4 的滑块颜色，或者一个与 #111 对比不那么强烈的颜色 */
+  border-radius: 4px; /* 可选，保持与全局一致 */
+}
+
+.history-panel::-webkit-scrollbar-thumb:hover {
+  background-color: #444; /* old4 的滑块悬停颜色 (new4 全局是 #555) */
+}
+
 .history-panel.show {
   transform: translateX(0);
 }
