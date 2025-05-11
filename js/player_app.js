@@ -800,10 +800,10 @@ function clearCurrentVideoSpecificEpisodeProgresses() {
     const videoId = `${currentVideoTitle}_${sourceCodeFromUrl}`;
 
     try {
-        let allVideoProgresses = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY) || '{}');
+        let allVideoProgresses = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || '{}');
         if (allVideoProgresses[videoId]) {
             delete allVideoProgresses[videoId];
-            localStorage.setItem(VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY, JSON.stringify(allVideoProgresses));
+            localStorage.setItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY, JSON.stringify(allVideoProgresses));
             if (typeof showToast === 'function') {
                 showToast(`已清除《${currentVideoTitle}》的各集播放进度`, 'info');
             }
