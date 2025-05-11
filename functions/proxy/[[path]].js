@@ -133,9 +133,18 @@ function createM3u8Response(request, content, cacheTtl) {
     });
 }
 function createOtherResponse(request, content, status, originalHeaders, cacheTtl) {
-    // 合并原始header，补充cache
+    // 1. 复制源站响应头
     const finalHeaders = new Headers(originalHeaders);
+
+    // 2. 让 Cloudflare CDN 缓 24h（或你在 env.CACHE_TTL 里设的秒数）
     finalHeaders.set('Cache-Control', `public, max-age=${cacheTtl}`);
+    finalHeaders.set('CDN-Cache-Control', `public, max-age=${cacheTtl}`);
+
+    // 3. 清理掉源站可能带来的私有或禁止缓存指令
+    finalHeaders.delete('Pragma');
+    finalHeaders.delete('Expires');
+    // 你也可以根据需要过滤 'set-cookie'、'authorization' 等 header
+
     return createResponse(request, content, status, finalHeaders);
 }
 function createFetchHeaders(originalRequest, targetUrl, userAgents) {

@@ -43,6 +43,8 @@ const CONFIG = {
   }
 };
 
+const doubanDataCache = new Map();
+
 // 默认标签配置
 const defaultMovieTags = ['热门', '最新', '经典', '豆瓣高分', '冷门佳片', '华语', '欧美', '韩国', '日本', '动作', '喜剧', '爱情', '科幻', '悬疑', '恐怖', '治愈'];
 const defaultTvTags = ['热门', '美剧', '英剧', '韩剧', '日剧', '国产剧', '港剧', '日本动画', '综艺', '纪录片'];
@@ -62,8 +64,9 @@ const utils = {
   debounce(fn, delay = 300) {
     let timer = null;
     return (...args) => {
+      const context = this;
       clearTimeout(timer);
-      timer = setTimeout(() => fn.apply(this, args), delay);
+      timer = setTimeout(() => fn.apply(context, args), delay);
     };
   },
 
@@ -440,6 +443,10 @@ function setupDoubanRefreshBtn() {
 
 // 获取豆瓣数据
 async function fetchDoubanData(url) {
+  if (doubanDataCache.has(url)) {
+    return doubanDataCache.get(url);
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUT);
 
@@ -464,7 +471,9 @@ async function fetchDoubanData(url) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();      // ② 首次拿到数据
+    doubanDataCache.set(url, data);          //    存入缓存
+    return data;
   } catch (err) {
     clearTimeout(timeoutId);
     console.error("豆瓣 API 请求失败：", err);
@@ -484,7 +493,9 @@ async function fetchDoubanData(url) {
 
       const data = await fallbackResponse.json();
       if (data?.contents) {
-        return JSON.parse(data.contents);
+        const parsed = JSON.parse(data.contents);
+        doubanDataCache.set(url, parsed);    // ③ 备用接口成功也写缓存
+        return parsed;
       }
 
       throw new Error("无法获取有效数据");
@@ -603,45 +614,38 @@ function renderDoubanCards(data, container) {
   initLazyLoading();
 }
 
-// 添加懒加载初始化函数
-function initLazyLoading() {
-  const lazyImages = document.querySelectorAll('img[data-src]');
 
-  if ('IntersectionObserver' in window) {
-    const imageObserver = new IntersectionObserver((entries, observer) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          const src = img.getAttribute('data-src');
-
-          img.onload = function () {
-            img.classList.remove('opacity-0');
-          };
-
-          img.onerror = function () {
-            this.onerror = null;
-            const proxiedUrl = PROXY_URL + encodeURIComponent(src);
-            this.src = proxiedUrl;
-            this.classList.add('object-contain');
-            this.classList.remove('opacity-0');
-          };
-
-          img.src = src;
-          img.removeAttribute('data-src');
-          imageObserver.unobserve(img);
-        }
-      });
-    });
-
-    lazyImages.forEach(img => {
-      imageObserver.observe(img);
-    });
-  } else {
-    // 回退方案，为不支持IntersectionObserver的浏览器
-    lazyImages.forEach(img => {
+// 单例观察器
+const lazyImgObserver = ('IntersectionObserver' in window)
+  ? new IntersectionObserver((entries, obs) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const img = entry.target;
       const src = img.getAttribute('data-src');
+
+      img.onload = () => img.classList.remove('opacity-0');
+      img.onerror = () => {
+        img.onerror = null;
+        img.src = (typeof PROXY_URL !== 'undefined') ? PROXY_URL + encodeURIComponent(src)
+          : src;
+        img.classList.add('object-contain');
+        img.classList.remove('opacity-0');
+      };
       img.src = src;
       img.removeAttribute('data-src');
+      obs.unobserve(img);
+    });
+  }, { rootMargin: '50px' })   // 提前 50px 预加载
+  : null;
+
+function initLazyLoading() {
+  const lazyImages = document.querySelectorAll('img[data-src]');
+  if (lazyImgObserver) {
+    lazyImages.forEach(img => lazyImgObserver.observe(img));
+  } else {         // 不支持 IntersectionObserver
+    lazyImages.forEach(img => {
+      const src = img.getAttribute('data-src');
+      img.src = src; img.removeAttribute('data-src');
       img.classList.remove('opacity-0');
     });
   }
