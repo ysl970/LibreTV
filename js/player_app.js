@@ -66,6 +66,42 @@ window.currentEpisodeIndex = 0;
 // window.dp will be set after DPlayer initialization
 // window.playEpisode will be set later
 
+function setupRememberEpisodeProgressToggle() {
+    const toggle = document.getElementById('remember-episode-progress-toggle');
+    if (!toggle) return;
+
+    // 1. 从 localStorage 初始化开关状态
+    const savedSetting = localStorage.getItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY);
+    if (savedSetting !== null) {
+        toggle.checked = savedSetting === 'true';
+    } else {
+        toggle.checked = true; // 默认开启
+        localStorage.setItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY, 'true');
+    }
+
+    // 2. 监听开关变化，并保存到 localStorage
+    toggle.addEventListener('change', function (event) {
+        const isChecked = event.target.checked;
+        localStorage.setItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY, isChecked.toString());
+        if (typeof showToast === 'function') { // 确保 showToast 可用
+            // showToast 是在 player.html 中通过 ui.js 引入的，应该全局可用
+            // 但 new6.txt 的 player_app.js (source:936-937) 中有检查 showToast/showMessage 的逻辑
+            // 并且 (source:1122-1128) 定义了本地的 showMessage
+            // 为简单起见，优先使用已有的 window.showMessage (如果它符合toast样式) 或 window.showToast
+            const messageText = isChecked ? '将记住本视频的各集播放进度' : '将不再记住本视频的各集播放进度';
+            if (typeof window.showMessage === 'function') { // 优先用 player_app.js 内的
+                window.showMessage(messageText, 'info');
+            } else if (typeof window.showToast === 'function') { // 备用 ui.js 的
+                window.showToast(messageText, 'info');
+            }
+        }
+        // (可选逻辑) 如果用户关闭功能，是否清除当前视频已保存的特定进度？
+        if (!isChecked) {
+            clearCurrentVideoAllEpisodeProgresses(); // 需要实现此函数
+        }
+    });
+}
+
 // In js/player_app.js
 document.addEventListener('DOMContentLoaded', function () {
     //  console.log('[PlayerApp Debug] DOMContentLoaded event fired.');
@@ -655,47 +691,6 @@ function addDPlayerEventListeners() {
 }
 
 function setupPlayerControls() {
-
-    // js/player_app.js
-
-    // ... (可以放在文件较靠后的位置，例如其他辅助函数之后) ...
-
-    function setupRememberEpisodeProgressToggle() {
-        const toggle = document.getElementById('remember-episode-progress-toggle');
-        if (!toggle) return;
-
-        // 1. 从 localStorage 初始化开关状态
-        const savedSetting = localStorage.getItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY);
-        if (savedSetting !== null) {
-            toggle.checked = savedSetting === 'true';
-        } else {
-            toggle.checked = true; // 默认开启
-            localStorage.setItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY, 'true');
-        }
-
-        // 2. 监听开关变化，并保存到 localStorage
-        toggle.addEventListener('change', function (event) {
-            const isChecked = event.target.checked;
-            localStorage.setItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY, isChecked.toString());
-            if (typeof showToast === 'function') { // 确保 showToast 可用
-                // showToast 是在 player.html 中通过 ui.js 引入的，应该全局可用
-                // 但 new6.txt 的 player_app.js (source:936-937) 中有检查 showToast/showMessage 的逻辑
-                // 并且 (source:1122-1128) 定义了本地的 showMessage
-                // 为简单起见，优先使用已有的 window.showMessage (如果它符合toast样式) 或 window.showToast
-                const messageText = isChecked ? '将记住本视频的各集播放进度' : '将不再记住本视频的各集播放进度';
-                if (typeof window.showMessage === 'function') { // 优先用 player_app.js 内的
-                    window.showMessage(messageText, 'info');
-                } else if (typeof window.showToast === 'function') { // 备用 ui.js 的
-                    window.showToast(messageText, 'info');
-                }
-            }
-            // (可选逻辑) 如果用户关闭功能，是否清除当前视频已保存的特定进度？
-            if (!isChecked) {
-                clearCurrentVideoAllEpisodeProgresses(); // 需要实现此函数
-            }
-        });
-    }
-
     const backButton = document.getElementById('back-button');
     if (backButton) {
         backButton.addEventListener('click', () => { window.location.href = 'index.html'; });
