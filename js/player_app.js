@@ -39,11 +39,11 @@ let shortcutHintTimeout = null;
 let progressSaveInterval = null;
 let isScreenLocked = false;
 
-const REMEMBER_EPISODE_PROGRESS_STORAGE_KEY = 'playerRememberEpisodeProgressEnabled'; // 开关状态的键名
-const VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY = 'videoEpisodeProgresses'; // 各视频各集进度的键名
+const REMEMBER_EPISODE_PROGRESS_ENABLED_KEY = 'playerRememberEpisodeProgressEnabled'; // 开关状态的键名
+const VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY = 'videoSpecificEpisodeProgresses'; // 各视频各集进度的键名
 
-// 辅助函数：格式化时间 (如果 player_app.js 中还没有，可以从 ui.js 借鉴或新建一个)
-function formatPlaybackTimeForPlayer(seconds) {
+// 辅助函数：格式化时间)
+function formatPlayerTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return "00:00";
     const m = Math.floor(seconds / 60);
     const s = Math.floor(seconds % 60);
@@ -51,7 +51,6 @@ function formatPlaybackTimeForPlayer(seconds) {
 }
 
 // 辅助函数：简单的确认弹窗 (如果 ui.js 没有提供更美观的)
-// 您也可以在 ui.js 中创建一个更美观的模态框，然后在 player_app.js 中调用 window.UI.showConfirmation(...)
 function showPlayerConfirmationDialog(message, onConfirm, onCancel) {
     if (confirm(message)) { // confirm 是浏览器自带的简单弹窗
         if (onConfirm) onConfirm();
@@ -459,6 +458,7 @@ function addDPlayerEventListeners() {
         videoHasEnded = false;
         setupProgressBarPreciseClicks();
         setTimeout(saveToHistory, 3000); // Save initial state to history
+        setTimeout(saveVideoSpecificEpisodeProgress, 3500); // 保存特定视频进度
         startProgressSaveInterval(); // Start periodic saving
     });
 
@@ -489,6 +489,7 @@ function addDPlayerEventListeners() {
     dp.on('ended', function () {
         videoHasEnded = true;
         saveCurrentProgress(); // Ensure final progress is saved
+        saveVideoSpecificEpisodeProgress(); // 特定视频进度
         clearVideoProgress(); // Clear progress for *this specific video*
         if (!autoplayEnabled) return;       // 用户关掉了自动连播
         const nextIdx = currentEpisodeIndex + 1;   // 始终 +1（上一条回复已统一）
@@ -544,32 +545,44 @@ function addDPlayerEventListeners() {
 
 function setupPlayerControls() {
 
+    // js/player_app.js
+
+    // ... (可以放在文件较靠后的位置，例如其他辅助函数之后) ...
+
     function setupRememberEpisodeProgressToggle() {
-        const rememberEpisodeProgressToggle = document.getElementById('remember-episode-progress-toggle');
+        const toggle = document.getElementById('remember-episode-progress-toggle');
+        if (!toggle) return;
 
-        if (rememberEpisodeProgressToggle) {
-            // 1. 初始化开关状态
-            const savedSetting = localStorage.getItem(REMEMBER_EPISODE_PROGRESS_STORAGE_KEY);
-            if (savedSetting !== null) {
-                rememberEpisodeProgressToggle.checked = savedSetting === 'true';
-            } else {
-                rememberEpisodeProgressToggle.checked = true; // 默认开启
-                localStorage.setItem(REMEMBER_EPISODE_PROGRESS_STORAGE_KEY, 'true');
-            }
-
-            // 2. 监听开关变化
-            rememberEpisodeProgressToggle.addEventListener('change', function (e) {
-                constisChecked = e.target.checked;
-                localStorage.setItem(REMEMBER_EPISODE_PROGRESS_STORAGE_KEY, isChecked.toString());
-                if (typeof showToast === 'function') { // 假设 showToast 已全局可用
-                    showToast(isChecked ? '将记住本视频的各集播放进度' : '将不再记住本视频的各集播放进度', 'info');
-                }
-                if (!isChecked) {
-                    // （可选）如果用户关闭了此功能，是否清除当前视频已保存的集数进度？
-                    // clearCurrentVideoSpecificEpisodeProgresses(); // 需要实现这个函数
-                }
-            });
+        // 1. 从 localStorage 初始化开关状态
+        const savedSetting = localStorage.getItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY);
+        if (savedSetting !== null) {
+            toggle.checked = savedSetting === 'true';
+        } else {
+            toggle.checked = true; // 默认开启
+            localStorage.setItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY, 'true');
         }
+
+        // 2. 监听开关变化，并保存到 localStorage
+        toggle.addEventListener('change', function (event) {
+            const isChecked = event.target.checked;
+            localStorage.setItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY, isChecked.toString());
+            if (typeof showToast === 'function') { // 确保 showToast 可用
+                // showToast 是在 player.html 中通过 ui.js 引入的，应该全局可用
+                // 但 new6.txt 的 player_app.js (source:936-937) 中有检查 showToast/showMessage 的逻辑
+                // 并且 (source:1122-1128) 定义了本地的 showMessage
+                // 为简单起见，优先使用已有的 window.showMessage (如果它符合toast样式) 或 window.showToast
+                const messageText = isChecked ? '将记住本视频的各集播放进度' : '将不再记住本视频的各集播放进度';
+                if (typeof window.showMessage === 'function') { // 优先用 player_app.js 内的
+                    window.showMessage(messageText, 'info');
+                } else if (typeof window.showToast === 'function') { // 备用 ui.js 的
+                    window.showToast(messageText, 'info');
+                }
+            }
+            // (可选逻辑) 如果用户关闭功能，是否清除当前视频已保存的特定进度？
+             if (!isChecked) {
+                 clearCurrentVideoAllEpisodeProgresses(); // 需要实现此函数
+             }
+        });
     }
 
     const backButton = document.getElementById('back-button');
@@ -1077,8 +1090,17 @@ function saveCurrentProgress() {
 
 function startProgressSaveInterval() {
     if (progressSaveInterval) clearInterval(progressSaveInterval);
-    progressSaveInterval = setInterval(saveCurrentProgress, 30000); // Save every 30 seconds
+    progressSaveInterval = setInterval(() => {
+        saveCurrentProgress(); // 保存到观看历史列表
+        saveVideoSpecificEpisodeProgress(); // 保存特定视频的集数进度
+    }, 30000); // Save every 30 seconds
 }
+
+// 并且在 beforeunload 事件中也添加
+window.addEventListener('beforeunload', function () {
+    saveCurrentProgress();
+    saveVideoSpecificEpisodeProgress();
+});
 
 function saveToHistory() { // This is more like an "initial save" or "episode change save"
     if (!dp || !dp.video || !currentVideoTitle || !window.addToViewingHistory || !currentEpisodes[currentEpisodeIndex]) return;
