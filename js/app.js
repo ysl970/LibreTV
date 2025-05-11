@@ -843,6 +843,9 @@ function handleResultClick(event) {
     }
 }
 
+window.handleResultClick = handleResultClick;
+window.copyLinks = copyLinks;
+window.toggleEpisodeOrderUI = toggleEpisodeOrderUI;
 
 /**
  * 显示视频剧集模态框
@@ -1027,6 +1030,3 @@ function toggleEpisodeOrderUI() {
 
 // 将函数暴露给全局作用域
 window.showVideoEpisodesModal = showVideoEpisodesModal;
-window.handleResultClick = handleResultClick;
-window.copyLinks = copyLinks;
-window.toggleEpisodeOrderUI = toggleEpisodeOrderUI;

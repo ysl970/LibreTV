@@ -1,8 +1,8 @@
 // File: js/player_app.js
 // Add this helper function at the top of js/player_app.js
-window.copyLinks = copyLinks;
-window.toggleEpisodeOrder = toggleEpisodeOrder;
-window.toggleLockScreen = toggleLockScreen;
+if (typeof showToast !== 'function' || typeof showMessage !== 'function') {
+    console.warn("UI notification functions (showToast/showMessage) are not available. Notifications might not work.");
+}
 
 function SQuery(selector, callback, timeout = 5000, interval = 100) {
     let elapsedTime = 0;
@@ -747,24 +747,23 @@ function showMessage(text, type = 'info', duration = 3000) {
 
 function toggleLockScreen() {
     isScreenLocked = !isScreenLocked;
-    const playerContainer = document.querySelector('.player-container'); // Should be .player-area or dplayer container
-    const lockButton = document.getElementById('lock-button'); // The button itself
-    // Assuming the icon is inside the button, we can find it or just replace innerHTML
-    // const lockIcon = document.getElementById('lock-icon'); // More specific if you have an ID on the SVG
+    const playerContainer = document.getElementById('dplayer'); // 假设播放器容器ID是 dplayer
+    const lockButton = document.getElementById('lock-button');
+    const lockIcon = document.getElementById('lock-icon'); // 确保SVG元素有此ID
 
-    if (playerContainer) { // Ensure player container exists
+    if (playerContainer) {
         playerContainer.classList.toggle('player-locked', isScreenLocked);
     }
 
-    if (lockButton) {
+    if (lockButton && lockIcon) {
         if (isScreenLocked) {
-            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-unlock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`; // Unlock icon
+            lockIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-unlock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>`;
             lockButton.setAttribute('aria-label', '解锁屏幕');
-            if (typeof showMessage === 'function') showMessage('屏幕已锁定', 'info');
+            if (typeof showMessage === 'function') showMessage('屏幕已锁定', 'info'); // 或者 showToast
         } else {
-            lockButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`; // Lock icon
+            lockIcon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-lock"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
             lockButton.setAttribute('aria-label', '锁定屏幕');
-            if (typeof showMessage === 'function') showMessage('屏幕已解锁', 'info');
+            if (typeof showMessage === 'function') showMessage('屏幕已解锁', 'info'); // 或者 showToast
         }
     }
 }
@@ -880,9 +879,8 @@ function copyLinks() {
 function toggleEpisodeOrder() {
     episodesReversed = !episodesReversed;
     localStorage.setItem('episodesReversed', episodesReversed.toString());
-    //   console.log('[PlayerApp] Episode order toggled. New state:', episodesReversed ? 'Reversed' : 'Normal');
-    updateOrderButton();
-    renderEpisodes();
+    updateOrderButton(); // 更新排序按钮的视觉状态
+    renderEpisodes();    // 重新渲染集数列表以反映新的排序
 }
 
 function updateOrderButton() {
