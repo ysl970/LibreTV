@@ -106,6 +106,63 @@ const API_SITES = {
         api: 'https://ikunzyapi.com',
         name: 'iKun资源'
     },
+     ddys: {
+        api: 'https://ddys.pro/',
+        name: '低端影视'
+    },
+    nfgc: { 
+        api: 'https://www.netflixgc.com/',
+        name: '奈飞工厂'
+    }, 
+    jzyy: {
+        api: 'https://www.jiaozi.me/',
+        name: '饺子影院'
+    },
+    ftys: {
+        api: 'https://www.fantuanys.cc/',
+        name: '饭团影视'
+    }, 
+    4kys: {
+        api: 'https://www.4kvm.tv/',
+        name: '4K影视'
+    }, 
+    wwzy: {
+        api: 'https://gaze.run/',
+        name: '注视影视'
+    }, 
+    libvio: {
+        api: 'https://libvio.me/',
+        name: 'LIBVIO'
+    }, 
+    lgbt: {
+        api: 'https://www.bttwo.me/',
+        name: '两个BT'
+    },
+    czzy: {
+        api: 'https://www.czzy77.com/',
+        name: '厂长资源'
+    }, 
+    auete: {
+        api: 'https://auete.cc/',
+        name: 'Auete影视'
+    }, 
+    sbbys: {
+        api: 'https://subaibai.vip/',
+        name: '素白白影视'
+    }, 
+    yfs: {
+        api: 'https://www.yinfans.me/',
+        name: '音范丝'
+    },
+    testSource: {
+        api: 'https://www.example.com',
+        name: '空内容测试源',
+        adult: true
+    },
+    // 下面是一些成人内容的API源，默认隐藏，使用本项目浏览黄色内容违背项目初衷
+    // 互联网上传播的色情内容将人彻底客体化、工具化，是性别解放和人类平等道路上的巨大障碍。
+    // 这些黄色影片是资本主义父权制压迫的最恶毒体现，它将暴力和屈辱商品化，践踏人的尊严，对受害者造成无法弥愈的伤害，并毒害社会关系。
+    // 资本为了利润，不惜将最卑劣的
     testSource: {
         api: 'https://www.example.com',
         name: '空内容测试源',
