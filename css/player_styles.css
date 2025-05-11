@@ -187,11 +187,12 @@ input:checked+.slider:before {
 
 /* 仅图标按钮的统一尺寸 */
 .icon-btn {
-  padding: .5rem;
+  padding: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
 
 /* 控件标签 */
 .control-label {
@@ -209,9 +210,39 @@ input:checked+.slider:before {
 .player-control-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.8rem;
   justify-content: flex-end;
   align-items: center;
+}
+
+/* 900px and below */
+@media (max-width: 900px) {
+  .player-control-bar {
+    gap: 0.6rem;
+  }
+  .icon-btn {
+    padding: 0.4rem;
+  }
+}
+
+/* 768px and below */
+@media (max-width: 768px) {
+  .player-control-bar {
+    gap: 0.4rem;
+  }
+  .icon-btn {
+    padding: 0.3rem;
+  }
+}
+
+/* 600px and below */
+@media (max-width: 600px) {
+  .player-control-bar {
+    gap: 0.25rem; /* Equivalent to Tailwind's gap-1 */
+  }
+  .icon-btn {
+    padding: 0.2rem;
+  }
 }
 
 #episodes-count {
