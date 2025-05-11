@@ -1195,7 +1195,7 @@ function startProgressSaveInterval() {
     if (progressSaveInterval) clearInterval(progressSaveInterval);
     progressSaveInterval = setInterval(() => {
         saveCurrentProgress(); // 这个是保存到“观看历史列表”的
-        +       saveVideoSpecificProgress(); // 新增调用，保存特定视频的集数进度
+        saveVideoSpecificProgress(); // 新增调用，保存特定视频的集数进度
     }, 30000); // Save every 30 seconds
 }
 
