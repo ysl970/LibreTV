@@ -739,7 +739,6 @@ window.playNextEpisode = playNextEpisode;
 window.showDetails = showDetails;
 window.playFromHistory = playFromHistory;
 
-
 function createResultItemUsingTemplate(item) {
     const template = document.getElementById('search-result-template');
     if (!template) {
@@ -749,7 +748,6 @@ function createResultItemUsingTemplate(item) {
 
     const clone = template.content.cloneNode(true);
     const cardElement = clone.querySelector('.card-hover');
-
     if (!cardElement) {
         console.error("卡片元素 (.card-hover) 在模板克隆中未找到，项目:", item);
         const errorDiv = document.createElement('div');
@@ -760,7 +758,8 @@ function createResultItemUsingTemplate(item) {
 
     const imgElement = clone.querySelector('.result-img');
     if (imgElement) {
-        imgElement.src = item.vod_pic && item.vod_pic.startsWith('http') ? item.vod_pic : 'https://via.placeholder.com/100x150/191919/555555?text=No+Image';
+        imgElement.src = item.vod_pic && item.vod_pic.startsWith('http') ?
+            item.vod_pic : 'https://via.placeholder.com/100x150/191919/555555?text=No+Image';
         imgElement.alt = item.vod_name || '未知标题';
         imgElement.onerror = function () {
             this.onerror = null;
@@ -808,11 +807,12 @@ function createResultItemUsingTemplate(item) {
     const sourceNameElement = clone.querySelector('.result-source-name');
     if (sourceNameElement) {
         if (item.source_name) {
-            sourceNameElement.textContent = item.source_name;
-            sourceNameElement.classList.add('search-tag');
-            sourceNameElement.classList.remove('hidden');
+            sourceNameElement.textContent = item.source_name; // 设置文本内容
+            sourceNameElement.className = 'result-source-name bg-[#222222] text-xs text-gray-200 px-2 py-1 rounded-md';
+
         } else {
-            sourceNameElement.classList.add('hidden');
+            // 如果没有 source_name，则确保元素是隐藏的
+            sourceNameElement.className = 'result-source-name hidden';
         }
     }
 
