@@ -31,8 +31,7 @@ const API_SITES = {
         name: '非凡影视',
         detail: 'http://ffzy5.tv',
     },
-
-    dyttzy: { api: 'http://caiji.dyttzyapi.com', name: '电影天堂资源', detail: 'http://caiji.dyttzyapi.com' },
+    dyttzy: { api: 'http://caiji.dyttzyapi.com', name: '电影天堂', detail: 'http://caiji.dyttzyapi.com' },
     tyyszy: { api: 'https://tyyszy.com', name: '天涯资源' },
     zy360: { api: 'https://360zy.com', name: '360资源' },
     wolong: { api: 'https://wolongzyw.com', name: '卧龙资源' },
@@ -40,13 +39,16 @@ const API_SITES = {
     jisu: { api: 'https://jszyapi.com', name: '极速资源', detail: 'https://jszyapi.com' },
     dbzy: { api: 'https://dbzy.com', name: '豆瓣资源' },
     bfzy: { api: 'https://bfzyapi.com', name: '暴风资源' },
+    huya: { api: 'https://www.huyaapi.com', name: '虎牙资源', detail: 'https://www.huyaapi.com', },
     mozhua: { api: 'https://mozhuazy.com', name: '魔爪资源' },
     mdzy: { api: 'https://www.mdzyapi.com', name: '魔都资源' },
     ruyi: { api: 'https://cj.rycjapi.com', name: '如意资源' },
     zuid: { api: 'https://api.zuidapi.com', name: '最大资源' },
     yinghua: { api: 'https://m3u8.apiyhzy.com', name: '樱花资源' },
     baidu: { api: 'https://api.apibdzy.com', name: '百度云资源' },
-    wujin: { api: 'https://api.wujinapi.me', name: '无尽资源' }
+    wujin: { api: 'https://api.wujinapi.me', name: '无尽资源' },
+    wwzy: { api: 'https://wwzy.tv', name: '旺旺短剧' },
+    ikun: { api: 'https://ikunzyapi.com', name: 'iKun资源' }
 };
 
 // 聚合搜索配置
