@@ -230,22 +230,20 @@ function initializePageContent() {
         const savedProgressData = allSpecificProgresses[videoSpecificIdForRestore];
 
         if (savedProgressData) {
-            let episodeToResumeIndexOrDefault = indexForPlayer; // 默认播放用户从首页选的那一集
-            let positionToResume = 0;
+            // ① 决定“要不要提示进度”
+            const positionToResume =
+                savedProgressData[indexForPlayer.toString()]      // 只看当前集
+                    ? parseInt(savedProgressData[indexForPlayer.toString()])
+                    : 0;
 
-            // 检查 localStorage 中是否有上次播放的集数记录
-            if (typeof savedProgressData.lastPlayedEpisodeIndex === 'number' &&
-                savedProgressData.lastPlayedEpisodeIndex >= 0 &&
-                savedProgressData.lastPlayedEpisodeIndex < currentEpisodes.length) {
-                // 如果有，并且用户是从首页点进来的（通常URL的index可能代表他想看的那集，或者就是默认第一集）
-                // 我们需要决定是播放用户新选的这集，还是上次播放的那集
-                // 这里我们优先提示恢复到“上次播放的那一集”的进度
-                episodeToResumeIndexOrDefault = savedProgressData.lastPlayedEpisodeIndex;
-            }
-
-            // 获取“要恢复的那一集”的播放位置
-            if (savedProgressData[episodeToResumeIndexOrDefault.toString()]) {
-                positionToResume = parseInt(savedProgressData[episodeToResumeIndexOrDefault.toString()]);
+            // ② 如果 URL *没* 带 index（多半是直接点“继续播放”进入播放器），
+            //    并且有 lastPlayedEpisodeIndex，可把页面跳到那一集。
+            //    ——这一步只做“跳页”，不影响弹窗逻辑
+            if ((!urlParams.has('index') || urlParams.get('index') === null)
+                && typeof savedProgressData.lastPlayedEpisodeIndex === 'number'
+                && savedProgressData.lastPlayedEpisodeIndex >= 0
+                && savedProgressData.lastPlayedEpisodeIndex < currentEpisodes.length) {
+                indexForPlayer = savedProgressData.lastPlayedEpisodeIndex;
             }
 
             if (positionToResume > 5 && currentEpisodes[episodeToResumeIndexOrDefault]) {
