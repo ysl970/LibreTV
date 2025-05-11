@@ -1231,14 +1231,24 @@ function getVideoId() {
     return `${encodeURIComponent(currentVideoTitle)}_${sourceCode}_ep${window.currentEpisodeIndex}`;
 }
 
-function playEpisode(index) {
+// js/player_app.js
+function playEpisode(index) { // index 是目标新集数的索引
     if (index < 0 || index >= currentEpisodes.length) {
         console.warn(`[PlayerApp] Invalid episode index: ${index}`);
         return;
     }
 
+    // 关键：在更新 currentEpisodeIndex 和跳转之前，为【当前正在结束的这一集】保存一次进度
+    // 使用当前的、模块级的 currentEpisodeIndex (这是旧的集数) 和 dp.video.currentTime
+    if (dp && dp.video && typeof currentEpisodeIndex === 'number' && currentEpisodes[currentEpisodeIndex]) {
+        // 只有当 dp 存在，并且 currentEpisodeIndex 是一个有效的、已加载的集数时才保存
+        console.log(`[PlayerApp Debug] Saving progress for OLD episode ${currentEpisodeIndex + 1} before switching to ${index + 1}`);
+        saveVideoSpecificProgress(); // 这个函数内部会使用当前的 currentVideoTitle, currentEpisodeIndex, dp.video.currentTime
+    }
+
+    // 更新模块级变量以反映即将播放的新集数
     currentEpisodeIndex = index;
-    window.currentEpisodeIndex = index;
+    window.currentEpisodeIndex = index; // 也更新 window 上的
 
     const episodeUrl = currentEpisodes[index];
     if (!episodeUrl) {
@@ -1246,35 +1256,29 @@ function playEpisode(index) {
         return;
     }
 
-    //------------------------------------------------------------------
-    // 新的方法：直接用 location.href 带 index/url 重新加载 player.html
-    //------------------------------------------------------------------
-    const playerUrl = new URL(
-        window.location.origin + window.location.pathname
-    );
-
+    // ... (后续构建 playerUrl 和跳转的逻辑不变) ...
+    const playerUrl = new URL(window.location.origin + window.location.pathname);
     playerUrl.searchParams.set('url', episodeUrl);
     playerUrl.searchParams.set('title', currentVideoTitle);
     playerUrl.searchParams.set('index', index.toString());
 
-    /* 把完整剧集数组塞进 URL，保证新页面即使拿不到
-       localStorage 也能渲染选集按钮                */
     if (Array.isArray(currentEpisodes) && currentEpisodes.length) {
-        playerUrl.searchParams.set(
-            'episodes',
-            encodeURIComponent(JSON.stringify(currentEpisodes))
-        );
+        playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(currentEpisodes)));
     }
-    // 如果你还想保 source_code，也可以加：
     const sourceCode = new URLSearchParams(window.location.search).get('source_code');
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
+    
+    const currentReversedForPlayer = localStorage.getItem('episodesReversed') === 'true';
+    playerUrl.searchParams.set('reversed', currentReversedForPlayer.toString());
+    playerUrl.searchParams.delete('position');
 
     try {
-        localStorage.setItem(
-            'currentEpisodes',
-            JSON.stringify(currentEpisodes)
-        );
+        localStorage.setItem('currentEpisodes', JSON.stringify(currentEpisodes));
         localStorage.setItem('currentVideoTitle', currentVideoTitle);
+        // 当跳转到新页面后，新页面的 initializePageContent 会从 URL 读取 index，
+        // 所以这里保存 currentEpisodeIndex (新的index) 到 localStorage 主要是为了
+        // 在某些极端情况下（如URL参数丢失）提供一个回退，但不是主要的恢复机制。
+        localStorage.setItem('currentEpisodeIndex', index.toString()); 
     } catch (_) { }
 
     window.location.href = playerUrl.toString();
