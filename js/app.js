@@ -942,8 +942,6 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
             <svg id="orderIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transition: transform 0.3s ease;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
             </svg>
-            {/* 下面这行文字 span 已被删除 */}
-            {/* <span id="orderText" class="hidden sm:inline">${currentReversedState ? '倒序' : '正序'}</span> */}
         </button>
     </div>
     <div id="episodeButtonsContainer" class="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">`;
@@ -1041,13 +1039,13 @@ function toggleEpisodeOrderUI() {
         if (buttonsContainerFromRender) {
             container.innerHTML = buttonsContainerFromRender.innerHTML;
         } else {
-             // 如果 #episodeButtonsContainer 没找到，就用整个 newButtonsHtml 里的 #episodeButtonsContainer 部分
+            // 如果 #episodeButtonsContainer 没找到，就用整个 newButtonsHtml 里的 #episodeButtonsContainer 部分
             const parsedDoc = new DOMParser().parseFromString(newButtonsHtml, 'text/html');
             const newEpisodeButtonsContent = parsedDoc.getElementById('episodeButtonsContainer');
             if (newEpisodeButtonsContent) {
                 container.innerHTML = newEpisodeButtonsContent.innerHTML;
             } else {
-                 console.error("无法从 renderEpisodeButtons 的输出中提取集数按钮。");
+                console.error("无法从 renderEpisodeButtons 的输出中提取集数按钮。");
             }
         }
     } else {
