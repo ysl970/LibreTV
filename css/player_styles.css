@@ -213,3 +213,7 @@ input:checked+.slider:before {
   justify-content: flex-end;
   align-items: center;
 }
+
+#episodes-count {
+  display: none !important; /* 使用 !important 确保覆盖 Tailwind 的类 */
+}
