@@ -368,23 +368,38 @@ const APISourceManager = {
     },
 
     /**
-     * Cancel edit custom API
+     * 取消添加自定义API
      */
-    cancelEditCustomApi: function () {
-        // 恢复添加按钮
-        this.restoreAddCustomApiButtons();
-
-        // 清空表单并隐藏
-        const nameInput = DOMCache.get('customApiName') || document.getElementById('customApiName');
-        const urlInput = DOMCache.get('customApiUrl') || document.getElementById('customApiUrl');
-        const isAdultInput = DOMCache.get('customApiIsAdult') || document.getElementById('customApiIsAdult');
-
-        nameInput.value = '';
-        urlInput.value = '';
-        if (isAdultInput) isAdultInput.checked = false;
-
+    cancelAddCustomApi: function() {
         const form = DOMCache.get('addCustomApiForm') || document.getElementById('addCustomApiForm');
-        if (form) form.classList.add('hidden');
+        if (form) {
+            form.classList.add('hidden');
+            // 重置表单
+            const nameInput = DOMCache.get('customApiName') || document.getElementById('customApiName');
+            const urlInput = DOMCache.get('customApiUrl') || document.getElementById('customApiUrl');
+            const isAdultInput = DOMCache.get('customApiIsAdult') || document.getElementById('customApiIsAdult');
+            
+            if (nameInput) nameInput.value = '';
+            if (urlInput) urlInput.value = '';
+            if (isAdultInput) isAdultInput.checked = false;
+            
+            // 恢复默认的添加按钮
+            const buttonContainer = form.querySelector('div:last-child');
+            if (buttonContainer) {
+                buttonContainer.innerHTML = `
+                    <button onclick="addCustomApi()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs">添加</button>
+                    <button onclick="cancelAddCustomApi()" class="bg-[#444] hover:bg-[#555] text-white px-3 py-1 rounded text-xs">取消</button>
+                `;
+            }
+        }
+    },
+
+    /**
+     * 取消编辑自定义API
+     */
+    cancelEditCustomApi: function() {
+        // 复用取消添加的逻辑
+        this.cancelAddCustomApi();
     },
 
     /**
