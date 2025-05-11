@@ -25,6 +25,7 @@ function SQuery(selector, callback, timeout = 5000, interval = 100) {
     check();
 }
 // --- 模块内变量 ---
+let isNavigatingToEpisode = false;   // 正在换集时置 true，避免误保存
 let currentVideoTitle = '';
 let currentEpisodeIndex = 0;
 let currentEpisodes = [];
@@ -748,6 +749,7 @@ function setupPlayerControls() {
 }
 
 function saveVideoSpecificProgress() {
+    if (isNavigatingToEpisode) return;   // ← 跳过 beforeunload 那次调用
     const toggle = document.getElementById('remember-episode-progress-toggle');
     if (!toggle || !toggle.checked) { // 如果开关未勾选，则不保存
         return;
@@ -1246,7 +1248,10 @@ function playEpisode(index) { // index 是目标新集数的索引
         saveVideoSpecificProgress(); // 这个函数内部会使用当前的 currentVideoTitle, currentEpisodeIndex, dp.video.currentTime
     }
 
-    // 更新模块级变量以反映即将播放的新集数
+    // ② 标记“正在跳转”，让 after-save 的 beforeunload 不再写库
+    isNavigatingToEpisode = true;
+
+    // ③ 再更新索引等
     currentEpisodeIndex = index;
     window.currentEpisodeIndex = index; // 也更新 window 上的
 
@@ -1267,7 +1272,7 @@ function playEpisode(index) { // index 是目标新集数的索引
     }
     const sourceCode = new URLSearchParams(window.location.search).get('source_code');
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
-    
+
     const currentReversedForPlayer = localStorage.getItem('episodesReversed') === 'true';
     playerUrl.searchParams.set('reversed', currentReversedForPlayer.toString());
     playerUrl.searchParams.delete('position');
@@ -1278,7 +1283,7 @@ function playEpisode(index) { // index 是目标新集数的索引
         // 当跳转到新页面后，新页面的 initializePageContent 会从 URL 读取 index，
         // 所以这里保存 currentEpisodeIndex (新的index) 到 localStorage 主要是为了
         // 在某些极端情况下（如URL参数丢失）提供一个回退，但不是主要的恢复机制。
-        localStorage.setItem('currentEpisodeIndex', index.toString()); 
+        localStorage.setItem('currentEpisodeIndex', index.toString());
     } catch (_) { }
 
     window.location.href = playerUrl.toString();
