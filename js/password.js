@@ -46,20 +46,26 @@ window.isPasswordVerified = isPasswordVerified;
 async function verifyPassword(password) {
     const correctHash = window.__ENV__?.PASSWORD;
     if (!correctHash) return false;
-    const hashFn = (typeof sha256 === 'function') ? sha256 : window.sha256;
-    if (!hashFn) throw new Error('全局缺少 sha256 函数！');
-    const inputHash = await hashFn(password);
-    const isValid = inputHash === correctHash;
-    if (isValid) {
-        localStorage.setItem(PASSWORD_CONFIG.localStorageKey, JSON.stringify({
-            verified: true,
-            timestamp: Date.now(),
-            passwordHash: correctHash
-        }));
+    
+    // 使用全局 sha256 函数
+    try {
+        const inputHash = await window.sha256(password);
+        const isValid = inputHash === correctHash;
+        if (isValid) {
+            localStorage.setItem(PASSWORD_CONFIG.localStorageKey, JSON.stringify({
+                verified: true,
+                timestamp: Date.now(),
+                passwordHash: correctHash
+            }));
+        }
+        return isValid;
+    } catch (error) {
+        console.error('SHA-256 计算失败:', error);
+        return false;
     }
-    return isValid;
 }
 
+// 移除重复的 sha256 函数实现
 /**
  * Web端/HTTP 用SHA-256实现，可用原生crypto或window._jsSha256兜底。
  * 强烈建议在 cloudflare pages HTTPS 环境下用原生crypto。

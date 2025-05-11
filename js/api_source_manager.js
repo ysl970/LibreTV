@@ -403,11 +403,24 @@ const APISourceManager = {
 
 
     /**
+     * 根据索引获取自定义API信息
+     * @param {number} customIndex - 自定义API索引
+     * @returns {object|null} - 自定义API信息对象或null
+     */
+    getCustomApiInfo: function (customIndex) {
+        const customAPIs = AppState.get('customAPIs');
+        if (Array.isArray(customAPIs) && customIndex >= 0 && customIndex < customAPIs.length) {
+            return customAPIs[customIndex];
+        }
+        return null;
+    },
+
+    /**
      * 根据来源代码获取API信息
      * @param {string} sourceCode - 来源代码 (例如 'heimuer', 'custom_0')
      * @returns {object|null} - 包含API信息的对象 (例如 { name: 'API名称', url: 'API地址', isCustom: boolean }) 或 null
      */
-    getSelectedApi: function (sourceCode) { // <--- 新增的方法
+    getSelectedApi: function (sourceCode) {
         if (!sourceCode) {
             return null;
         }
