@@ -368,6 +368,8 @@ body {
   width: 320px;
   box-sizing: border-box;
   scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #333 #111; 
 }
 
 /* 为历史面板定制滚动条样式，使其更接近 old4 的全局效果或确保背景融合 */
@@ -376,7 +378,7 @@ body {
 }
 
 .history-panel::-webkit-scrollbar-track {
-  background: #111; /* 关键：确保轨道背景和面板背景一致 */
+  background: #inherit; /* 关键：确保轨道背景和面板背景一致 #111 */
   border-radius: 4px; /* 可选，保持与全局一致 */
 }
 
