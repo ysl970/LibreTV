@@ -419,14 +419,15 @@ const APISourceManager = {
 
     /**
      * 根据索引获取自定义API信息
-     * @param {number} customIndex - 自定义API索引
+     * @param {number} index - 自定义API索引
      * @returns {object|null} - 自定义API信息对象或null
      */
-    getCustomApiInfo: function (customIndex) {
-        const customAPIs = AppState.get('customAPIs');
-        if (Array.isArray(customAPIs) && customIndex >= 0 && customIndex < customAPIs.length) {
-            return customAPIs[customIndex];
+    getCustomApiInfo: function(index) {
+        const customAPIs = AppState.get('customAPIs'); // 从AppState获取自定义API列表
+        if (customAPIs && typeof index === 'number' && index >= 0 && index < customAPIs.length) {
+            return customAPIs[index]; // 返回格式应为 { name, url, isAdult }
         }
+        console.warn(`getCustomApiInfo: Invalid index ${index} or customAPIs not found.`);
         return null;
     },
 
