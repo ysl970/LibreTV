@@ -50,15 +50,6 @@ function formatPlayerTime(seconds) {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-// 辅助函数：简单的确认弹窗 (如果 ui.js 没有提供更美观的)
-function showPlayerConfirmationDialog(message, onConfirm, onCancel) {
-    if (confirm(message)) { // confirm 是浏览器自带的简单弹窗
-        if (onConfirm) onConfirm();
-    } else {
-        if (onCancel) onCancel();
-    }
-}
-
 // 将需要在 player_preload.js 中访问的变量挂载到 window
 window.currentEpisodes = [];
 window.currentEpisodeIndex = 0;
