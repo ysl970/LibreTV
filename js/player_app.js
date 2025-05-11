@@ -546,7 +546,7 @@ function setupPlayerControls() {
 
     function setupRememberEpisodeProgressToggle() {
         const rememberEpisodeProgressToggle = document.getElementById('remember-episode-progress-toggle');
-    
+
         if (rememberEpisodeProgressToggle) {
             // 1. 初始化开关状态
             const savedSetting = localStorage.getItem(REMEMBER_EPISODE_PROGRESS_STORAGE_KEY);
@@ -556,9 +556,9 @@ function setupPlayerControls() {
                 rememberEpisodeProgressToggle.checked = true; // 默认开启
                 localStorage.setItem(REMEMBER_EPISODE_PROGRESS_STORAGE_KEY, 'true');
             }
-    
+
             // 2. 监听开关变化
-            rememberEpisodeProgressToggle.addEventListener('change', function(e) {
+            rememberEpisodeProgressToggle.addEventListener('change', function (e) {
                 constisChecked = e.target.checked;
                 localStorage.setItem(REMEMBER_EPISODE_PROGRESS_STORAGE_KEY, isChecked.toString());
                 if (typeof showToast === 'function') { // 假设 showToast 已全局可用
@@ -632,6 +632,69 @@ function setupPlayerControls() {
     // Add lock button event listener
     const lockButton = document.getElementById('lock-button');
     if (lockButton) lockButton.addEventListener('click', toggleLockScreen);
+}
+
+// js/player_app.js
+
+function saveVideoSpecificEpisodeProgress() {
+    const rememberEpisodeProgressToggle = document.getElementById('remember-episode-progress-toggle');
+    // 检查“记住进度”开关是否开启
+    if (!rememberEpisodeProgressToggle || !rememberEpisodeProgressToggle.checked) {
+        return;
+    }
+
+    if (!dp || !dp.video || typeof currentVideoTitle === 'undefined' || typeof currentEpisodeIndex === 'undefined' || !currentEpisodes || currentEpisodes.length === 0) {
+        return;
+    }
+
+    const currentTime = Math.floor(dp.video.currentTime);
+    const duration = Math.floor(dp.video.duration);
+    const sourceCodeFromUrl = new URLSearchParams(window.location.search).get('source_code') || 'unknown_source';
+    const videoId = `${currentVideoTitle}_${sourceCodeFromUrl}`; // 视频唯一ID
+
+    // 只在有意义的进度时保存 (例如播放超过5秒，且未播放完毕)
+    if (currentTime > 5 && duration > 0 && currentTime < duration * 0.98) {
+        try {
+            let allVideoProgresses = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY) || '{}');
+            if (!allVideoProgresses[videoId]) {
+                allVideoProgresses[videoId] = {};
+            }
+            allVideoProgresses[videoId][currentEpisodeIndex.toString()] = currentTime; // 保存当前集数进度
+            allVideoProgresses[videoId].lastPlayedEpisodeIndex = currentEpisodeIndex; // 记录这个视频最后播放的是哪一集
+            allVideoProgresses[videoId].totalEpisodes = currentEpisodes.length; // (可选) 记录总集数
+            allVideoProgresses[videoId].lastKnownEpisodeUrls = currentEpisodes.map(ep => ep.split('/').pop()); // (可选) 记录集数URL片段用于校验
+
+            localStorage.setItem(VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY, JSON.stringify(allVideoProgresses));
+
+            if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) {
+                // console.log(`已保存 '${videoId}' 第 ${currentEpisodeIndex + 1} 集特定进度: ${currentTime}s`);
+            }
+        } catch (e) {
+            console.error('保存特定视频集数进度失败:', e);
+        }
+    }
+}
+
+// （可选）用于在关闭“记住进度”时清除当前视频的集数进度
+function clearCurrentVideoSpecificEpisodeProgresses() {
+    if (typeof currentVideoTitle === 'undefined' || !currentEpisodes || currentEpisodes.length === 0) {
+        return;
+    }
+    const sourceCodeFromUrl = new URLSearchParams(window.location.search).get('source_code') || 'unknown_source';
+    const videoId = `${currentVideoTitle}_${sourceCodeFromUrl}`;
+
+    try {
+        let allVideoProgresses = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY) || '{}');
+        if (allVideoProgresses[videoId]) {
+            delete allVideoProgresses[videoId];
+            localStorage.setItem(VIDEO_SPECIFIC_PROGRESSES_STORAGE_KEY, JSON.stringify(allVideoProgresses));
+            if (typeof showToast === 'function') {
+                showToast(`已清除《${currentVideoTitle}》的各集播放进度`, 'info');
+            }
+        }
+    } catch (e) {
+        console.error('清除特定视频集数进度失败:', e);
+    }
 }
 
 function showError(message) {
