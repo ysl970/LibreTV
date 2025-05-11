@@ -698,12 +698,6 @@ body {
   }
 }
 
-/* 优化卡片内元素间距 */
-.card-hover .p-2 {
-  padding: 0.75rem;
-  /* 增加内边距 */
-}
-
 /* 增加卡片内字体大小 */
 .card-hover h3 {
   font-size: 0.95rem;
@@ -720,23 +714,6 @@ body {
 /* 优化卡片内元素间距 */
 .card-hover .p-2 {
   padding: 0.5rem;
-}
-
-/* 播放器顶部header移动端优化 */
-.player-header {
-  gap: 0.5rem;
-}
-
-.custom-title-scroll {
-  overflow-x: auto;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.custom-title-scroll::-webkit-scrollbar {
-  display: none;
 }
 
 .logo-text {
