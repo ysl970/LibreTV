@@ -1,5 +1,6 @@
 // douban.js
-
+// 用同一个 Overlay，反复插拔
+let globalLoadingOverlay = null;
 // 常量配置区域 
 const CONFIG = {
   // API相关
@@ -68,6 +69,28 @@ const utils = {
       clearTimeout(timer);
       timer = setTimeout(() => fn.apply(context, args), delay);
     };
+  },
+
+  /* ------------------------------------------------------------------
+     ↓↓↓ 如果项目里尚未定义 createLoadingOverlay，就把它也放进来 ↓↓↓
+  ------------------------------------------------------------------ */
+  createLoadingOverlay() {
+    const div = document.createElement("div");
+    div.className =
+      "absolute inset-0 bg-white/60 flex items-center justify-center";
+    div.innerHTML = `<span class="animate-spin mr-2">⏳</span> Loading…`;
+    return div;
+  },
+
+  /* ------------------------------------------------------------------
+     ↓↓↓ 新增：复用同一个 Loading 遮罩层 ↓↓↓
+  ------------------------------------------------------------------ */
+  getLoadingOverlay() {
+    // 用 utils._globalLoadingOverlay 缓存唯一实例
+    if (!this._globalLoadingOverlay) {
+      this._globalLoadingOverlay = this.createLoadingOverlay();
+    }
+    return this._globalLoadingOverlay;
   },
 
   // 安全文本处理 - 增强型XSS防护
@@ -511,7 +534,12 @@ async function renderRecommend(tag, pageLimit, pageStart) {
   const container = utils.getElement("douban-results");
   if (!container) return;
 
-  const loadingOverlay = utils.createLoadingOverlay();
+  const loadingOverlay = utils.getLoadingOverlay();
+  if (!container.contains(loadingOverlay)) {
+    container.classList.add("relative");      // 保证父元素定位
+    container.appendChild(loadingOverlay);    // 只插一次
+  }
+
   container.classList.add("relative");
   container.appendChild(loadingOverlay);
 
