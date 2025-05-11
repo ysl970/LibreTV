@@ -413,7 +413,7 @@ function search(options = {}) {
     let isNormalSearch = !options.doubanQuery; // 简单判断是否为普通搜索
 
     if (isNormalSearch && typeof showLoading === 'function') {
-        showLoading(`正在搜索“${query}”...`); // 普通搜索也显示全局 loading
+        showLoading(`正在搜索“${query}”`); // 普通搜索也显示全局 loading
     }
 
     // 只有非豆瓣触发的搜索才保存历史（或按您之前的逻辑调整）
@@ -938,7 +938,7 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
         </button>
         <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" 
                 title="${currentReversedState ? '切换为正序排列' : '切换为倒序排列'}" /* 添加 title 提示 */
-                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center"> {/* 移除了 gap-1 */}
+                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
             <svg id="orderIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transition: transform 0.3s ease;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
             </svg>
@@ -1029,8 +1029,6 @@ function toggleEpisodeOrderUI() {
     const sourceCode = AppState.get('currentSourceCode');
 
     if (episodes && title && sourceCode) {
-        // 调用 renderEpisodeButtons 时，它会使用最新的 AppState.get('episodesReversed')
-        // 并正确地重新生成不含文字的排序按钮，同时更新其 title
         const newButtonsHtml = renderEpisodeButtons(episodes, title, sourceCode, sourceName || '');
         // 从返回的完整 HTML（包括外部的控制按钮div）中提取出集数按钮容器的内容
         const tempDiv = document.createElement('div');
@@ -1039,7 +1037,6 @@ function toggleEpisodeOrderUI() {
         if (buttonsContainerFromRender) {
             container.innerHTML = buttonsContainerFromRender.innerHTML;
         } else {
-            // 如果 #episodeButtonsContainer 没找到，就用整个 newButtonsHtml 里的 #episodeButtonsContainer 部分
             const parsedDoc = new DOMParser().parseFromString(newButtonsHtml, 'text/html');
             const newEpisodeButtonsContent = parsedDoc.getElementById('episodeButtonsContainer');
             if (newEpisodeButtonsContent) {
