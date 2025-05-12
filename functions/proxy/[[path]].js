@@ -1,9 +1,6 @@
 // functions/proxy/[[path]].js
 // -----------------------------------------------------------------------------
-// 💡  小白友好的 Cloudflare-Workers 视频代理
 //     • 智能缓存 & M3U8 重写
-//     • 原十项修复 + 二轮 (#1-#8) + 微调 A/B/C/D/F
-//     • 深度优化 ①-④ + 复审细抠 ⑤-⑥（2025-05-12）
 // -----------------------------------------------------------------------------
 
 import { kvHelper } from "../utils/kv-helper.js";
@@ -73,8 +70,8 @@ const getBaseUrl = (urlStr) => {
     return lastSlash > protoEnd + 2
       ? urlStr.slice(0, lastSlash + 1)
       : urlStr.endsWith("/")
-      ? urlStr
-      : `${urlStr}/`;
+        ? urlStr
+        : `${urlStr}/`;
   }
 };
 
