@@ -405,7 +405,7 @@ class EnhancedAdFilterLoader extends Hls.DefaultConfig.loader {
     static strip(content) {
         const lines = content.split('\n');
         let inAd = false, out = [];
-    
+
         for (const l of lines) {
             if (!inAd && this.cueStart.some(re => re.test(l))) { inAd = true; continue; }
             if (inAd && this.cueEnd.some(re => re.test(l))) { inAd = false; continue; }
@@ -414,9 +414,10 @@ class EnhancedAdFilterLoader extends Hls.DefaultConfig.loader {
         }
         return out.join('\n');
     }
-    
+
     load(ctx, cfg, cbs) {
-        if ((ctx.type === 'manifest' || ctx.type === 'level') && window.PLAYER_CONFIG?.adFilteringEnabled !== false) {        const orig = cbs.onSuccess;
+        if ((ctx.type === 'manifest' || ctx.type === 'level') && window.PLAYER_CONFIG?.adFilteringEnabled !== false) {
+            const orig = cbs.onSuccess;
             cbs.onSuccess = (r, s, ctx2) => { r.data = EnhancedAdFilterLoader.strip(r.data); orig(r, s, ctx2); };
         }
         super.load(ctx, cfg, cbs);
@@ -481,13 +482,19 @@ function initPlayer(videoUrl, sourceCode) {
                         // ★ 先拿到“正确的新地址”
                         const src = player.options && player.options.video
                             ? player.options.video.url
-                            : '';           // 理论上一定有
+                            : '';
 
-                        // ★ 然后再去清理旧 DOM，避免把新地址弄丢
+                        // ★ 清理旧的 <source> 元素
                         const existingSource = video.querySelector('source');
                         if (existingSource) existingSource.remove();
                         if (video.hasAttribute('src')) video.removeAttribute('src');
-                        hls.loadSource(src);
+
+                        // ★ 用代理地址加载 m3u8（Worker 会剥离广告）
+                        const proxyUrl = adFilteringEnabled
+                            ? `/proxy/${encodeURIComponent(src)}`
+                            : `/proxy/${encodeURIComponent(src)}?af=0`;
+                        if (debugMode) console.log('[PlayerApp] HLS via proxy →', proxyUrl);
+                        hls.loadSource(proxyUrl);
                         hls.attachMedia(video);
 
                         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
