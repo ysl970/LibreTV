@@ -477,39 +477,20 @@ function initPlayer(videoUrl, sourceCode) {
                             const errorEl = document.getElementById('error'); if (errorEl) errorEl.style.display = 'none';
                             // video.removeEventListener('playing', onPlaying); // Maybe keep listening?
                         });
-                        
-                        //video.disableRemotePlayback = false;
-                        // ★ 先拿到“正确的新地址”
-                       // const src = player.options && player.options.video
-                       //     ? player.options.video.url
-                       //     : '';           // 理论上一定有
-
-                        // ★ 然后再去清理旧 DOM，避免把新地址弄丢
-                       // const existingSource = video.querySelector('source');
-                       // if (existingSource) existingSource.remove();
-                      //  if (video.hasAttribute('src')) video.removeAttribute('src');
-                     //   hls.loadSource(src);
-                     //   hls.attachMedia(video);
 
                         video.disableRemotePlayback = false;
                         // ★ 先拿到“正确的新地址”
                         const src = player.options && player.options.video
                             ? player.options.video.url
-                            : '';
+                            : '';           // 理论上一定有
 
-                        // ★ 清理旧的 <source> 元素
+                        // ★ 然后再去清理旧 DOM，避免把新地址弄丢
                         const existingSource = video.querySelector('source');
                         if (existingSource) existingSource.remove();
                         if (video.hasAttribute('src')) video.removeAttribute('src');
-
-                        // ★ 用代理地址加载 m3u8（Worker 会剥离广告）
-                        const proxyUrl = adFilteringEnabled
-                            ? `/proxy/${encodeURIComponent(src)}`
-                            : `/proxy/${encodeURIComponent(src)}?af=0`;
-                        if (debugMode) console.log('[PlayerApp] HLS via proxy →', proxyUrl);
-                        hls.loadSource(proxyUrl);
+                        hls.loadSource(src);
                         hls.attachMedia(video);
-      // end
+
                         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
                             if (debugMode) console.log("[PlayerApp] HLS Media Attached");
                             // DPlayer usually handles play(), but ensure it happens
