@@ -1,6 +1,7 @@
 // functions/proxy/[[path]].js
 
 // --- 常量/配置 ---
+const resolveCache = new Map();
 const DEFAULT_CACHE_TTL = 86400; // 24小时
 const DEFAULT_MAX_RECURSION = 5;
 const DEFAULT_USER_AGENTS = [
