@@ -430,6 +430,7 @@ class AdAwareLoader extends Hls.DefaultConfig.loader {
                 if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Ad End detected in manifest: ${trimmedLine}`);
                 return false; // 移除广告结束标记
             }
+            if (localInAd && /^#EXT-X-PART/i.test(trimmedLine)) { return false; } // 丢弃广告 PART
             if (localInAd) {
                 if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Skipping line in ad segment (manifest): ${trimmedLine}`);
                 return false; // 移除广告段内部行

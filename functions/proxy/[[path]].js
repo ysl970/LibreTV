@@ -1,3 +1,4 @@
+
 // functions/proxy/[[path]].js
 // -----------------------------------------------------------------------------
 //     • 智能缓存 & M3U8 重写
@@ -60,12 +61,14 @@ const AD_REGEX_RULES = [
   /\/advertisements\//i,
   // 更多自定义的正则表达式规则
 ];
+// JS 允许正则里出现换行，但禁止使用 /x，所以最保险的写法还是单行：
+const AD_TRIGGER_RE = /#EXT(?:-X)?-(?:CUE|SCTE35|DATERANGE).*?(?:CLASS="?ad"?|CUE-OUT|SCTE35-OUT|PLACEMENT-OPPORTUNITY|SCTE35-OUT-CONT)/i;
 
-const AD_TRIGGER_RE = /#EXT(?:-X)?-(?:CUE|SCTE35|DATERANGE).*?(?:CLASS="?ad"?|CUE-OUT|SCTE35-OUT)/i;
-const AD_END_RE = /#EXT(?:-X)?-(?:CUE|SCTE35).*?(CUE-IN|SCTE35-IN)/i;
-// 注意：他人方案中的 AD_URI_RE 我们用 AD_KEYWORDS 和 AD_REGEX_RULES 替代一部分功能，
-// 并在 processMediaPlaylist 中直接判断URL。如果需要更强的URI判断，可以引入类似 AD_URI_RE 的正则。
-// const AD_URI_RE     = /\/(?:ad|ads|adv|preroll)[^\/]*\.ts$/i; // 这是他人方案的，如果需要可以整合
+const AD_END_RE = /#EXT(?:-X)?-(?:CUE|SCTE35|DATERANGE).*?(?:CUE-IN|SCTE35-IN|PLACEMENT-OPPORTUNITY-END)/i;
+
+// LL‑HLS 部分片保持不变
+const PART_RE = /^#EXT-X-PART:.*URI="([^"]+)"/i;
+
 
 const SKIP_RE = /#EXT-X-SKIP:SKIPPED-SEGMENTS=(\d+)/; // 用于处理 LL-HLS 跳过片段
 
@@ -98,10 +101,11 @@ const stripAdsFromServer = (content, adFilteringEnabled = true, logFn = console.
       continue;
     }
 
-    if (inAdSegment) {
-      logFn(`[AdBlocker Server] Skipping line inside ad segment: ${trimmedLine}`);
-      continue; // 移除广告段内部的所有行
-    }
+       if (inAdSegment) {
+              // 连带 LL-HLS PART 一并丢弃
+              if (PART_RE.test(trimmedLine)) { logFn(`[AdBlock] skip PART in ad`); }
+              continue;
+          }
 
     // 处理 #EXT-X-SKIP
     const skipMatch = trimmedLine.match(SKIP_RE);
@@ -461,8 +465,16 @@ const processMediaPlaylist = (targetUrl, content, cache, logFn, adFilteringEnabl
       processedLines.push(processUriLine(t, base, cache, logFn));
     } else if (t.startsWith("#")) {
       processedLines.push(t); // 其他元数据行直接保留
-    } else {
-      // 非注释行，应该是媒体分片URI，进行代理重写
+       } else if (t.startsWith('#EXT-X-PART')) {
+             // 把 PART URI 提取出来再走关键词/正则检测
+             const m = t.match(/URI="([^"]+)"/i);
+             const partUri = m ? m[1] : '';
+             if (adFilteringEnabled && (isUriAd(partUri))) {
+                 logFn(`[AdBlock] PART uri looks like ad, skip`);
+                 continue;
+             }
+             processedLines.push(processUriLine(t, base, cache, logFn));
+        } else {
       const abs = resolveUrl(base, t, cache, logFn);
       processedLines.push(rewriteUrlToProxy(abs));
     }
@@ -473,25 +485,16 @@ const processMediaPlaylist = (targetUrl, content, cache, logFn, adFilteringEnabl
 /** 寻找首个变体 URL（支持 STREAM‑INF 与 MEDIA）。 */
 const findFirstVariantUrl = (content, baseUrl, cache, logFn) => {
   const lines = content.split(/\r?\n/);
+    const isAdLine = (l) =>
+            /#EXT-X-STREAM-INF/i.test(l) && /(ad|promo|preroll)/i.test(l);
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i].trim();
-    if (l.startsWith("#EXT-X-MEDIA")) {
-      const m = l.match(/URI\s*=\s*"([^"]+)"/);
-      if (m) {
-        const abs = resolveUrl(baseUrl, m[1], cache, logFn);
-        logFn(`Variant (MEDIA) → ${abs}`);
-        return abs;
-      }
-    }
-    if (l.startsWith("#EXT-X-STREAM-INF")) {
-      for (let j = i + 1; j < lines.length; j++) {
-        const cand = lines[j].trim();
-        if (!cand || cand.startsWith("#")) continue;
-        const abs = resolveUrl(baseUrl, cand, cache, logFn);
-        logFn(`Variant (STREAM-INF) → ${abs}`);
-        return abs;
-      }
-    }
+        if (isAdLine(lines[i]) && adFilteringEnabled) {   // ★ 跳过广告码率档
+              logFn(`[AdBlock] variant line looks like ad → skip`);
+              // 跳到下一条 #EXT-X-STREAM-INF
+              while (i < lines.length && !lines[i].startsWith('#EXT-X-STREAM-INF')) i++;
+              continue;
+          }
   }
   return "";
 };
@@ -613,26 +616,25 @@ export const onRequest = async (ctx) => {
   }
   log(`Target URL from path: ${targetUrl}`);
 
-  // --- 开始粘贴 新增的获取开关状态逻辑 ---
-  const requestUrlParams = new URLSearchParams(search); // 从 search 部分创建 URLSearchParams
-  const adFilterParam = requestUrlParams.get('ad_filter_enabled');
-  let serverAdFilteringEnabled = true; // 默认开启服务器端过滤
-  if (adFilterParam !== null) {
-    serverAdFilteringEnabled = adFilterParam === 'true';
-  }
-  log(`Server-side ad filtering is ${serverAdFilteringEnabled ? 'ENABLED' : 'DISABLED'} based on URL parameter.`);
-  // --- 粘贴结束 新增的获取开关状态逻辑 ---
+// --- 获取“分片广告过滤”开关状态 ------------------------------------------
+const adFilterParam = new URL(request.url).searchParams.get('ad_filter_enabled');
+
+/**
+ * 逻辑：
+ *   -   URL 没带参数   →  默认 **开启**
+ *   -   ad_filter_enabled=true   →  开启
+ *   -   ad_filter_enabled=false  →  关闭
+ */
+const serverAdFilteringEnabled = adFilterParam !== 'false';
+
+log(
+  `[Proxy] Server-side ad filtering is ${serverAdFilteringEnabled ? 'ENABLED' : 'DISABLED'
+  } (param=${adFilterParam})`
+);
 
   const kv = env.LIBRETV_PROXY_KV ? kvHelper(env.LIBRETV_PROXY_KV, cfg.CACHE_TTL, log) : null;
 
-  // ... (您已有的 RAW 缓存逻辑，如 rawKey, rawVal, rawCacheObj) ...
-  // ... (您已有的 fetchContentWithType 调用逻辑) ...
-  // 确保在调用 fetchContentWithType 之后，如果内容是M3U8，将 serverAdFilteringEnabled 传递下去
-
   let body, contentType, originHeaders;
-  // ... (从缓存或网络获取 body, contentType, originHeaders 的逻辑保持不变) ...
-  // 例如，在您的代码中，这部分逻辑可能在：
-  // if (rawCacheObj) { ... } else { const fetched = await fetchContentWithType(...); ... }
 
   if (rawCacheObj) {
       log("[Proxy KV Hit] Raw content cache hit.");
