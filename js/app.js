@@ -108,11 +108,12 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
     playerUrl.searchParams.set('title', title);
     playerUrl.searchParams.set('index', episodeIndex.toString());
 
-    const eps = AppState.get('currentEpisodes');
-    if (Array.isArray(eps) && eps.length) {
-        playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(eps)));
-    }
+   // const eps = AppState.get('currentEpisodes');
+    //if (Array.isArray(eps) && eps.length) {
+    //    playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(eps)));
+   // }
 
+   // 注释掉这行，让URL不带 reversed 参数
     const currentReversedStateForPlayer = AppState.get('episodesReversed') || false;
     playerUrl.searchParams.set('reversed', currentReversedStateForPlayer.toString());
 
