@@ -1,29 +1,30 @@
 // functions/proxy/[[path]].js
 // -----------------------------------------------------------------------------
-// 💡  A beginner-friendly ("小白" friendly) version of the Cloudflare-Workers proxy
-//     with robust caching, playlist rewriting, and clear inline comments.
-//     ✔  Implements SIX extra improvements requested on 2025-05-12.
+// 💡  小白友好的 Cloudflare-Workers 视频代理
+//     • 智能缓存 & M3U8 重写
+//     • 原十项修复 + 二轮 (#1-#8) + 微调 A/B/C/D/F
+//     • 深度优化 ①-④ + 复审细抠 ⑤-⑥（2025-05-12）
 // -----------------------------------------------------------------------------
 
 import { kvHelper } from "../utils/kv-helper.js";
 
 // -----------------------------------------------------------------------------
-//  CONSTANTS & RE-USABLE REGEX
+//  常量与正则
 // -----------------------------------------------------------------------------
-const RE_URI = /URI\s*=\s*"([^"]+)"/g;                         // Standard URI attributes
-// 3️⃣  Generalised – capture any attribute that ends with "URI"
+const RE_URI = /URI\s*=\s*"([^"]+)"/g;
 const RE_OTHER_URI = /\b([A-Z0-9_-]*?URI)\s*=\s*"([^"]+)"/gi;
 
-const DEFAULT_CACHE_TTL = 86400;                         // 24 h in seconds
+const DEFAULT_CACHE_TTL = 86400; // 24 h
 const DEFAULT_MAX_RECURSION = 5;
 const DEFAULT_USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
 ];
+const DEFAULT_LARGE_MAX_MB = 32; // 超过此阈值即视为“大文件”
 
-const KV_RAW_PREFIX = "proxy_raw:";                      // Raw response cache key
-const KV_M3U8_PROCESSED_PREFIX = "m3u8_processed:";      // Processed playlist cache key
+const KV_RAW_PREFIX = "proxy_raw:";
+const KV_M3U8_PROCESSED_PREFIX = "m3u8_processed:";
 
-const M3U8_CONTENT_TYPES = [                             // MIME types that mean M3U8
+const M3U8_CONTENT_TYPES = [
   "application/vnd.apple.mpegurl",
   "application/x-mpegurl",
   "audio/mpegurl",
@@ -37,7 +38,7 @@ const COMMON_HEADERS = {
 const OPTIONS_HEADERS = { ...COMMON_HEADERS, "Access-Control-Max-Age": "86400" };
 
 // -----------------------------------------------------------------------------
-//  HELPER UTILITIES (env parsing, logging, base64 helpers, etc.)
+//  工具函数
 // -----------------------------------------------------------------------------
 export const parseNumberEnv = (env, key, def = 0) => {
   const raw = env[key];
@@ -57,7 +58,7 @@ export const parseJsonArrayEnv = (env, key, def = []) => {
   }
 };
 
-// Fast way to get base URL of any absolute/relative string
+// 取 URL 目录部分
 const getBaseUrl = (urlStr) => {
   try {
     const url = new URL(urlStr);
@@ -66,26 +67,28 @@ const getBaseUrl = (urlStr) => {
     parts.pop();
     return `${url.origin}${parts.join("/")}/`;
   } catch {
-    // Fallback that never throws – keeps proxy alive even on weird URLs
     const protoEnd = urlStr.indexOf("://");
     if (protoEnd === -1) return urlStr;
     const lastSlash = urlStr.lastIndexOf("/");
-    return lastSlash > protoEnd + 2 ? urlStr.slice(0, lastSlash + 1) : urlStr.endsWith("/") ? urlStr : `${urlStr}/`;
+    return lastSlash > protoEnd + 2
+      ? urlStr.slice(0, lastSlash + 1)
+      : urlStr.endsWith("/")
+      ? urlStr
+      : `${urlStr}/`;
   }
 };
 
-const isM3u8Content = (content, contentType) => {
-  if (contentType && M3U8_CONTENT_TYPES.some((ct) => contentType.toLowerCase().includes(ct))) return true;
-  return typeof content === "string" && content.trimStart().startsWith("#EXTM3U");
-};
+const isM3u8Content = (content, contentType) =>
+  (contentType &&
+    M3U8_CONTENT_TYPES.some((ct) => contentType.toLowerCase().includes(ct))) ||
+  (typeof content === "string" && content.trimStart().startsWith("#EXTM3U"));
 
 const logDebug = (debugEnabled, msg) => {
   if (debugEnabled) console.log(`[Proxy] ${msg}`);
 };
 
-// Resolve relative → absolute, with per-request cache to avoid repeat new URL()
 const resolveUrl = (baseUrl, relativeUrl, cache, logFn) => {
-  if (/^https?:\/\//i.test(relativeUrl)) return relativeUrl;      // already absolute
+  if (/^https?:\/\//i.test(relativeUrl)) return relativeUrl;
   const key = `${baseUrl}|${relativeUrl}`;
   if (cache.has(key)) return cache.get(key);
   try {
@@ -94,7 +97,7 @@ const resolveUrl = (baseUrl, relativeUrl, cache, logFn) => {
     return abs;
   } catch (e) {
     logFn(`URL resolve failed (${relativeUrl}): ${e.message}`);
-    return relativeUrl;                                           // best-effort fallback
+    return relativeUrl;
   }
 };
 
@@ -110,28 +113,39 @@ const safeJsonParse = (str, def = null, logFn) => {
   }
 };
 
-// -- Base64 helpers (large-file safe) ----------------------------------------
+// -- Base64 辅助（分块 atob，突破 50 MB 限制）-----------------------------
 const abToBase64 = (ab) => {
   const u8 = new Uint8Array(ab);
-  const CHUNK = 0x8000;         // 32 768 bytes
-  let str = "";
+  const CHUNK = 0x8000;
+  const parts = [];
   for (let i = 0; i < u8.length; i += CHUNK) {
-    str += String.fromCharCode(...u8.subarray(i, i + CHUNK));
+    parts.push(String.fromCharCode(...u8.subarray(i, i + CHUNK)));
   }
-  return btoa(str);
+  return btoa(parts.join(""));
 };
 
-const base64ToAb = (b64) =>
-  Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
-
+const base64ToAb = (b64) => {
+  const CHUNK = 0x8000;
+  let pos = 0;
+  const len = b64.length;
+  const bytes = new Uint8Array((len >> 2) * 3 + 3);
+  let offset = 0;
+  while (pos < len) {
+    const slice = b64.slice(pos, pos + CHUNK);
+    const bin = atob(slice);
+    for (let i = 0; i < bin.length; i++) bytes[offset++] = bin.charCodeAt(i);
+    pos += CHUNK;
+  }
+  return bytes.subarray(0, offset).buffer;
+};
 
 // -----------------------------------------------------------------------------
-//  RESPONSE HELPERS
+//  响应包装
 // -----------------------------------------------------------------------------
 const createResponse = (request, body, status = 200, headers = {}) => {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: OPTIONS_HEADERS });
-  const h = new Headers({ ...COMMON_HEADERS, ...headers });
-  return new Response(body, { status, headers: h });
+  if (request.method === "OPTIONS")
+    return new Response(null, { status: 204, headers: OPTIONS_HEADERS });
+  return new Response(body, { status, headers: { ...COMMON_HEADERS, ...headers } });
 };
 
 const createM3u8Response = (request, body, ttl) =>
@@ -140,7 +154,8 @@ const createM3u8Response = (request, body, ttl) =>
     "Cache-Control": `public, max-age=${ttl}`,
   });
 
-const stripHopByHopHeaders = (headers) => {
+// ——细抠 #6：同时写 Surrogate-Control + CDN-Cache-Control------------------- ★
+const stripHopByHopHeaders = (headers) =>
   [
     "set-cookie",
     "cookie",
@@ -150,26 +165,28 @@ const stripHopByHopHeaders = (headers) => {
     "server",
     "x-powered-by",
   ].forEach((h) => headers.delete(h));
-};
 
-// 6️⃣  Separate browser vs CDN caching
 const createOtherResponse = (request, body, status, originHeaders, ttl) => {
   const h = new Headers(originHeaders);
   stripHopByHopHeaders(h);
-  h.set("Cache-Control", `public, max-age=${Math.floor(ttl / 4)}`);    // browsers
-  h.set("CDN-Cache-Control", `public, max-age=${ttl}`);                // edge
-  h.delete("pragma");
-  h.delete("expires");
+  const browserTtl = Math.max(1, Math.floor(ttl / 4));
+  h.set("Cache-Control", `public, max-age=${browserTtl}`);
+  h.set("Surrogate-Control", `public, max-age=${ttl}`);
+  h.set("CDN-Cache-Control", `public, max-age=${ttl}`); // ★
   return createResponse(request, body, status, h);
 };
 
 // -----------------------------------------------------------------------------
-//  NETWORK FETCHING – with text/binary sniffing (4️⃣)
+//  网络抓取
 // -----------------------------------------------------------------------------
 const createFetchHeaders = (req, targetUrl, agents) => {
   const h = new Headers();
   h.set("User-Agent", agents[Math.floor(Math.random() * agents.length)]);
-  h.set("Accept", "*/*");
+  // 细抠 #5：再加 image/*，提高极端源站兼容性 ----------------------------- ★
+  h.set(
+    "Accept",
+    "application/x-mpegurl, video/*;q=0.75, image/*;q=0.6, application/json;q=0.6, */*;q=0.5",
+  );
   const al = req.headers.get("Accept-Language");
   if (al) h.set("Accept-Language", al);
   try {
@@ -181,9 +198,55 @@ const createFetchHeaders = (req, targetUrl, agents) => {
   return h;
 };
 
+// --①：无 Content-Length 时流式阈值探测 + 安全返回 ArrayBuffer ------------- ★
+const decideStreamOrBuffer = async (resp, isText, threshold, logFn) => {
+  const reader = resp.body.getReader();
+  let total = 0;
+  const chunks = [];
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    total += value.byteLength;
+    if (!isText && total > threshold) {
+      logFn("switch → stream (size exceeded)");
+      const tailStream = new ReadableStream({
+        start(controller) {
+          for (const c of chunks) controller.enqueue(c);
+          const pump = () =>
+            reader
+              .read()
+              .then(({ value, done }) => {
+                if (done) {
+                  controller.close();
+                  return;
+                }
+                controller.enqueue(value);
+                return pump();
+              })
+              .catch((e) => controller.error(e)); // 细抠 #2：捕获上游异常 ★
+          pump();
+        },
+      });
+      return { content: tailStream, isStream: true };
+    }
+  }
+
+  // 未超阈值：合并缓冲并拷贝 ArrayBuffer，彻底与原 Uint8Array 解耦 ——细抠 #1
+  const buf = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    buf.set(c, offset);
+    offset += c.byteLength;
+  }
+  const arrBuf = buf.slice().buffer; // ★
+  return { content: isText ? new TextDecoder().decode(buf) : arrBuf, isStream: false };
+};
+
 /**
- * Fetch any asset and return { content, contentType, responseHeaders }.
- * Text is decoded to string, binary kept as ArrayBuffer.
+ * 抓取任意资源。
+ * @returns {{content:string|ArrayBuffer|ReadableStream, contentType:string,
+ *            responseHeaders:Headers, isStream:boolean}}
  */
 const fetchContentWithType = async (targetUrl, originalRequest, cfg, logFn) => {
   const headers = createFetchHeaders(originalRequest, targetUrl, cfg.USER_AGENTS);
@@ -196,24 +259,38 @@ const fetchContentWithType = async (targetUrl, originalRequest, cfg, logFn) => {
     throw new Error(`Network error fetching ${targetUrl}: ${e.message}`);
   }
   if (!resp.ok) {
-    const msg = await resp.text().catch(() => "<unreadable>");
-    throw new Error(`HTTP ${resp.status} ${resp.statusText}: ${msg.slice(0, 200)}`);
+    const msg = (await resp.text().catch(() => "<unreadable>")).slice(0, 80);
+    throw new Error(`HTTP ${resp.status}: ${msg}`);
   }
 
   const contentType = resp.headers.get("Content-Type") || "";
-  const buf = await resp.arrayBuffer();
-
   const isText =
     /^text\//i.test(contentType) ||
     M3U8_CONTENT_TYPES.some((t) => contentType.toLowerCase().includes(t));
 
-  const content = isText ? new TextDecoder().decode(buf) : buf;      // 4️⃣ tweak
+  const contentLength = Number(resp.headers.get("Content-Length") || 0);
 
-  return { content, contentType, responseHeaders: resp.headers };
+  if (!isText && contentLength > cfg.LARGE_MAX_BYTES) {
+    return { content: resp.body, contentType, responseHeaders: resp.headers, isStream: true };
+  }
+
+  if (!isText && contentLength === 0) {
+    const { content, isStream } = await decideStreamOrBuffer(
+      resp,
+      isText,
+      cfg.LARGE_MAX_BYTES,
+      logFn,
+    );
+    return { content, contentType, responseHeaders: resp.headers, isStream };
+  }
+
+  const buf = await resp.arrayBuffer();
+  const content = isText ? new TextDecoder().decode(buf) : buf;
+  return { content, contentType, responseHeaders: resp.headers, isStream: false };
 };
 
 // -----------------------------------------------------------------------------
-//  M3U8 PROCESSING FUNCTIONS
+//  M3U8 处理
 // -----------------------------------------------------------------------------
 const processUriLine = (line, baseUrl, cache, logFn) => {
   let out = line.replace(RE_URI, (_, uri) => {
@@ -230,39 +307,45 @@ const processUriLine = (line, baseUrl, cache, logFn) => {
 
 const processMediaPlaylist = (targetUrl, content, cache, logFn) => {
   const base = getBaseUrl(targetUrl);
+  const newline = /\r\n/.test(content) ? "\r\n" : "\n";                         // ★ D
   return content
-    .split("\n")
+    .split(/\r?\n/)
     .map((line) => {
       const t = line.trim();
-      if (!t) return line;                               // keep blank lines
+      if (!t) return "";                                                        // ★ D（避免孤立 \r）
       if (t.startsWith("#EXT-X-KEY") || t.startsWith("#EXT-X-MAP"))
         return processUriLine(t, base, cache, logFn);
-      if (t.startsWith("#")) return t;                  // comment/directive
-      const abs = resolveUrl(base, t, cache, logFn);     // media segment
+      if (t.startsWith("#")) return t;
+      const abs = resolveUrl(base, t, cache, logFn);
       return rewriteUrlToProxy(abs);
     })
-    .join("\n");
+    .join(newline);                                                             // ★
 };
 
-/**
- * 2️⃣  Master-playlist detection – line-by-line scan for first #EXT-X-STREAM-INF.
- */
+/** 寻找首个变体 URL（支持 STREAM‑INF 与 MEDIA）。 */
 const findFirstVariantUrl = (content, baseUrl, cache, logFn) => {
-  const lines = content.split("\n");
+  const lines = content.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i].trim();
+    if (l.startsWith("#EXT-X-MEDIA")) {
+      const m = l.match(/URI\s*=\s*"([^"]+)"/);
+      if (m) {
+        const abs = resolveUrl(baseUrl, m[1], cache, logFn);
+        logFn(`Variant (MEDIA) → ${abs}`);
+        return abs;
+      }
+    }
     if (l.startsWith("#EXT-X-STREAM-INF")) {
-      // Find the next non-empty, non-comment line
       for (let j = i + 1; j < lines.length; j++) {
         const cand = lines[j].trim();
         if (!cand || cand.startsWith("#")) continue;
         const abs = resolveUrl(baseUrl, cand, cache, logFn);
-        logFn(`Variant (line scan) → ${abs}`);
+        logFn(`Variant (STREAM-INF) → ${abs}`);
         return abs;
       }
     }
   }
-  return ""; // not found
+  return "";
 };
 
 const processMasterPlaylist = async (
@@ -277,34 +360,41 @@ const processMasterPlaylist = async (
 ) => {
   if (depth > cfg.MAX_RECURSION) throw new Error("Max recursion depth reached");
 
-  const base = getBaseUrl(targetUrl);
-  let variantUrl = findFirstVariantUrl(content, base, cache, logFn);
-
+  const variantUrl = findFirstVariantUrl(content, getBaseUrl(targetUrl), cache, logFn);
   if (!variantUrl) {
     logFn("No variant found – fallback to media playlist");
     return processMediaPlaylist(targetUrl, content, cache, logFn);
   }
 
-  // KV cache for processed sub-playlist
   const cacheKey = `${KV_M3U8_PROCESSED_PREFIX}${variantUrl}`;
+  const processedHit = kv ? await kv.get(cacheKey) : null;
+  if (processedHit) {
+    logFn("[KV hit – processed M3U8]");
+    return processedHit;
+  }
+
+  const { content: varContent, contentType } = await fetchContentWithType(
+    variantUrl,
+    ctx.request,
+    cfg,
+    logFn,
+  );
+
+  const processed = await processM3u8Recursive(
+    variantUrl,
+    varContent,
+    contentType,
+    depth + 1,
+    ctx,
+    cfg,
+    cache,
+    logFn,
+    kv,
+  );
+
   if (kv) {
-    const hit = await kv.get(cacheKey);
-    if (hit) {
-      logFn("[KV hit – processed M3U8]");
-      return hit;
-    }
+    kv.put(cacheKey, processed, { expirationTtl: cfg.CACHE_TTL }).catch((e) => logFn(`KV put err: ${e.message}`));
   }
-
-  const { content: varContent, contentType } = await fetchContentWithType(variantUrl, ctx.request, cfg, logFn);
-  const processed = await processM3u8Recursive(variantUrl, varContent, contentType, depth + 1, ctx, cfg, cache, logFn, kv);
-
-  // 5️⃣ KV put de-duplication
-  if (kv && (await kv.get(cacheKey)) == null) {
-    kv
-      .put(cacheKey, processed, { expirationTtl: cfg.CACHE_TTL })
-      .catch((e) => logFn(`KV put err: ${e.message}`));
-  }
-
   return processed;
 };
 
@@ -319,91 +409,106 @@ const processM3u8Recursive = async (
   logFn,
   kv,
 ) => {
-  const isMaster = content.includes("#EXT-X-STREAM-INF") || content.includes("#EXT-X-MEDIA:");
+  const isMaster =
+    content.includes("#EXT-X-STREAM-INF") || content.includes("#EXT-X-MEDIA:");
   return isMaster
     ? processMasterPlaylist(targetUrl, content, depth, ctx, cfg, cache, logFn, kv)
     : processMediaPlaylist(targetUrl, content, cache, logFn);
 };
 
 // -----------------------------------------------------------------------------
-//  MAIN REQUEST HANDLER
+//  主处理函数
 // -----------------------------------------------------------------------------
 export const onRequest = async (ctx) => {
   const { request, env } = ctx;
   const DEBUG = env.DEBUG === "true";
   const log = (m) => logDebug(DEBUG, m);
 
-  // ── 1.  Read config from environment --------------------------------------
   const cfg = {
     CACHE_TTL: parseNumberEnv(env, "CACHE_TTL", DEFAULT_CACHE_TTL),
     MAX_RECURSION: parseNumberEnv(env, "MAX_RECURSION", DEFAULT_MAX_RECURSION),
     USER_AGENTS: parseJsonArrayEnv(env, "USER_AGENTS_JSON", DEFAULT_USER_AGENTS),
+    LARGE_MAX_BYTES:
+      parseNumberEnv(env, "LARGE_MAX_MB", DEFAULT_LARGE_MAX_MB) * 1024 * 1024,   // ★ 统一命名
   };
 
-  // ── 2.  Extract target URL from /proxy/{ENCODED} ---------------------------
-  const pathPart = new URL(request.url).pathname.replace(/^\/proxy\//, "");
+  // 提取目标 URL
+  const { pathname } = new URL(request.url);
+  const encoded = pathname.slice(7); // 去掉 "/proxy/"
   let targetUrl;
   try {
-    targetUrl = decodeURIComponent(pathPart);
+    targetUrl = decodeURIComponent(encoded);
   } catch {
-    targetUrl = pathPart;
+    targetUrl = encoded;
   }
-  if (!/^https?:\/\//i.test(targetUrl)) return createResponse(request, "Bad Request: invalid target URL", 400);
+  if (!/^https?:\/\//i.test(targetUrl))
+    return createResponse(request, "Bad Request: invalid target URL", 400);
   log(`Target → ${targetUrl}`);
 
-  // ── 3.  Create KV helper ---------------------------------------------------
+  // KV 辅助
   const kv = env.LIBRETV_PROXY_KV ? kvHelper(env.LIBRETV_PROXY_KV, cfg.CACHE_TTL, log) : null;
 
-  // ── 4.  Try RAW cache ------------------------------------------------------
+  // RAW 缓存
   const rawKey = `${KV_RAW_PREFIX}${targetUrl}`;
-  let rawCacheObj = null;
-  if (kv) rawCacheObj = safeJsonParse(await kv.get(rawKey), null, log);
+  const rawVal = kv ? await kv.get(rawKey) : null;
+  const rawCacheObj = rawVal ? safeJsonParse(rawVal, null, log) : null;
 
-  let body, contentType, originHeaders;
+  let body,
+    contentType,
+    originHeaders;
 
   if (rawCacheObj) {
     log("[KV hit – raw]");
-    body = rawCacheObj.isBase64 ? base64ToAb(rawCacheObj.body) : rawCacheObj.body; // 1️⃣ decode
-    originHeaders = new Headers(rawCacheObj.headers);
+    body = rawCacheObj.isBase64 ? base64ToAb(rawCacheObj.body) : rawCacheObj.body;
+    originHeaders = new Headers(Object.entries(rawCacheObj.headers));
     contentType = originHeaders.get("content-type") || "";
   } else {
-    // ---- Fetch from origin --------------------------------------------------
     const fetched = await fetchContentWithType(targetUrl, request, cfg, log);
     body = fetched.content;
     contentType = fetched.contentType;
     originHeaders = fetched.responseHeaders;
 
-    // ---- Write RAW cache (string or base64) --------------------------------
-    if (kv) {
-      const rawBody = typeof body === "string" ? body : abToBase64(body); // encode if binary
-      const cacheVal = JSON.stringify({
-        body: rawBody,
-        isBase64: typeof body !== "string",
-        headers: Object.fromEntries([...originHeaders].map(([k, v]) => [k.toLowerCase(), v])),
-      });
-      // 5️⃣  KV put de-dup (rare concurrency case)
-      if ((await kv.get(rawKey)) == null) {
-        kv
-          .put(rawKey, cacheVal, { expirationTtl: cfg.CACHE_TTL })
-          .catch((e) => log(`KV put err: ${e.message}`));
-      }
+    // 仅缓存“非流式”结果
+    if (kv && !fetched.isStream) {
+      const rawBody = typeof body === "string" ? body : abToBase64(body);
+      kv
+        .put(
+          rawKey,
+          JSON.stringify({
+            body: rawBody,
+            isBase64: typeof body !== "string",
+            headers: Object.fromEntries([...originHeaders].map(([k, v]) => [k.toLowerCase(), v])),
+          }),
+          { expirationTtl: cfg.CACHE_TTL },
+        )
+        .catch((e) => log(`KV put err: ${e.message}`));
     }
   }
 
-  // ── 5.  M3U8 smart handling ----------------------------------------------
+  // M3U8 智能处理
   if (isM3u8Content(body, contentType)) {
-    log("M3U8 detected – processing");
-    if (typeof body !== "string") body = new TextDecoder().decode(body); // ensure string
-    const cache = new Map();                                            // per-request resolve cache
-    const processed = await processM3u8Recursive(targetUrl, body, contentType, 0, ctx, cfg, cache, log, kv);
+    log("M3U8 detected → processing");
+    if (typeof body !== "string") body = new TextDecoder().decode(body);
+    const cache = new Map();
+    const processed = await processM3u8Recursive(
+      targetUrl,
+      body,
+      contentType,
+      0,
+      ctx,
+      cfg,
+      cache,
+      log,
+      kv,
+    );
     return createM3u8Response(request, processed, cfg.CACHE_TTL);
   }
 
-  // ── 6.  Non-M3U8 → pass through with tweaked caching ----------------------
+  // 其它资源直传
   return createOtherResponse(request, body, 200, originHeaders, cfg.CACHE_TTL);
 };
 
 // -----------------------------------------------------------------------------
-//  OPTIONS (CORS pre-flight) ---------------------------------------------------
+//  CORS 预检
 // -----------------------------------------------------------------------------
 export const onOptions = () => new Response(null, { status: 204, headers: OPTIONS_HEADERS });
