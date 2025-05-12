@@ -379,16 +379,10 @@ export async function onRequest(context) {
     const log = (msg) => logDebug(DEBUG_ENABLED, msg);
 
     // 1. 读取/校验配置
-    const CACHE_TTL = parseNumberEnv(env, "CACHE_TTL", 86400);
-    if (isNaN(CACHE_TTL) || CACHE_TTL < 0) {
-        log(`Invalid CACHE_TTL value "${env.CACHE_TTL}". Using default: ${DEFAULT_CACHE_TTL}`);
-        CACHE_TTL = DEFAULT_CACHE_TTL;
-    }
-    const MAX_RECURSION = parseNumberEnv(env, 'MAX_RECURSION', 3);
-    if (isNaN(MAX_RECURSION) || MAX_RECURSION < 0) {
-        log(`Invalid MAX_RECURSION value "${env.MAX_RECURSION}". Using default: ${DEFAULT_MAX_RECURSION}`);
-        MAX_RECURSION = DEFAULT_MAX_RECURSION;
-    }
+    let CACHE_TTL = parseNumberEnv(env, "CACHE_TTL", DEFAULT_CACHE_TTL);
+  
+    let MAX_RECURSION = parseNumberEnv(env, 'MAX_RECURSION', DEFAULT_MAX_RECURSION);
+
     let USER_AGENTS = DEFAULT_USER_AGENTS;
     const agentsJson = env.USER_AGENTS_JSON;
     if (agentsJson) {
