@@ -439,7 +439,7 @@ function initPlayer(videoUrl, sourceCode) {
     const hlsConfig = {
         debug: debugMode || false,
         loader: adFilteringEnabled ? EnhancedAdFilterLoader : Hls.DefaultConfig.loader,
-        skipDateRanges: true,
+        skipDateRanges: adFilteringEnabled,
         enableWorker: true, lowLatencyMode: false, backBufferLength: 90, maxBufferLength: 30,
         maxMaxBufferLength: 60, maxBufferSize: 30 * 1000 * 1000, maxBufferHole: 0.5,
         fragLoadingMaxRetry: 6, fragLoadingMaxRetryTimeout: 64000, fragLoadingRetryDelay: 1000,
