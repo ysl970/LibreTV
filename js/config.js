@@ -88,7 +88,7 @@ const CUSTOM_PLAYER_URL = 'player.html'; // 使用相对路径引用本地player
 const DEFAULTS = {
     enablePreloading: true, // 预加载
     preloadCount: 2,       // 预加载集数
-    debugMode: true      // 调试模式
+    debugMode: false      // 调试模式
 };
 
 // 播放器配置
