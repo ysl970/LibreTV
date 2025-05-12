@@ -43,6 +43,18 @@ let isScreenLocked = false;
 const REMEMBER_EPISODE_PROGRESS_ENABLED_KEY = 'playerRememberEpisodeProgressEnabled'; // 开关状态的键名
 const VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY = 'videoSpecificEpisodeProgresses'; // 各视频各集进度的键名
 
+// ==== 广告分片起止标记 ====
+const AD_START_PATTERNS = [
+    /#EXT-X-DATERANGE:.*CLASS="ad"/i,
+    /#EXT-X-SCTE35-OUT/i,
+    /#EXTINF:[\d.]+,\s*ad/i,
+  ];
+  const AD_END_PATTERNS = [
+    /#EXT-X-DATERANGE:.*CLASS="content"/i,
+    /#EXT-X-SCTE35-IN/i,
+    /#EXT-X-DISCONTINUITY/i,   // 保险：有些源用 DISCONTINUITY 结束广告
+  ];
+  
 // 辅助函数：格式化时间)
 function formatPlayerTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return "00:00";
