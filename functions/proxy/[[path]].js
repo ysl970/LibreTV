@@ -2,26 +2,25 @@
 
 import { kvHelper } from "../utils/kv-helper.js";
 
-// 顶部常量区
-const resolveCache = new Map();          // 共享解析缓存
+// ----------------------------- 常量配置 -----------------------------
+const RE_URI = /URI\s*=\s*"([^"]+)"/g;                       // #EXT-X-KEY、#EXT-X-MAP 等标准 URI 属性
+const RE_OTHER_URI = /(DATA-URI|IV|OTHER-URI-ATTR)\s*=\s*"([^"]+)"/gi; // 其他潜在包含 URL 的属性
 
-const RE_URI = /URI\s*=\s*"([^"]+)"/g;   // 预编译正则
-
-const RE_OTHER_URI = /(DATA-URI|IV|OTHER-URI-ATTR)\s*=\s*"([^"]+)"/gi;
-
-// --- 常量/配置 ---
-const DEFAULT_CACHE_TTL = 86400; // 24小时
+const DEFAULT_CACHE_TTL = 86400; // 24 h
 const DEFAULT_MAX_RECURSION = 5;
 const DEFAULT_USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 ];
+
 const KV_RAW_PREFIX = "proxy_raw:";
 const KV_M3U8_PROCESSED_PREFIX = "m3u8_processed:";
+
 const M3U8_CONTENT_TYPES = [
-    'application/vnd.apple.mpegurl',
-    'application/x-mpegurl',
-    'audio/mpegurl'
+    "application/vnd.apple.mpegurl",
+    "application/x-mpegurl",
+    "audio/mpegurl",
 ];
+
 const COMMON_HEADERS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, HEAD, POST, OPTIONS",
@@ -29,506 +28,319 @@ const COMMON_HEADERS = {
 };
 const OPTIONS_HEADERS = {
     ...COMMON_HEADERS,
-    "Access-Control-Max-Age": "86400"
+    "Access-Control-Max-Age": "86400",
 };
 
-// --- 工具函数 ---
-export function parseNumberEnv(env, key, def = 0) {
-    const raw = env[key];                // 直接拿字串
-    if (raw == null || raw === '') return def;
-
-    const n = Number(raw);               // 或用 parseInt(raw, 10)
-    return isNaN(n) || n < 0 ? def : n;
-}
-
-export function parseJsonArrayEnv(env, key, def = []) {
+// ----------------------------- 工具函数 -----------------------------
+export const parseNumberEnv = (env, key, def = 0) => {
     const raw = env[key];
-    if (typeof raw !== 'string' || !raw.trim()) return def;
+    if (raw == null || raw === "") return def;
+    const n = Number(raw);
+    return Number.isNaN(n) || n < 0 ? def : n;
+};
 
+export const parseJsonArrayEnv = (env, key, def = []) => {
+    const raw = env[key];
+    if (typeof raw !== "string" || !raw.trim()) return def;
     try {
         const arr = JSON.parse(raw);
         return Array.isArray(arr) && arr.length ? arr : def;
-    } catch (e) {
+    } catch {
         return def;
     }
-}
+};
 
-function getBaseUrl(urlStr) {
+const getBaseUrl = (urlStr) => {
     try {
         const url = new URL(urlStr);
-        if (!url.pathname || url.pathname === '/') {
-            return `${url.origin}/`;
-        }
-        const pathParts = url.pathname.split('/');
-        pathParts.pop();
-        const basePath = pathParts.join('/');
-        return `${url.origin}${basePath}/`;
-    } catch (e) {
-        // 容错处理
-        // 记录日志，表明URL解析失败，使用字符串回退逻辑
-        console.log(`getBaseUrl: new URL() failed for '${urlStr}', using string fallback.`);
-
-        const protocolEnd = urlStr.indexOf('://');
-        if (protocolEnd === -1) return urlStr;
-        const lastSlashIndex = urlStr.lastIndexOf('/');
-        if (lastSlashIndex > protocolEnd + 2) {
-            return urlStr.substring(0, lastSlashIndex + 1);
-        }
-        return urlStr.endsWith('/') ? urlStr : urlStr + '/';
+        if (!url.pathname || url.pathname === "/") return `${url.origin}/`;
+        const parts = url.pathname.split("/");
+        parts.pop();
+        return `${url.origin}${parts.join("/")}/`;
+    } catch {
+        // fallback ── 保守回退策略，保证不会抛错
+        const protoEnd = urlStr.indexOf("://");
+        if (protoEnd === -1) return urlStr;
+        const lastSlash = urlStr.lastIndexOf("/");
+        return lastSlash > protoEnd + 2 ? urlStr.slice(0, lastSlash + 1) : urlStr.endsWith("/") ? urlStr : `${urlStr}/`;
     }
-}
+};
 
-function getKvNamespace(env, logFn) {
-    try {
-        const kv = env.LIBRETV_PROXY_KV;
-        if (!kv) {
-            logFn("KV namespace 'LIBRETV_PROXY_KV' is not bound.");
-            return null;
-        }
-        return kv;
-    } catch (e) {
-        logFn(`Error accessing KV: ${e.message}`);
-        return null;
-    }
-}
+const isM3u8Content = (content, contentType) => {
+    if (contentType && M3U8_CONTENT_TYPES.some((ct) => contentType.toLowerCase().includes(ct))) return true;
+    return typeof content === "string" && content.trimStart().startsWith("#EXTM3U");
+};
 
-function isM3u8Content(content, contentType) {
-    if (contentType) {
-        const lowerContentType = contentType.toLowerCase();
-        if (M3U8_CONTENT_TYPES.some(ct => lowerContentType.includes(ct))) {
-            return true;
-        }
-    }
-    return typeof content === 'string' && content.trimStart().startsWith('#EXTM3U');
-}
+const logDebug = (debugEnabled, message) => {
+    if (debugEnabled) console.log(`[Proxy] ${message}`);
+};
 
-function logDebug(debugEnabled, message) {
-    if (debugEnabled) console.log(`[Proxy Func] ${message}`);
-}
-
-function resolveUrl(baseUrl, relativeUrl, resolveCache, logFn) {
+const resolveUrl = (baseUrl, relativeUrl, cache, logFn) => {
     if (/^https?:\/\//i.test(relativeUrl)) return relativeUrl;
-    const cacheKey = `${baseUrl}|${relativeUrl}`;
-    if (resolveCache.has(cacheKey)) return resolveCache.get(cacheKey);
+    const key = `${baseUrl}|${relativeUrl}`;
+    if (cache.has(key)) return cache.get(key);
     try {
-        const absoluteUrl = new URL(relativeUrl, baseUrl).toString();
-        resolveCache.set(cacheKey, absoluteUrl);
-        return absoluteUrl;
+        const abs = new URL(relativeUrl, baseUrl).toString();
+        cache.set(key, abs);
+        return abs;
     } catch (e) {
-        logFn(`URL resolution failed: baseUrl=${baseUrl}, relativeUrl=${relativeUrl}, error=${e.message}`);
+        logFn(`URL resolve failed: ${e.message}`);
         return relativeUrl;
     }
-}
+};
 
-function rewriteUrlToProxy(targetUrl) {
-    return `/proxy/${encodeURIComponent(targetUrl)}`;
-}
+const rewriteUrlToProxy = (url) => `/proxy/${encodeURIComponent(url)}`;
 
-function safeJsonParse(jsonString, defaultValue = null, logFn) {
-    if (typeof jsonString !== 'string') return defaultValue;
+const safeJsonParse = (str, def = null, logFn) => {
+    if (typeof str !== "string") return def;
     try {
-        return JSON.parse(jsonString);
+        return JSON.parse(str);
     } catch (e) {
-        if (logFn) logFn(`JSON parse error: ${e.message}`);
-        return defaultValue;
+        logFn?.(`JSON parse error: ${e.message}`);
+        return def;
     }
-}
-function safeJsonStringify(value, defaultValue = 'null', logFn) {
+};
+
+const safeJsonStringify = (val, def = "null", logFn) => {
     try {
-        return JSON.stringify(value);
+        return JSON.stringify(val);
     } catch (e) {
-        if (logFn) logFn(`JSON stringify error: ${e.message}`);
-        return defaultValue;
+        logFn?.(`JSON stringify error: ${e.message}`);
+        return def;
     }
-}
+};
 
-// --- 响应辅助 ---
+// ----------------------------- Response 帮助 -----------------------------
+const createResponse = (request, body, status = 200, headers = {}) => {
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: OPTIONS_HEADERS });
+    const h = new Headers({ ...COMMON_HEADERS, ...headers });
+    return new Response(body, { status, headers: h });
+};
 
-function createResponse(request, body, status = 200, headers = {}) {
-    const responseHeaders = new Headers(headers);
-    for (const [key, value] of Object.entries(COMMON_HEADERS)) {
-        responseHeaders.set(key, value);
-    }
-    if (request.method === "OPTIONS") {
-        return new Response(null, { status: 204, headers: OPTIONS_HEADERS });
-    }
-    return new Response(body, { status, headers: responseHeaders });
-}
-function createM3u8Response(request, content, cacheTtl) {
-    return createResponse(request, content, 200, {
+const createM3u8Response = (request, body, ttl) =>
+    createResponse(request, body, 200, {
         "Content-Type": "application/vnd.apple.mpegurl",
-        "Cache-Control": `public, max-age=${cacheTtl}`
+        "Cache-Control": `public, max-age=${ttl}`,
     });
-}
-function createOtherResponse(request, content, status, originalHeaders, cacheTtl) {
-    // 1️⃣ 先复制源站响应头
-    const finalHeaders = new Headers(originalHeaders);
 
-    // 2️⃣ 过滤敏感响应头 —— 按需追加到列表即可
+const stripHopByHopHeaders = (headers) => {
     [
-        'set-cookie',
-        'cookie',
-        'authorization',
-        // 'www-authenticate',       // 如有需要随时加
-        // 'proxy-authenticate',
-        // 'server',
-        // 'x-powered-by',
-    ].forEach(h => finalHeaders.delete(h));
+        "set-cookie",
+        "cookie",
+        "authorization",
+        "www-authenticate",
+        "proxy-authenticate",
+        "server",
+        "x-powered-by",
+    ].forEach((h) => headers.delete(h));
+};
 
-    // 3️⃣ 设置 CDN 缓存策略
-    finalHeaders.set('Cache-Control', `public, max-age=${cacheTtl}`);
-    finalHeaders.set('CDN-Cache-Control', `public, max-age=${cacheTtl}`);
+const createOtherResponse = (request, body, status, originHeaders, ttl) => {
+    const h = new Headers(originHeaders);
+    stripHopByHopHeaders(h);
+    h.set("Cache-Control", `public, max-age=${ttl}`);
+    h.set("CDN-Cache-Control", `public, max-age=${ttl}`);
+    h.delete("pragma");
+    h.delete("expires");
+    return createResponse(request, body, status, h);
+};
 
-    // 4️⃣ 清掉会干扰缓存的头
-    finalHeaders.delete('pragma');
-    finalHeaders.delete('expires');
-
-    // 5️⃣ 构造并返回最终 Response
-    return createResponse(request, content, status, finalHeaders);
-}
-
-function createFetchHeaders(originalRequest, targetUrl, userAgents) {
-    const headers = new Headers();
-    const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
-    headers.set('User-Agent', userAgent);
-    headers.set('Accept', '*/*');
-    headers.set('Accept-Language', originalRequest.headers.get('Accept-Language') || 'en-US,en;q=0.9');
+// ----------------------------- Fetch -----------------------------
+const createFetchHeaders = (req, targetUrl, agents) => {
+    const h = new Headers();
+    h.set("User-Agent", agents[Math.floor(Math.random() * agents.length)]);
+    h.set("Accept", "*/*");
+    const acceptLang = req.headers.get("Accept-Language");
+    if (acceptLang) h.set("Accept-Language", acceptLang);
     try {
-        headers.set('Referer', new URL(targetUrl).origin);
+        h.set("Referer", new URL(targetUrl).origin);
+    } catch {
+        const ref = req.headers.get("Referer");
+        if (ref) h.set("Referer", ref);
+    }
+    return h;
+};
+
+/**
+ * 拉取并读取资源（自动文本/二进制处理）
+ */
+const fetchContentWithType = async (targetUrl, originalRequest, cfg, logFn) => {
+    const headers = createFetchHeaders(originalRequest, targetUrl, cfg.USER_AGENTS);
+    logFn(`Fetch -> ${targetUrl}`);
+
+    let resp;
+    try {
+        resp = await fetch(targetUrl, { headers, redirect: "follow" });
     } catch (e) {
-        const origReferer = originalRequest.headers.get('Referer');
-        if (origReferer) headers.set('Referer', origReferer);
+        throw new Error(`Network error fetching ${targetUrl}: ${e.message}`);
     }
-    return headers;
-}
+    if (!resp.ok) {
+        const body = await resp.text().catch(() => "<unreadable>");
+        throw new Error(`HTTP ${resp.status} ${resp.statusText} (${body.slice(0, 200)})`);
+    }
 
-// --- M3U8处理 ---
+    const ct = resp.headers.get("Content-Type") || "";
+    const isText = /^text\//i.test(ct) || M3U8_CONTENT_TYPES.some((t) => ct.toLowerCase().includes(t));
+    const buf = await resp.arrayBuffer();
+    const body = isText ? new TextDecoder().decode(buf) : buf;
 
-function processUriLine(line, baseUrl, resolveCache, logFn) {
-    // 处理标准URI属性
-    let processedLine = line.replace(/URI\s*=\s*"([^"]+)"/g, (match, uri) => {
-        if (!uri) return match;
-        const absoluteUri = resolveUrl(baseUrl, uri, resolveCache, logFn);
-        logFn(`Processing URI: Original='${uri}', Absolute='${absoluteUri}'`);
-        return `URI="${rewriteUrlToProxy(absoluteUri)}"`;
+    return { content: body, contentType: ct, responseHeaders: resp.headers };
+};
+
+// ----------------------------- M3U8 处理 -----------------------------
+const processUriLine = (line, baseUrl, cache, logFn) => {
+    let out = line.replace(RE_URI, (_, uri) => {
+        const abs = resolveUrl(baseUrl, uri, cache, logFn);
+        return `URI="${rewriteUrlToProxy(abs)}"`;
     });
-
-    // 处理其他可能包含URI的属性，如DATA-URI等
-    // 注意: 这里的属性列表(DATA-URI|IV|OTHER-URI-ATTR)是一个通用占位符
-    // 未来可考虑通过环境变量配置这个列表，以支持更多自定义M3U8标签
-    // 例如: env.CUSTOM_URI_ATTRIBUTES="DATA-URI|IV|CUSTOM-ATTR1|CUSTOM-ATTR2"
-    processedLine = processedLine.replace(/(DATA-URI|IV|OTHER-URI-ATTR)\s*=\s*"([^"]+)"/gi, (match, attr, uri) => {
-        if (!uri || !uri.includes('://')) return match; // 只处理看起来像URL的值
-        const absoluteUri = resolveUrl(baseUrl, uri, resolveCache, logFn);
-        logFn(`Processing ${attr}: Original='${uri}', Absolute='${absoluteUri}'`);
-        return `${attr}="${rewriteUrlToProxy(absoluteUri)}"`;
+    out = out.replace(RE_OTHER_URI, (match, attr, uri) => {
+        if (!uri.includes("://")) return match;
+        const abs = resolveUrl(baseUrl, uri, cache, logFn);
+        return `${attr}="${rewriteUrlToProxy(abs)}"`;
     });
+    return out;
+};
 
-    return processedLine;
-}
+const processMediaPlaylist = (targetUrl, content, cache, logFn) => {
+    const base = getBaseUrl(targetUrl);
+    return content
+        .split("\n")
+        .map((l) => {
+            const t = l.trim();
+            if (!t) return l; // 保留空行结构
+            if (t.startsWith("#EXT-X-KEY") || t.startsWith("#EXT-X-MAP")) return processUriLine(t, base, cache, logFn);
+            if (t.startsWith("#")) return t;
+            const abs = resolveUrl(base, t, cache, logFn);
+            return rewriteUrlToProxy(abs);
+        })
+        .join("\n");
+};
 
-function processMediaPlaylist(targetUrl, content, resolveCache, logFn) {
-    const baseUrl = getBaseUrl(targetUrl);
-    const lines = content.split('\n');
-    const output = [];
-    for (const line of lines) {
-        const trimmedLine = line.trim();
-        if (!trimmedLine) {
-            if (output.length > 0 || lines.indexOf(line) < lines.length - 1) output.push('');
-            continue;
-        }
-        if (trimmedLine.startsWith('#EXT-X-KEY') || trimmedLine.startsWith('#EXT-X-MAP')) {
-            output.push(processUriLine(trimmedLine, baseUrl, resolveCache, logFn));
-        } else if (trimmedLine.startsWith('#')) {
-            output.push(trimmedLine);
-        } else {
-            const absoluteUrl = resolveUrl(baseUrl, trimmedLine, resolveCache, logFn);
-            logFn(`Rewriting media segment: Original='${trimmedLine}', Absolute='${absoluteUrl}'`);
-            output.push(rewriteUrlToProxy(absoluteUrl));
-        }
+const processMasterPlaylist = async (
+    targetUrl,
+    content,
+    depth,
+    ctx,
+    cfg,
+    cache,
+    logFn,
+    kv,
+) => {
+    if (depth > cfg.MAX_RECURSION) throw new Error("Max recursion depth reached");
+
+    const base = getBaseUrl(targetUrl);
+    const match = content.match(/[^#\r\n]+\.m3u8[^\r\n]*/i);
+    if (!match) {
+        logFn("No variant .m3u8 found, treating as media playlist");
+        return processMediaPlaylist(targetUrl, content, cache, logFn);
     }
-    let result = output.join('\n');
-    if (content.endsWith('\n') && !result.endsWith('\n')) result += '\n';
-    return result;
-}
 
-async function processMasterPlaylist(targetUrl, content, recursionDepth, context, config, resolveCache, logFn) {
-    const { env, waitUntil } = context;
-    const { MAX_RECURSION, CACHE_TTL } = config;
-    if (recursionDepth > MAX_RECURSION) throw new Error(`Max recursion depth (${MAX_RECURSION}) exceeded while processing master playlist: ${targetUrl}`);
-    const baseUrl = getBaseUrl(targetUrl);
-    const lines = content.split('\n');
-    // let bestVariantUrl = '';
-    // for (let i = 0; i < lines.length; i++) {
-    //     const trimmedLine = lines[i].trim();
-    //     if (trimmedLine && !trimmedLine.startsWith('#') && (trimmedLine.toLowerCase().includes('.m3u8'))) {
-    //         let prevLineIndex = i - 1;
-    //         while (prevLineIndex >= 0 && !lines[prevLineIndex].trim()) prevLineIndex--;
-    //         if (prevLineIndex >= 0) {
-    //             const prevTrimmed = lines[prevLineIndex].trim();
-    //              if (prevTrimmed.startsWith('#EXT-X-STREAM-INF') || prevTrimmed.startsWith('#EXT-X-MEDIA')) {
-    //                 bestVariantUrl = resolveUrl(baseUrl, trimmedLine, resolveCache, logFn);
-    //                 logFn(`Found variant stream URI: ${bestVariantUrl}`);
-    //                 break;
-    //             }
-    //        }
-    //        if (!bestVariantUrl && (trimmedLine.endsWith('.m3u8') || trimmedLine.includes('.m3u8?'))) {
-    //             bestVariantUrl = resolveUrl(baseUrl, trimmedLine, resolveCache, logFn);
-    //            logFn(`Found likely sub-playlist URI: ${bestVariantUrl}`);
-    //              break;
-    //         }
-    //      }
-    //   }
+    const variantUrl = resolveUrl(base, match[0].trim(), cache, logFn);
+    logFn(`Variant -> ${variantUrl}`);
 
-    // 使用正则一次捕获第一个 .m3u8 行，有清晰度之后用上面的
-    const match = content.match(/[^\r\n#]+\.m3u8[^\r\n]*/i);
-    const bestVariantUrl = match
-        ? resolveUrl(baseUrl, match[0].trim(), resolveCache, logFn)
-        : '';
-    logFn(`Found variant (regex): ${bestVariantUrl || 'none'}`);
-
-    if (!bestVariantUrl) {
-        // 添加更详细的警告日志
-        if (content.includes('#EXT-X-STREAM-INF') || content.includes('#EXT-X-MEDIA:')) {
-            logFn(`WARNING: Playlist appears to be a master playlist with variants, but no valid variant URLs were found. Falling back to media playlist processing for: ${targetUrl}`);
-        } else {
-            logFn(`No suitable variant/sub-playlist URI found, treating as media playlist: ${targetUrl}`);
-        }
-        return processMediaPlaylist(targetUrl, content, resolveCache, logFn);
-    }
-    logFn(`Selected variant/sub-playlist URL: ${bestVariantUrl}`);
-    const kvNamespace = getKvNamespace(env, logFn);
-    const cacheKey = `${KV_M3U8_PROCESSED_PREFIX}${bestVariantUrl}`;
-    if (kvNamespace) {
-        try {
-            const cachedContent = await kvNamespace.get(cacheKey);
-            if (cachedContent) {
-                logFn(`[Cache Hit - Processed M3U8]`);
-                return cachedContent;
-            }
-            logFn(`[Cache Miss - Processed M3U8]`);
-        } catch (kvError) {
-            logFn(`KV get error for processed key: ${kvError.message}`);
+    const cacheKey = `${KV_M3U8_PROCESSED_PREFIX}${variantUrl}`;
+    if (kv) {
+        const hit = await kv.get(cacheKey);
+        if (hit) {
+            logFn("[KV hit – processed M3U8]");
+            return hit;
         }
     }
-    const { content: variantContent, contentType: variantType } = await fetchContentWithType(
-        bestVariantUrl, context.request, config, logFn
-    );
-    if (!isM3u8Content(variantContent, variantType)) {
-        logFn(`Fetched content NOT M3U8, fallback to media playlist`);
-        return processMediaPlaylist(targetUrl, content, resolveCache, logFn);
-    }
-    const processedVariant = await processM3u8Recursive(
-        bestVariantUrl, variantContent, variantType, recursionDepth + 1,
-        context, config, resolveCache, logFn
-    );
-    if (kvNamespace && processedVariant) {
-        try {
-            waitUntil(
-                kvNamespace.put(cacheKey, processedVariant, { expirationTtl: CACHE_TTL })
-                    .catch(kvPutError => logFn(`[Cache Write Error - Processed M3U8 Background]: ${kvPutError.message}`))
-            );
-            logFn(`[Cache Write - Processed M3U8] Operation sent to background.`);
-        } catch (immediateKvPutError) {
-            logFn(`[Cache Write Error - Processed M3U8 Immediate]: ${immediateKvPutError.message}`);
-        }
-    }
-    return processedVariant;
-}
 
-async function processM3u8Recursive(targetUrl, content, contentType, recursionDepth, context, config, resolveCache, logFn) {
-    const isMaster = content.includes('#EXT-X-STREAM-INF') || content.includes('#EXT-X-MEDIA:');
-    if (isMaster) {
-        logFn(`Processing as Master Playlist: ${targetUrl}`);
-        return await processMasterPlaylist(targetUrl, content, recursionDepth, context, config, resolveCache, logFn);
-    } else {
-        logFn(`Processing as Media Playlist: ${targetUrl}`);
-        return processMediaPlaylist(targetUrl, content, resolveCache, logFn);
-    }
-}
+    const { content: variantContent, contentType } = await fetchContentWithType(variantUrl, ctx.request, cfg, logFn);
+    const processed = await processM3u8Recursive(variantUrl, variantContent, contentType, depth + 1, ctx, cfg, cache, logFn, kv);
 
-async function fetchContentWithType(targetUrl, originalRequest, config, logFn) {
-    const fetchHeaders = createFetchHeaders(originalRequest, targetUrl, config.USER_AGENTS);
-    logFn(`Fetching: ${targetUrl} with User-Agent: ${fetchHeaders.get('User-Agent')}`);
-    let response;
+    kv?.put(cacheKey, processed, { expirationTtl: cfg.CACHE_TTL }).catch((e) => logFn(`KV put err: ${e.message}`));
+    return processed;
+};
+
+const processM3u8Recursive = async (
+    targetUrl,
+    content,
+    contentType,
+    depth,
+    ctx,
+    cfg,
+    cache,
+    logFn,
+    kv,
+) => {
+    const isMaster = content.includes("#EXT-X-STREAM-INF") || content.includes("#EXT-X-MEDIA:");
+    return isMaster
+        ? processMasterPlaylist(targetUrl, content, depth, ctx, cfg, cache, logFn, kv)
+        : processMediaPlaylist(targetUrl, content, cache, logFn);
+};
+
+// ----------------------------- 主入口 -----------------------------
+export const onRequest = async (ctx) => {
+    const { request, env } = ctx;
+    const DEBUG = env.DEBUG === "true";
+    const log = (m) => logDebug(DEBUG, m);
+
+    // ------------ 配置读取 ------------
+    const cfg = {
+        CACHE_TTL: parseNumberEnv(env, "CACHE_TTL", DEFAULT_CACHE_TTL),
+        MAX_RECURSION: parseNumberEnv(env, "MAX_RECURSION", DEFAULT_MAX_RECURSION),
+        USER_AGENTS: parseJsonArrayEnv(env, "USER_AGENTS_JSON", DEFAULT_USER_AGENTS),
+    };
+
+    // ------------ 解析目标 URL ------------
+    const pathPart = new URL(request.url).pathname.replace(/^\/proxy\//, "");
+    let targetUrl = "";
     try {
-        response = await fetch(targetUrl, { headers: fetchHeaders, redirect: 'follow' });
-    } catch (error) {
-        logFn(`Fetch network error: ${error.message}`);
-        throw new Error(`Network error while fetching ${targetUrl}: ${error.message}`);
+        targetUrl = decodeURIComponent(pathPart);
+    } catch {
+        targetUrl = pathPart;
     }
-    if (!response.ok) {
-        const errorBody = await response.text().catch(() => '[Could not read error body]');
-        logFn(`Fetch failed: ${response.status} ${response.statusText}`);
-        throw new Error(`HTTP error ${response.status} (${response.statusText}) fetching ${targetUrl}. Body: ${errorBody.substring(0, 200)}`);
+    if (!/^https?:\/\//i.test(targetUrl)) return createResponse(request, "Bad Request: invalid target URL", 400);
+    log(`Target: ${targetUrl}`);
+
+    // ------------ KV 句柄 ------------
+    const kv = env.LIBRETV_PROXY_KV ? kvHelper(env.LIBRETV_PROXY_KV, cfg.CACHE_TTL, log) : null;
+
+    // ------------ 原始缓存尝试 ------------
+    const rawKey = `${KV_RAW_PREFIX}${targetUrl}`;
+    let rawCache = null;
+    if (kv) {
+        rawCache = safeJsonParse(await kv.get(rawKey), null, log);
     }
-    const bodyStream = response.body;     // ReadableStream
-    const contentType = response.headers.get('Content-Type') || '';
-    logFn(`Fetch success: ${targetUrl}, Content-Type: ${contentType}`);
-    return { content, contentType, responseHeaders: response.headers };
-}
 
-// --- 主处理入口 ---
-
-export async function onRequest(context) {
-    const { request, env, waitUntil } = context;
-    const url = new URL(request.url);
-
-    // 开启/关闭debug日志
-    const DEBUG_ENABLED = env.DEBUG === 'true';
-    const log = (msg) => logDebug(DEBUG_ENABLED, msg);
-
-    // 1. 读取/校验配置
-    let CACHE_TTL = parseNumberEnv(env, "CACHE_TTL", DEFAULT_CACHE_TTL);
-  
-    let MAX_RECURSION = parseNumberEnv(env, 'MAX_RECURSION', DEFAULT_MAX_RECURSION);
-
-    let USER_AGENTS = DEFAULT_USER_AGENTS;
-    const agentsJson = env.USER_AGENTS_JSON;
-    if (agentsJson) {
-        const parsedAgents = safeJsonParse(agentsJson, null, log);
-        if (Array.isArray(parsedAgents) && parsedAgents.length > 0 && parsedAgents.every(ua => typeof ua === 'string')) {
-            USER_AGENTS = parsedAgents;
-            log(`Loaded ${USER_AGENTS.length} User-Agents from env.`);
-        } else {
-            log("Env variable USER_AGENTS_JSON was invalid or empty. Using default User-Agents.");
-        }
+    let body, contentType, originHeaders;
+    if (rawCache) {
+        log("[KV hit – raw]");
+        ({ body, headers: originHeaders } = rawCache);
+        originHeaders = new Headers(originHeaders);
+        contentType = originHeaders.get("content-type") || "";
     } else {
-        log("Env variable USER_AGENTS_JSON not set. Using default User-Agents.");
-    }
-
-    const config = { DEBUG_ENABLED, CACHE_TTL, MAX_RECURSION, USER_AGENTS };
-
-    // ------ 目标URL提取逻辑 ------
-    const encodedUrlPart = url.pathname.replace(/^\/proxy\//, '');
-    let targetUrl = '';
-    if (encodedUrlPart) {
-        try {
-            let decoded = decodeURIComponent(encodedUrlPart);
-            if (/^https?:\/\//i.test(decoded)) {
-                targetUrl = decoded;
-            } else if (/^https?:\/\//i.test(encodedUrlPart)) {
-                targetUrl = encodedUrlPart;
-                log(`Warning: Path part "${encodedUrlPart}" was not URI encoded but looks like a URL.`);
-            } else {
-                log(`Invalid target URL format after decoding: ${decoded}`);
-            }
-        } catch (e) {
-            log(`Error decoding path part "${encodedUrlPart}": ${e.message}`);
-            if (/^https?:\/\//i.test(encodedUrlPart)) {
-                targetUrl = encodedUrlPart;
-                log(`Warning: Path part "${encodedUrlPart}" failed decoding but looks like a URL.`);
-            }
-        }
-    }
-    if (!targetUrl) {
-        log(`Failed to extract valid target URL from path: ${url.pathname}`);
-        return createResponse(request, "Invalid proxy request: Missing or invalid target URL in path.", 400);
-    }
-    log(`Processing request for target URL: ${targetUrl}`);
-
-    try {
-        const kv = env.LIBRETV_PROXY_KV
-            ? kvHelper(env.LIBRETV_PROXY_KV, CACHE_TTL, log)
-            : null;
-        const rawCacheKey = `${KV_RAW_PREFIX}${targetUrl}`;
-        let cachedRawData = null;
-
-        // -- 尝试KV原始缓存 --
-        if (kvNamespace) {
-            try {
-                const cachedRawJson = await kv?.get(rawCacheKey);
-                if (cachedRawJson) {
-                    log(`[Cache Hit - Raw]`);
-                    cachedRawData = safeJsonParse(cachedRawJson, null, log);
-                    if (!cachedRawData || typeof cachedRawData.body !== 'string' || typeof cachedRawData.headers !== 'object') {
-                        log(`[Cache Invalid - Raw] Bad format. Ignoring.`);
-                        cachedRawData = null;
-                    }
-                } else {
-                    log(`[Cache Miss - Raw]`);
-                }
-            } catch (kvError) {
-                log(`KV get error for raw key: ${kvError.message}`);
-            }
-        }
-
-        let content, contentType, responseHeaders;
-        if (cachedRawData) {
-            content = cachedRawData.body;
-            // 直接使用headers对象，不需要再解析
-            responseHeaders = new Headers(cachedRawData.headers);
-            contentType = responseHeaders.get('content-type') || '';
-            log(`Using cached raw content. Content-Type: ${contentType}`);
-        } else {
-            // 没有缓存，真实请求源站
-            const fetchedData = await fetchContentWithType(targetUrl, request, config, log);
-            content = fetchedData.content;
-            contentType = fetchedData.contentType;
-            responseHeaders = fetchedData.responseHeaders;
-
-            // ------- KV 写入逻辑（防错，小白友好） -------
-            if (kvNamespace) {
-                // 将响应的Headers变成普通对象
-                const headersObj = {};
-                responseHeaders.forEach((value, key) => {
-                    headersObj[key.toLowerCase()] = value;
-                });
-                // 有header就写缓存
-                if (Object.keys(headersObj).length > 0) {
-                    // 直接存储headers对象，不再进行二次字符串化
-                    const cacheData = {
-                        body: content,
-                        headers: headersObj
-                    };
-                    const stringifiedValue = safeJsonStringify(cacheData, null, log);
-                    if (stringifiedValue) {
-                        try {
-                            kv?.put(rawCacheKey, stringifiedValue);   // put 内部已 catch
-                            log(`[Cache Write - Raw] Operation sent to background.`);
-                        } catch (immediateKvPutError) {
-                            log(`[Cache Write Error - Raw KV Immediate]: ${immediateKvPutError.message}`);
-                        }
-                    } else {
-                        log(`[Cache Write Skipped - Raw] Stringification of value failed.`);
-                    }
-                } else {
-                    log(`[Cache Write Error - Raw] serialize headers fail`);
-                }
-            }
-            // ------- 结束 -------
-        }
-
-        // M3U8智能处理/直出
-        if (isM3u8Content(content, contentType)) {
-            log(`Content is M3U8, processing`);
-            const resolveCache = new Map();
-            const processedM3u8 = await processM3u8Recursive(
-                targetUrl,
-                content,
-                contentType,
-                0,
-                context,
-                config,
-                resolveCache,
-                log
+        const fetched = await fetchContentWithType(targetUrl, request, cfg, log);
+        body = fetched.content;
+        contentType = fetched.contentType;
+        originHeaders = fetched.responseHeaders;
+        // 写 KV（尽量不阻塞请求）
+        if (kv) {
+            const cacheVal = safeJsonStringify(
+                {
+                    body,
+                    headers: Object.fromEntries([...originHeaders].map(([k, v]) => [k.toLowerCase(), v])),
+                },
+                null,
+                log,
             );
-            return createM3u8Response(request, processedM3u8, CACHE_TTL);
-        } else {
-            log(`Content is not M3U8 (Type: ${contentType}), return direct`);
-            return createOtherResponse(request, content, 200, responseHeaders, CACHE_TTL);
+            if (cacheVal) kv.put(rawKey, cacheVal, { expirationTtl: cfg.CACHE_TTL }).catch((e) => log(`KV put err: ${e.message}`));
         }
-    } catch (error) {
-        log(`!!! Critical Error: ${error.message}\n${error.stack}`);
-        return createResponse(request, `Proxy error: ${error.message}`, 500);
     }
-}
 
+    // ------------ M3U8 智能处理 / 直出 ------------
+    if (isM3u8Content(body, contentType)) {
+        log("M3U8 detected – processing");
+        if (typeof body !== "string") body = new TextDecoder().decode(body); // binary → text
+        const cache = new Map();
+        const processed = await processM3u8Recursive(targetUrl, body, contentType, 0, ctx, cfg, cache, log, kv);
+        return createM3u8Response(request, processed, cfg.CACHE_TTL);
+    }
 
-export async function onOptions(context) {
-    // CORS 预检支持
-    return new Response(null, {
-        status: 204,
-        headers: OPTIONS_HEADERS,
-    });
-}
+    // 非 M3U8 ── 直接返回
+    return createOtherResponse(request, body, 200, originHeaders, cfg.CACHE_TTL);
+};
+
+export const onOptions = () => new Response(null, { status: 204, headers: OPTIONS_HEADERS });
