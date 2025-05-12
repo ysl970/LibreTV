@@ -209,7 +209,96 @@ const createFetchHeaders = (req, targetUrl, agents) => {
   return h;
 };
 
-// decideStreamOrBuffer 及 fetchContentWithType —— 保持原实现，省略（与旧版一致）
+// --①：无 Content-Length 时流式阈值探测 + 安全返回 ArrayBuffer ------------- ★
+const decideStreamOrBuffer = async (resp, isText, threshold, logFn) => {
+  const reader = resp.body.getReader();
+  let total = 0;
+  const chunks = [];
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    total += value.byteLength;
+    if (!isText && total > threshold) {
+      logFn("switch → stream (size exceeded)");
+      const tailStream = new ReadableStream({
+        start(controller) {
+          for (const c of chunks) controller.enqueue(c);
+          const pump = () =>
+            reader
+              .read()
+              .then(({ value, done }) => {
+                if (done) {
+                  controller.close();
+                  return;
+                }
+                controller.enqueue(value);
+                return pump();
+              })
+              .catch((e) => controller.error(e)); // 细抠 #2：捕获上游异常 ★
+          pump();
+        },
+      });
+      return { content: tailStream, isStream: true };
+    }
+  }
+
+  // 未超阈值：合并缓冲并拷贝 ArrayBuffer，彻底与原 Uint8Array 解耦 ——细抠 #1
+  const buf = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    buf.set(c, offset);
+    offset += c.byteLength;
+  }
+  const arrBuf = buf.slice().buffer; // ★
+  return { content: isText ? new TextDecoder().decode(buf) : arrBuf, isStream: false };
+};
+
+/**
+ * 抓取任意资源。
+ * @returns {{content:string|ArrayBuffer|ReadableStream, contentType:string,
+ *            responseHeaders:Headers, isStream:boolean}}
+ */
+const fetchContentWithType = async (targetUrl, originalRequest, cfg, logFn) => {
+  const headers = createFetchHeaders(originalRequest, targetUrl, cfg.USER_AGENTS);
+  logFn(`Fetch → ${targetUrl}`);
+
+  let resp;
+  try {
+    resp = await fetch(targetUrl, { headers, redirect: "follow" });
+  } catch (e) {
+    throw new Error(`Network error fetching ${targetUrl}: ${e.message}`);
+  }
+  if (!resp.ok) {
+    const msg = (await resp.text().catch(() => "<unreadable>")).slice(0, 80);
+    throw new Error(`HTTP ${resp.status}: ${msg}`);
+  }
+
+  const contentType = resp.headers.get("Content-Type") || "";
+  const isText =
+    /^text\//i.test(contentType) ||
+    M3U8_CONTENT_TYPES.some((t) => contentType.toLowerCase().includes(t));
+
+  const contentLength = Number(resp.headers.get("Content-Length") || 0);
+
+  if (!isText && contentLength > cfg.LARGE_MAX_BYTES) {
+    return { content: resp.body, contentType, responseHeaders: resp.headers, isStream: true };
+  }
+
+  if (!isText && contentLength === 0) {
+    const { content, isStream } = await decideStreamOrBuffer(
+      resp,
+      isText,
+      cfg.LARGE_MAX_BYTES,
+      logFn,
+    );
+    return { content, contentType, responseHeaders: resp.headers, isStream };
+  }
+
+  const buf = await resp.arrayBuffer();
+  const content = isText ? new TextDecoder().decode(buf) : buf;
+  return { content, contentType, responseHeaders: resp.headers, isStream: false };
+};
 
 // -----------------------------------------------------------------------------
 //  广告剥离工具
