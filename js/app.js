@@ -119,6 +119,10 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
     if (sourceName) playerUrl.searchParams.set('source', sourceName);
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
 
+    // ← 在这一行后面，插入广告过滤开关参数
+    const adOn = getBoolConfig(PLAYER_CONFIG.adFilteringStorage, true);
+    playerUrl.searchParams.set('af', adOn ? '1' : '0');
+
     window.location.href = playerUrl.toString();
 }
 
@@ -184,6 +188,9 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0, sourceN
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
     if (playbackPosition > 0) playerUrl.searchParams.set('position', playbackPosition.toString());
 
+    // 去广告开关有关
+    const adOn = getBoolConfig(PLAYER_CONFIG.adFilteringStorage, true);
+    playerUrl.searchParams.set('af', adOn ? '1' : '0');
     // Navigate to player page
     window.location.href = playerUrl.toString();
 }
