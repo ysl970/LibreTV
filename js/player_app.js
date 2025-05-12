@@ -403,14 +403,29 @@ class EnhancedAdFilterLoader extends Hls.DefaultConfig.loader {
     static cueEnd = AD_END_PATTERNS;
     static strip(content) {
         const lines = content.split('\n');
-        let inAd = false, out = [];
+        let inAd = false;
+        const out = [];
+    
         for (const l of lines) {
-            if (!inAd && this.cueStart.some(re => re.test(l))) { inAd = true; continue; }
-            if (inAd && this.cueEnd.some(re => re.test(l))) { inAd = false; continue; }
-            if (!inAd && !/^#EXT-X-DISCONTINUITY/.test(l)) out.push(l);
+            // 遇到广告开头 → 进入过滤状态
+            if (!inAd && this.cueStart.some(re => re.test(l))) {
+                inAd = true;
+                continue;                       // 不输出广告起始行
+            }
+    
+            // 遇到广告结束 → 退出过滤状态，并补一个 DISCONTINUITY
+            if (inAd && this.cueEnd.some(re => re.test(l))) {
+                inAd = false;
+                out.push('#EXT-X-DISCONTINUITY'); // 关键：插入断点
+                continue;                       // 不输出广告结束行
+            }
+    
+            // 不在广告里 → 原样输出（包括任何本来就有的 DISCONTINUITY）
+            if (!inAd) out.push(l);
         }
         return out.join('\n');
     }
+    
     load(ctx, cfg, cbs) {
         if ((ctx.type === 'manifest' || ctx.type === 'level') && window.PLAYER_CONFIG?.adFilteringEnabled !== false) {
             const orig = cbs.onSuccess;
@@ -437,7 +452,7 @@ function initPlayer(videoUrl, sourceCode) {
     const hlsConfig = {
         debug: debugMode || false,
         loader: adFilteringEnabled ? EnhancedAdFilterLoader : Hls.DefaultConfig.loader,
-        skipDateRanges: true,
+        skipDateRanges: adFilteringEnabled,
         enableWorker: true, lowLatencyMode: false, backBufferLength: 90, maxBufferLength: 30,
         maxMaxBufferLength: 60, maxBufferSize: 30 * 1000 * 1000, maxBufferHole: 0.5,
         fragLoadingMaxRetry: 6, fragLoadingMaxRetryTimeout: 64000, fragLoadingRetryDelay: 1000,
