@@ -477,6 +477,19 @@ function initPlayer(videoUrl, sourceCode) {
                             const errorEl = document.getElementById('error'); if (errorEl) errorEl.style.display = 'none';
                             // video.removeEventListener('playing', onPlaying); // Maybe keep listening?
                         });
+                        
+                        //video.disableRemotePlayback = false;
+                        // ★ 先拿到“正确的新地址”
+                       // const src = player.options && player.options.video
+                       //     ? player.options.video.url
+                       //     : '';           // 理论上一定有
+
+                        // ★ 然后再去清理旧 DOM，避免把新地址弄丢
+                       // const existingSource = video.querySelector('source');
+                       // if (existingSource) existingSource.remove();
+                      //  if (video.hasAttribute('src')) video.removeAttribute('src');
+                     //   hls.loadSource(src);
+                     //   hls.attachMedia(video);
 
                         video.disableRemotePlayback = false;
                         // ★ 先拿到“正确的新地址”
@@ -496,7 +509,7 @@ function initPlayer(videoUrl, sourceCode) {
                         if (debugMode) console.log('[PlayerApp] HLS via proxy →', proxyUrl);
                         hls.loadSource(proxyUrl);
                         hls.attachMedia(video);
-
+      // end
                         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
                             if (debugMode) console.log("[PlayerApp] HLS Media Attached");
                             // DPlayer usually handles play(), but ensure it happens
