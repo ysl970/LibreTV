@@ -1,5 +1,6 @@
 // File: js/player_app.js
 
+
 // Add this helper function at the top of js/player_app.js
 if (typeof showToast !== 'function' || typeof showMessage !== 'function') {
     console.warn("UI notification functions (showToast/showMessage) are not available. Notifications might not work.");

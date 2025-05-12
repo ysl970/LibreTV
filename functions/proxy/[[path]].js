@@ -101,11 +101,11 @@ const stripAdsFromServer = (content, adFilteringEnabled = true, logFn = console.
       continue;
     }
 
-       if (inAdSegment) {
-              // 连带 LL-HLS PART 一并丢弃
-              if (PART_RE.test(trimmedLine)) { logFn(`[AdBlock] skip PART in ad`); }
-              continue;
-          }
+    if (inAdSegment) {
+      // 连带 LL-HLS PART 一并丢弃
+      if (PART_RE.test(trimmedLine)) { logFn(`[AdBlock] skip PART in ad`); }
+      continue;
+    }
 
     // 处理 #EXT-X-SKIP
     const skipMatch = trimmedLine.match(SKIP_RE);
@@ -465,16 +465,16 @@ const processMediaPlaylist = (targetUrl, content, cache, logFn, adFilteringEnabl
       processedLines.push(processUriLine(t, base, cache, logFn));
     } else if (t.startsWith("#")) {
       processedLines.push(t); // 其他元数据行直接保留
-       } else if (t.startsWith('#EXT-X-PART')) {
-             // 把 PART URI 提取出来再走关键词/正则检测
-             const m = t.match(/URI="([^"]+)"/i);
-             const partUri = m ? m[1] : '';
-             if (adFilteringEnabled && (isUriAd(partUri))) {
-                 logFn(`[AdBlock] PART uri looks like ad, skip`);
-                 continue;
-             }
-             processedLines.push(processUriLine(t, base, cache, logFn));
-        } else {
+    } else if (t.startsWith('#EXT-X-PART')) {
+      // 把 PART URI 提取出来再走关键词/正则检测
+      const m = t.match(/URI="([^"]+)"/i);
+      const partUri = m ? m[1] : '';
+      if (adFilteringEnabled && (isUriAd(partUri))) {
+        logFn(`[AdBlock] PART uri looks like ad, skip`);
+        continue;
+      }
+      processedLines.push(processUriLine(t, base, cache, logFn));
+    } else {
       const abs = resolveUrl(base, t, cache, logFn);
       processedLines.push(rewriteUrlToProxy(abs));
     }
@@ -483,18 +483,22 @@ const processMediaPlaylist = (targetUrl, content, cache, logFn, adFilteringEnabl
 };
 
 /** 寻找首个变体 URL（支持 STREAM‑INF 与 MEDIA）。 */
-const findFirstVariantUrl = (content, baseUrl, cache, logFn) => {
+const findFirstVariantUrl = (content, baseUrl, cache, logFn, adFilteringEnabled) => {
   const lines = content.split(/\r?\n/);
-    const isAdLine = (l) =>
-            /#EXT-X-STREAM-INF/i.test(l) && /(ad|promo|preroll)/i.test(l);
+  const isAdLine = (l) =>
+    /#EXT-X-STREAM-INF/i.test(l) && /(ad|promo|preroll)/i.test(l);
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i].trim();
-        if (isAdLine(lines[i]) && adFilteringEnabled) {   // ★ 跳过广告码率档
-              logFn(`[AdBlock] variant line looks like ad → skip`);
-              // 跳到下一条 #EXT-X-STREAM-INF
-              while (i < lines.length && !lines[i].startsWith('#EXT-X-STREAM-INF')) i++;
-              continue;
+        if (adFilteringEnabled && /#EXT-X-STREAM-INF/i.test(l) && /ad|promo|preroll/i.test(l)) {
+            logFn(`[Proxy] Skipping ad variant: ${l}`);
+            continue;
           }
+    if (isAdLine(lines[i]) && adFilteringEnabled) {   // ★ 跳过广告码率档
+      logFn(`[AdBlock] variant line looks like ad → skip`);
+      // 跳到下一条 #EXT-X-STREAM-INF
+      while (i < lines.length && !lines[i].startsWith('#EXT-X-STREAM-INF')) i++;
+      continue;
+    }
   }
   return "";
 };
@@ -566,23 +570,13 @@ const processMasterPlaylist = async (
 };
 
 const processM3u8Recursive = async (
-  targetUrl,
-  content,
-  contentType,
-  depth,
-  ctx,
-  cfg,
-  cache,
-  logFn,
-  kv,
-  adFilteringEnabled = true // <--- 新增参数并提供默认值
+  targetUrl, content, contentType, depth, ctx, cfg, cache, logFn, kv,
+  adFilteringEnabled = true
 ) => {
-  const isMaster =
-    content.includes("#EXT-X-STREAM-INF") ||
-    content.includes("#EXT-X-MEDIA:");
+  const isMaster = content.includes("#EXT-X-STREAM-INF") || content.includes("#EXT-X-MEDIA:");
   return isMaster
-    ? processMasterPlaylist(targetUrl, content, depth, ctx, cfg, cache, logFn, kv, adFilteringEnabled) // <--- 传递
-    : processMediaPlaylist(targetUrl, content, cache, logFn, adFilteringEnabled); // <--- 传递
+    ? processMasterPlaylist(targetUrl, content, depth, ctx, cfg, cache, logFn, kv, adFilteringEnabled)
+    : processMediaPlaylist(targetUrl, content, cache, logFn, adFilteringEnabled);
 };
 
 // -----------------------------------------------------------------------------
@@ -616,50 +610,50 @@ export const onRequest = async (ctx) => {
   }
   log(`Target URL from path: ${targetUrl}`);
 
-// --- 获取“分片广告过滤”开关状态 ------------------------------------------
-const adFilterParam = new URL(request.url).searchParams.get('ad_filter_enabled');
+  // --- 获取“分片广告过滤”开关状态 ------------------------------------------
+  const adFilterParam = new URL(request.url).searchParams.get('ad_filter_enabled');
 
-/**
- * 逻辑：
- *   -   URL 没带参数   →  默认 **开启**
- *   -   ad_filter_enabled=true   →  开启
- *   -   ad_filter_enabled=false  →  关闭
- */
-const serverAdFilteringEnabled = adFilterParam !== 'false';
+  /**
+   * 逻辑：
+   *   -   URL 没带参数   →  默认 **开启**
+   *   -   ad_filter_enabled=true   →  开启
+   *   -   ad_filter_enabled=false  →  关闭
+   */
+  const serverAdFilteringEnabled = adFilterParam !== 'false';
 
-log(
-  `[Proxy] Server-side ad filtering is ${serverAdFilteringEnabled ? 'ENABLED' : 'DISABLED'
-  } (param=${adFilterParam})`
-);
+  log(
+    `[Proxy] Server-side ad filtering is ${serverAdFilteringEnabled ? 'ENABLED' : 'DISABLED'
+    } (param=${adFilterParam})`
+  );
 
   const kv = env.LIBRETV_PROXY_KV ? kvHelper(env.LIBRETV_PROXY_KV, cfg.CACHE_TTL, log) : null;
 
-  const rawKey      = `${KV_RAW_PREFIX}${targetUrl}`;
-  const rawVal      = kv ? await kv.get(rawKey) : null;
+  const rawKey = `${KV_RAW_PREFIX}${targetUrl}`;
+  const rawVal = kv ? await kv.get(rawKey) : null;
   const rawCacheObj = rawVal ? safeJsonParse(rawVal, null, log) : null;
-  
+
   let body, contentType, originHeaders;
 
   if (rawCacheObj) {
-      log("[Proxy KV Hit] Raw content cache hit.");
-      body = rawCacheObj.isBase64 ? base64ToAb(rawCacheObj.body) : rawCacheObj.body;
-      originHeaders = new Headers(Object.entries(rawCacheObj.headers));
-      contentType = originHeaders.get("content-type") || "";
+    log("[Proxy KV Hit] Raw content cache hit.");
+    body = rawCacheObj.isBase64 ? base64ToAb(rawCacheObj.body) : rawCacheObj.body;
+    originHeaders = new Headers(Object.entries(rawCacheObj.headers));
+    contentType = originHeaders.get("content-type") || "";
   } else {
-      log(`[Proxy] Raw content cache miss. Fetching from origin: ${targetUrl}`);
-      try {
-          const fetched = await fetchContentWithType(targetUrl, request, cfg, log);
-          body = fetched.content;
-          contentType = fetched.contentType;
-          originHeaders = fetched.responseHeaders;
+    log(`[Proxy] Raw content cache miss. Fetching from origin: ${targetUrl}`);
+    try {
+      const fetched = await fetchContentWithType(targetUrl, request, cfg, log);
+      body = fetched.content;
+      contentType = fetched.contentType;
+      originHeaders = fetched.responseHeaders;
 
-          if (kv && !fetched.isStream) {
-              // ... (写入 raw 缓存的逻辑) ...
-          }
-      } catch (fetchErr) {
-          log(`[Proxy Fetch Error] Failed to fetch content from origin: ${fetchErr.message}`);
-          return createResponse(request, `Error fetching origin content: ${fetchErr.message}`, 502);
+      if (kv && !fetched.isStream) {
+        // ... (写入 raw 缓存的逻辑) ...
       }
+    } catch (fetchErr) {
+      log(`[Proxy Fetch Error] Failed to fetch content from origin: ${fetchErr.message}`);
+      return createResponse(request, `Error fetching origin content: ${fetchErr.message}`, 502);
+    }
   }
 
 
@@ -667,27 +661,27 @@ log(
     log(`[Proxy] M3U8 content detected for ${targetUrl}. Processing...`);
     let m3u8TextContent = "";
     if (typeof body === 'string') {
-        m3u8TextContent = body;
+      m3u8TextContent = body;
     } else if (body instanceof ArrayBuffer) {
-        try {
-            m3u8TextContent = new TextDecoder().decode(body);
-        } catch (decodeError) {
-            log(`[Proxy Error] Failed to decode M3U8 ArrayBuffer: ${decodeError.message}`);
-            return createResponse(request, "Error decoding M3U8 content", 500);
-        }
+      try {
+        m3u8TextContent = new TextDecoder().decode(body);
+      } catch (decodeError) {
+        log(`[Proxy Error] Failed to decode M3U8 ArrayBuffer: ${decodeError.message}`);
+        return createResponse(request, "Error decoding M3U8 content", 500);
+      }
     } else {
-        log(`[Proxy Error] M3U8 content is of unexpected type: ${typeof body}`);
-        return createResponse(request, "Unexpected M3U8 content type", 500);
+      log(`[Proxy Error] M3U8 content is of unexpected type: ${typeof body}`);
+      return createResponse(request, "Unexpected M3U8 content type", 500);
     }
 
     const urlForCacheAndProcessing = targetUrl; // 使用原始目标URL作为缓存和处理的基准
 
-    const processedM3u8Key = `<span class="math-inline">\{KV\_M3U8\_PROCESSED\_PREFIX\}</span>{urlForCacheAndProcessing}_filter-${serverAdFilteringEnabled}`; // 在缓存键中也加入过滤状态
+    const processedM3u8Key = `${KV_M3U8_PROCESSED_PREFIX}${targetUrl}_filter-${serverAdFilteringEnabled}`;
     const cachedProcessedM3u8 = kv ? await kv.get(processedM3u8Key) : null;
 
     if (cachedProcessedM3u8) {
-        log(`[Proxy KV Hit] Returning pre-processed M3U8 from cache (filter: ${serverAdFilteringEnabled}) for: ${urlForCacheAndProcessing}`);
-        return createM3u8Response(request, cachedProcessedM3u8, cfg.CACHE_TTL);
+      log(`[Proxy KV Hit] Returning pre-processed M3U8 from cache (filter: ${serverAdFilteringEnabled}) for: ${urlForCacheAndProcessing}`);
+      return createM3u8Response(request, cachedProcessedM3u8, cfg.CACHE_TTL);
     }
 
     const recursionCache = new Map(); // 本次请求的递归处理缓存
@@ -705,8 +699,8 @@ log(
     );
 
     if (kv) {
-         kv.put(processedM3u8Key, processedM3u8, { expirationTtl: cfg.CACHE_TTL })
-           .catch(e => log(`[Proxy KV Error] Failed to cache processed M3U8: ${e.message}`));
+      kv.put(processedM3u8Key, processedM3u8, { expirationTtl: cfg.CACHE_TTL })
+        .catch(e => log(`[Proxy KV Error] Failed to cache processed M3U8: ${e.message}`));
     }
     return createM3u8Response(request, processedM3u8, cfg.CACHE_TTL);
   }
