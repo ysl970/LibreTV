@@ -108,16 +108,21 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
     playerUrl.searchParams.set('title', title);
     playerUrl.searchParams.set('index', episodeIndex.toString());
 
-    const eps = AppState.get('currentEpisodes');
-    if (Array.isArray(eps) && eps.length) {
-        playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(eps)));
-    }
+    // const eps = AppState.get('currentEpisodes');
+    //if (Array.isArray(eps) && eps.length) {
+    //    playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(eps)));
+    // }
 
-    const currentReversedStateForPlayer = AppState.get('episodesReversed') || false;
-    playerUrl.searchParams.set('reversed', currentReversedStateForPlayer.toString());
+    // 注释掉这行，让URL不带 reversed 参数
+    //const currentReversedStateForPlayer = AppState.get('episodesReversed') || false;
+    //playerUrl.searchParams.set('reversed', currentReversedStateForPlayer.toString());
 
     if (sourceName) playerUrl.searchParams.set('source', sourceName);
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
+
+    // ← 在这一行后面，插入广告过滤开关参数
+    const adOn = getBoolConfig(PLAYER_CONFIG.adFilteringStorage, true);
+    playerUrl.searchParams.set('af', adOn ? '1' : '0');
 
     window.location.href = playerUrl.toString();
 }
@@ -184,6 +189,9 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0, sourceN
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
     if (playbackPosition > 0) playerUrl.searchParams.set('position', playbackPosition.toString());
 
+    // 去广告开关有关
+    const adOn = getBoolConfig(PLAYER_CONFIG.adFilteringStorage, true);
+    playerUrl.searchParams.set('af', adOn ? '1' : '0');
     // Navigate to player page
     window.location.href = playerUrl.toString();
 }
@@ -900,8 +908,9 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
         AppState.set('currentSourceName', selectedApi.name);
         AppState.set('currentSourceCode', sourceCode);
 
-        // episodesReversed 状态直接从 AppState 读取，用于初次渲染
-        // AppState.get('episodesReversed') 会在 renderEpisodeButtons 中被读取
+        // ← 在这里，紧接着写入 localStorage，player.html 会读取这两项
+        localStorage.setItem('currentEpisodes', JSON.stringify(data.episodes));
+        localStorage.setItem('currentVideoTitle', title);
 
         const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode, selectedApi.name);
         showModal(episodeButtonsHtml, `${title} (${selectedApi.name})`);

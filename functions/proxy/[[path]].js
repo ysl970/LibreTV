@@ -1,6 +1,6 @@
 // functions/proxy/[[path]].js
 // -----------------------------------------------------------------------------
-//     • 智能缓存 & M3U8 重写
+//     • 智能缓存 & M3U8 重写（含广告剥离）
 // -----------------------------------------------------------------------------
 
 import { kvHelper } from "../utils/kv-helper.js";
@@ -25,6 +25,19 @@ const M3U8_CONTENT_TYPES = [
   "application/vnd.apple.mpegurl",
   "application/x-mpegurl",
   "audio/mpegurl",
+];
+
+// === 广告标记正则（可按需增删） ================================================
+const AD_START_PATTERNS = [
+  /^#EXT-X-CUE-OUT\b/i,
+  /^#EXT-X-SCTE35-OUT\b/i,
+  /^#EXT-X-CUE-OUT-CONT\b/i,
+  /#EXT-X-DATERANGE[^]*CLASS="[^"]*ads?/i,
+];
+const AD_END_PATTERNS = [
+  /^#EXT-X-CUE-IN\b/i,
+  /^#EXT-X-SCTE35-IN\b/i,
+  /#EXT-X-DATERANGE[^]*END-ON-NEXT=YES/i,
 ];
 
 const COMMON_HEADERS = {
@@ -98,7 +111,9 @@ const resolveUrl = (baseUrl, relativeUrl, cache, logFn) => {
   }
 };
 
-const rewriteUrlToProxy = (url) => `/proxy/${encodeURIComponent(url)}`;
+// 新：在重写时保留广告过滤参数
+const rewriteUrlToProxy = (url, adFilterOn) =>
+  `/proxy/${encodeURIComponent(url)}${adFilterOn ? "" : "?af=0"}`;
 
 const safeJsonParse = (str, def = null, logFn) => {
   if (typeof str !== "string") return def;
@@ -110,7 +125,7 @@ const safeJsonParse = (str, def = null, logFn) => {
   }
 };
 
-// -- Base64 辅助（分块 atob，突破 50 MB 限制）-----------------------------
+// -- Base64 辅助 ---------------------------------------------------------------
 const abToBase64 = (ab) => {
   const u8 = new Uint8Array(ab);
   const CHUNK = 0x8000;
@@ -151,7 +166,7 @@ const createM3u8Response = (request, body, ttl) =>
     "Cache-Control": `public, max-age=${ttl}`,
   });
 
-// ——细抠 #6：同时写 Surrogate-Control + CDN-Cache-Control------------------- ★
+// ——细抠 #6：同时写 Surrogate-Control + CDN-Cache-Control-----------------------
 const stripHopByHopHeaders = (headers) =>
   [
     "set-cookie",
@@ -169,7 +184,7 @@ const createOtherResponse = (request, body, status, originHeaders, ttl) => {
   const browserTtl = Math.max(1, Math.floor(ttl / 4));
   h.set("Cache-Control", `public, max-age=${browserTtl}`);
   h.set("Surrogate-Control", `public, max-age=${ttl}`);
-  h.set("CDN-Cache-Control", `public, max-age=${ttl}`); // ★
+  h.set("CDN-Cache-Control", `public, max-age=${ttl}`);
   return createResponse(request, body, status, h);
 };
 
@@ -179,7 +194,6 @@ const createOtherResponse = (request, body, status, originHeaders, ttl) => {
 const createFetchHeaders = (req, targetUrl, agents) => {
   const h = new Headers();
   h.set("User-Agent", agents[Math.floor(Math.random() * agents.length)]);
-  // 细抠 #5：再加 image/*，提高极端源站兼容性 ----------------------------- ★
   h.set(
     "Accept",
     "application/x-mpegurl, video/*;q=0.75, image/*;q=0.6, application/json;q=0.6, */*;q=0.5",
@@ -287,39 +301,58 @@ const fetchContentWithType = async (targetUrl, originalRequest, cfg, logFn) => {
 };
 
 // -----------------------------------------------------------------------------
+//  广告剥离工具
+// -----------------------------------------------------------------------------
+const stripAdSections = (lines) => {
+  const out = [];
+  let inAd = false;
+  for (const raw of lines) {
+    const l = raw.trim();
+    if (!inAd && AD_START_PATTERNS.some((re) => re.test(l))) { inAd = true; continue; }
+    if (inAd && AD_END_PATTERNS.some((re) => re.test(l)))     { inAd = false; continue; }
+    if (!inAd) out.push(raw);
+  }
+  return out;
+};
+
+// -----------------------------------------------------------------------------
 //  M3U8 处理
 // -----------------------------------------------------------------------------
-const processUriLine = (line, baseUrl, cache, logFn) => {
+const processUriLine = (line, baseUrl, cache, logFn, adFilterOn) => {
   let out = line.replace(RE_URI, (_, uri) => {
     const abs = resolveUrl(baseUrl, uri, cache, logFn);
-    return `URI="${rewriteUrlToProxy(abs)}"`;
+    return `URI="${rewriteUrlToProxy(abs, adFilterOn)}"`;
   });
   out = out.replace(RE_OTHER_URI, (match, attr, uri) => {
     if (!uri.includes("://")) return match;
     const abs = resolveUrl(baseUrl, uri, cache, logFn);
-    return `${attr}="${rewriteUrlToProxy(abs)}"`;
+    return `${attr}="${rewriteUrlToProxy(abs, adFilterOn)}"`;
   });
   return out;
 };
 
-const processMediaPlaylist = (targetUrl, content, cache, logFn) => {
+// -------- 媒体播放列表 ---------------------------------------------------------
+const processMediaPlaylist = (targetUrl, content, cache, logFn, adFilterOn) => {
   const base = getBaseUrl(targetUrl);
-  const newline = /\r\n/.test(content) ? "\r\n" : "\n";                         // ★ D
-  return content
+  const newline = /\r\n/.test(content) ? "\r\n" : "\n";
+  const rewritten = content
     .split(/\r?\n/)
     .map((line) => {
       const t = line.trim();
-      if (!t) return "";                                                        // ★ D（避免孤立 \r）
+      if (!t) return "";
       if (t.startsWith("#EXT-X-KEY") || t.startsWith("#EXT-X-MAP"))
-        return processUriLine(t, base, cache, logFn);
+        return processUriLine(t, base, cache, logFn, adFilterOn);
       if (t.startsWith("#")) return t;
       const abs = resolveUrl(base, t, cache, logFn);
-      return rewriteUrlToProxy(abs);
-    })
-    .join(newline);                                                             // ★
+      return rewriteUrlToProxy(abs, adFilterOn);
+    });
+
+  // 如开关开启 → 再剥离广告段
+  const finalLines = adFilterOn ? stripAdSections(rewritten) : rewritten;
+  return finalLines.join(newline);
 };
 
-/** 寻找首个变体 URL（支持 STREAM‑INF 与 MEDIA）。 */
+// -------- Master 播放列表 ------------------------------------------------------
 const findFirstVariantUrl = (content, baseUrl, cache, logFn) => {
   const lines = content.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
@@ -354,16 +387,17 @@ const processMasterPlaylist = async (
   cache,
   logFn,
   kv,
+  adFilterOn,
 ) => {
   if (depth > cfg.MAX_RECURSION) throw new Error("Max recursion depth reached");
 
   const variantUrl = findFirstVariantUrl(content, getBaseUrl(targetUrl), cache, logFn);
   if (!variantUrl) {
     logFn("No variant found – fallback to media playlist");
-    return processMediaPlaylist(targetUrl, content, cache, logFn);
+    return processMediaPlaylist(targetUrl, content, cache, logFn, adFilterOn);
   }
 
-  const cacheKey = `${KV_M3U8_PROCESSED_PREFIX}${variantUrl}`;
+  const cacheKey = `${KV_M3U8_PROCESSED_PREFIX}${variantUrl}|${adFilterOn ? 1 : 0}`;
   const processedHit = kv ? await kv.get(cacheKey) : null;
   if (processedHit) {
     logFn("[KV hit – processed M3U8]");
@@ -387,6 +421,7 @@ const processMasterPlaylist = async (
     cache,
     logFn,
     kv,
+    adFilterOn,
   );
 
   if (kv) {
@@ -405,12 +440,13 @@ const processM3u8Recursive = async (
   cache,
   logFn,
   kv,
+  adFilterOn,
 ) => {
   const isMaster =
     content.includes("#EXT-X-STREAM-INF") || content.includes("#EXT-X-MEDIA:");
   return isMaster
-    ? processMasterPlaylist(targetUrl, content, depth, ctx, cfg, cache, logFn, kv)
-    : processMediaPlaylist(targetUrl, content, cache, logFn);
+    ? processMasterPlaylist(targetUrl, content, depth, ctx, cfg, cache, logFn, kv, adFilterOn)
+    : processMediaPlaylist(targetUrl, content, cache, logFn, adFilterOn);
 };
 
 // -----------------------------------------------------------------------------
@@ -426,11 +462,12 @@ export const onRequest = async (ctx) => {
     MAX_RECURSION: parseNumberEnv(env, "MAX_RECURSION", DEFAULT_MAX_RECURSION),
     USER_AGENTS: parseJsonArrayEnv(env, "USER_AGENTS_JSON", DEFAULT_USER_AGENTS),
     LARGE_MAX_BYTES:
-      parseNumberEnv(env, "LARGE_MAX_MB", DEFAULT_LARGE_MAX_MB) * 1024 * 1024,   // ★ 统一命名
+      parseNumberEnv(env, "LARGE_MAX_MB", DEFAULT_LARGE_MAX_MB) * 1024 * 1024,
   };
 
   // 提取目标 URL
-  const { pathname } = new URL(request.url);
+  const urlObj = new URL(request.url);
+  const { pathname, searchParams } = urlObj;
   const encoded = pathname.slice(7); // 去掉 "/proxy/"
   let targetUrl;
   try {
@@ -441,6 +478,10 @@ export const onRequest = async (ctx) => {
   if (!/^https?:\/\//i.test(targetUrl))
     return createResponse(request, "Bad Request: invalid target URL", 400);
   log(`Target → ${targetUrl}`);
+
+  // 广告过滤开关 (?af=0 关闭)
+  const adFilterEnabled = searchParams.get("af") !== "0";
+  log(`AdFilter ${adFilterEnabled ? "ON" : "OFF"}`);
 
   // KV 辅助
   const kv = env.LIBRETV_PROXY_KV ? kvHelper(env.LIBRETV_PROXY_KV, cfg.CACHE_TTL, log) : null;
@@ -497,6 +538,7 @@ export const onRequest = async (ctx) => {
       cache,
       log,
       kv,
+      adFilterEnabled,
     );
     return createM3u8Response(request, processed, cfg.CACHE_TTL);
   }
@@ -509,3 +551,4 @@ export const onRequest = async (ctx) => {
 //  CORS 预检
 // -----------------------------------------------------------------------------
 export const onOptions = () => new Response(null, { status: 204, headers: OPTIONS_HEADERS });
+

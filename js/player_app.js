@@ -1,4 +1,5 @@
 // File: js/player_app.js
+
 // Add this helper function at the top of js/player_app.js
 if (typeof showToast !== 'function' || typeof showMessage !== 'function') {
     console.warn("UI notification functions (showToast/showMessage) are not available. Notifications might not work.");
@@ -42,6 +43,21 @@ let isScreenLocked = false;
 
 const REMEMBER_EPISODE_PROGRESS_ENABLED_KEY = 'playerRememberEpisodeProgressEnabled'; // 开关状态的键名
 const VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY = 'videoSpecificEpisodeProgresses'; // 各视频各集进度的键名
+
+// ==== 广告分片起止标记 ====
+const AD_START_PATTERNS = [
+    /#EXT-X-DATERANGE:.*CLASS="ad"/i,
+    /#EXT-X-SCTE35-OUT/i,
+    /#EXTINF:[\d.]+,\s*ad/i,
+];
+const AD_END_PATTERNS = [
+    /#EXT-X-DATERANGE:.*CLASS="content"/i,
+    /#EXT-X-SCTE35-IN/i,
+    /#EXT-X-DISCONTINUITY/i,   // 保险：有些源用 DISCONTINUITY 结束广告
+];
+
+// ==== 全局开关：是否去广告（缺省 true，可被 config.js 覆盖） ====
+let adFilteringEnabled = window.PLAYER_CONFIG?.adFilteringEnabled ?? true;
 
 // 辅助函数：格式化时间)
 function formatPlayerTime(seconds) {
@@ -383,59 +399,28 @@ function initializePageContent() {
 }
 
 // --- Ad Filtering Loader (Using Legacy Logic) ---
-class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
-    constructor(config) {
-        super(config);
+class EnhancedAdFilterLoader extends Hls.DefaultConfig.loader {
+    static cueStart = AD_START_PATTERNS;
+    static cueEnd = AD_END_PATTERNS;
+    static strip(content) {
+        const lines = content.split('\n');
+        let inAd = false, out = [];
+
+        for (const l of lines) {
+            if (!inAd && this.cueStart.some(re => re.test(l))) { inAd = true; continue; }
+            if (inAd && this.cueEnd.some(re => re.test(l))) { inAd = false; continue; }
+            if (!inAd && !/^#EXT-X-DISCONTINUITY/.test(l)) out.push(l);
+
+        }
+        return out.join('\n');
     }
 
-    load(context, config, callbacks) {
-        // Ensure PLAYER_CONFIG and its properties are accessible and have default fallbacks
-        const adFilteringEnabled = (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
-            ? window.PLAYER_CONFIG.adFilteringEnabled
-            : true; // Default to true if not specified
-
-        if ((context.type === 'manifest' || context.type === 'level') && adFilteringEnabled) {
-            const origOnSuccess = callbacks.onSuccess;
-            callbacks.onSuccess = (response, stats, context) => {
-                if (response.data && typeof response.data === 'string') {
-                    response.data = this.filterAdsLegacy(response.data); // Call the legacy filter
-                }
-                return origOnSuccess(response, stats, context);
-            };
+    load(ctx, cfg, cbs) {
+        if ((ctx.type === 'manifest' || ctx.type === 'level') && window.PLAYER_CONFIG?.adFilteringEnabled !== false) {
+            const orig = cbs.onSuccess;
+            cbs.onSuccess = (r, s, ctx2) => { r.data = EnhancedAdFilterLoader.strip(r.data); orig(r, s, ctx2); };
         }
-
-        // Call the original HLS.js loader's load method
-        super.load(context, config, callbacks);
-    }
-
-    // Legacy filter logic (removes lines with #EXT-X-DISCONTINUITY)
-    filterAdsLegacy(m3u8Content) {
-        if (typeof m3u8Content !== 'string' || !m3u8Content) {
-            return m3u8Content;
-        }
-
-        if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-            //   console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
-        }
-
-        const lines = m3u8Content.split('\n');
-        const filteredLines = [];
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line.includes('#EXT-X-DISCONTINUITY')) {
-                filteredLines.push(line);
-            } else {
-                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-                    //     console.log('[AdFilter-Legacy] Removing line:', line);
-                }
-            }
-        }
-        return filteredLines.join('\n');
-    }
-
-    // Keeping the old method name for backward compatibility, but redirecting to the legacy filter
-    filterAdsFromM3U8Legacy(m3u8Content) {
-        return this.filterAdsLegacy(m3u8Content);
+        super.load(ctx, cfg, cbs);
     }
 }
 
@@ -451,13 +436,12 @@ function initPlayer(videoUrl, sourceCode) {
     }
 
     const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
-    const adFilteringEnabled = (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
-        ? window.PLAYER_CONFIG.adFilteringEnabled
-        : true; // Default to true if not specified
+    adFilteringEnabled = window.PLAYER_CONFIG?.adFilteringEnabled ?? true;
 
     const hlsConfig = {
         debug: debugMode || false,
-        loader: adFilteringEnabled ? CustomHlsJsLoader : Hls.DefaultConfig.loader,
+        loader: adFilteringEnabled ? EnhancedAdFilterLoader : Hls.DefaultConfig.loader,
+        skipDateRanges: adFilteringEnabled,
         enableWorker: true, lowLatencyMode: false, backBufferLength: 90, maxBufferLength: 30,
         maxMaxBufferLength: 60, maxBufferSize: 30 * 1000 * 1000, maxBufferHole: 0.5,
         fragLoadingMaxRetry: 6, fragLoadingMaxRetryTimeout: 64000, fragLoadingRetryDelay: 1000,
@@ -493,20 +477,39 @@ function initPlayer(videoUrl, sourceCode) {
                             const errorEl = document.getElementById('error'); if (errorEl) errorEl.style.display = 'none';
                             // video.removeEventListener('playing', onPlaying); // Maybe keep listening?
                         });
+                        
+                        //video.disableRemotePlayback = false;
+                        // ★ 先拿到“正确的新地址”
+                       // const src = player.options && player.options.video
+                       //     ? player.options.video.url
+                       //     : '';           // 理论上一定有
+
+                        // ★ 然后再去清理旧 DOM，避免把新地址弄丢
+                       // const existingSource = video.querySelector('source');
+                       // if (existingSource) existingSource.remove();
+                      //  if (video.hasAttribute('src')) video.removeAttribute('src');
+                     //   hls.loadSource(src);
+                     //   hls.attachMedia(video);
 
                         video.disableRemotePlayback = false;
                         // ★ 先拿到“正确的新地址”
                         const src = player.options && player.options.video
                             ? player.options.video.url
-                            : '';           // 理论上一定有
+                            : '';
 
-                        // ★ 然后再去清理旧 DOM，避免把新地址弄丢
+                        // ★ 清理旧的 <source> 元素
                         const existingSource = video.querySelector('source');
                         if (existingSource) existingSource.remove();
                         if (video.hasAttribute('src')) video.removeAttribute('src');
-                        hls.loadSource(src);
-                        hls.attachMedia(video);
 
+                        // ★ 用代理地址加载 m3u8（Worker 会剥离广告）
+                        const proxyUrl = adFilteringEnabled
+                            ? `/proxy/${encodeURIComponent(src)}`
+                            : `/proxy/${encodeURIComponent(src)}?af=0`;
+                        if (debugMode) console.log('[PlayerApp] HLS via proxy →', proxyUrl);
+                        hls.loadSource(proxyUrl);
+                        hls.attachMedia(video);
+      // end
                         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
                             if (debugMode) console.log("[PlayerApp] HLS Media Attached");
                             // DPlayer usually handles play(), but ensure it happens
@@ -1266,6 +1269,8 @@ function playEpisode(index) { // index 是目标新集数的索引
     playerUrl.searchParams.set('url', episodeUrl);
     playerUrl.searchParams.set('title', currentVideoTitle);
     playerUrl.searchParams.set('index', index.toString());
+    // adFilteringEnabled 是前面已经算好的全局变量
+    playerUrl.searchParams.set('af', adFilteringEnabled ? '1' : '0');
 
     if (Array.isArray(currentEpisodes) && currentEpisodes.length) {
         playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(currentEpisodes)));
