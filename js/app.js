@@ -108,12 +108,12 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
     playerUrl.searchParams.set('title', title);
     playerUrl.searchParams.set('index', episodeIndex.toString());
 
-   // const eps = AppState.get('currentEpisodes');
+    // const eps = AppState.get('currentEpisodes');
     //if (Array.isArray(eps) && eps.length) {
     //    playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(eps)));
-   // }
+    // }
 
-   // 注释掉这行，让URL不带 reversed 参数
+    // 注释掉这行，让URL不带 reversed 参数
     const currentReversedStateForPlayer = AppState.get('episodesReversed') || false;
     playerUrl.searchParams.set('reversed', currentReversedStateForPlayer.toString());
 
@@ -908,8 +908,9 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
         AppState.set('currentSourceName', selectedApi.name);
         AppState.set('currentSourceCode', sourceCode);
 
-        // episodesReversed 状态直接从 AppState 读取，用于初次渲染
-        // AppState.get('episodesReversed') 会在 renderEpisodeButtons 中被读取
+        // ← 在这里，紧接着写入 localStorage，player.html 会读取这两项
+        localStorage.setItem('currentEpisodes', JSON.stringify(data.episodes));
+        localStorage.setItem('currentVideoTitle', title);
 
         const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode, selectedApi.name);
         showModal(episodeButtonsHtml, `${title} (${selectedApi.name})`);
