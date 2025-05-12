@@ -471,51 +471,6 @@
             </div>
         </div>
     </template>
-
-    <script>
-        ; (function () {
-            // 切换 UI 样式的函数
-            function updateToggleUI(on) {
-                const bg = document.querySelector('.toggle-bg');
-                const dot = document.querySelector('.toggle-dot');
-                if (!bg || !dot) return;
-                if (on) {
-                    bg.classList.add('bg-pink-600');
-                    dot.classList.add('translate-x-6');
-                } else {
-                    bg.classList.remove('bg-pink-600');
-                    dot.classList.remove('translate-x-6');
-                }
-            }
-
-            // 页面加载完成后，初始化开关状态，绑定事件
-            document.addEventListener('DOMContentLoaded', function () {
-                const chk = document.getElementById('adFilterToggle');
-                if (!chk) return;
-
-                // 1. 从 localStorage 读取上次状态（默认开启 → true）
-                const stored = localStorage.getItem('adFilterEnabled');
-                const initial = stored === null ? true : (stored === 'true');
-                chk.checked = initial;
-                updateToggleUI(initial);
-
-                // 2. 监听变化
-                chk.addEventListener('change', function () {
-                    const on = chk.checked;
-                    // 存状态
-                    localStorage.setItem('adFilterEnabled', on);
-                    // 切换 UI
-                    updateToggleUI(on);
-                    // 重新加载页面并把参数放到 URL (后端 & Hls.Loader 都会读取它)
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('ad_filter_enabled', on);
-                    // 这里强制刷新，可根据需求换成动态切片切换
-                    window.location.href = url.toString();
-                });
-            });
-        })();
-    </script>
-
 </body>
 
 </html>
