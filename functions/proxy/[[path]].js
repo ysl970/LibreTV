@@ -314,7 +314,7 @@ async function fetchContentWithType(targetUrl, originalRequest, config, logFn) {
         logFn(`Fetch failed: ${response.status} ${response.statusText}`);
         throw new Error(`HTTP error ${response.status} (${response.statusText}) fetching ${targetUrl}. Body: ${errorBody.substring(0, 200)}`);
     }
-    const content = await response.text();
+    const bodyStream = response.body;     // ReadableStream
     const contentType = response.headers.get('Content-Type') || '';
     logFn(`Fetch success: ${targetUrl}, Content-Type: ${contentType}`);
     return { content, contentType, responseHeaders: response.headers };
