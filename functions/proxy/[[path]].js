@@ -1,5 +1,10 @@
 // functions/proxy/[[path]].js
 
+// 顶部常量区
+const resolveCache = new Map();          // 共享解析缓存
+const RE_URI = /URI\s*=\s*"([^"]+)"/g;   // 预编译正则
+const RE_OTHER_URI = /(DATA-URI|IV|OTHER-URI-ATTR)\s*=\s*"([^"]+)"/gi;
+
 // --- 常量/配置 ---
 const resolveCache = new Map();
 const DEFAULT_CACHE_TTL = 86400; // 24小时
@@ -219,27 +224,35 @@ async function processMasterPlaylist(targetUrl, content, recursionDepth, context
     if (recursionDepth > MAX_RECURSION) throw new Error(`Max recursion depth (${MAX_RECURSION}) exceeded while processing master playlist: ${targetUrl}`);
     const baseUrl = getBaseUrl(targetUrl);
     const lines = content.split('\n');
-    let bestVariantUrl = '';
-    for (let i = 0; i < lines.length; i++) {
-        const trimmedLine = lines[i].trim();
-        if (trimmedLine && !trimmedLine.startsWith('#') && (trimmedLine.toLowerCase().includes('.m3u8'))) {
-            let prevLineIndex = i - 1;
-            while (prevLineIndex >= 0 && !lines[prevLineIndex].trim()) prevLineIndex--;
-            if (prevLineIndex >= 0) {
-                const prevTrimmed = lines[prevLineIndex].trim();
-                if (prevTrimmed.startsWith('#EXT-X-STREAM-INF') || prevTrimmed.startsWith('#EXT-X-MEDIA')) {
-                    bestVariantUrl = resolveUrl(baseUrl, trimmedLine, resolveCache, logFn);
-                    logFn(`Found variant stream URI: ${bestVariantUrl}`);
-                    break;
-                }
-            }
-            if (!bestVariantUrl && (trimmedLine.endsWith('.m3u8') || trimmedLine.includes('.m3u8?'))) {
-                bestVariantUrl = resolveUrl(baseUrl, trimmedLine, resolveCache, logFn);
-                logFn(`Found likely sub-playlist URI: ${bestVariantUrl}`);
-                break;
-            }
-        }
-    }
+    // let bestVariantUrl = '';
+    // for (let i = 0; i < lines.length; i++) {
+    //     const trimmedLine = lines[i].trim();
+    //     if (trimmedLine && !trimmedLine.startsWith('#') && (trimmedLine.toLowerCase().includes('.m3u8'))) {
+    //         let prevLineIndex = i - 1;
+    //         while (prevLineIndex >= 0 && !lines[prevLineIndex].trim()) prevLineIndex--;
+    //         if (prevLineIndex >= 0) {
+    //             const prevTrimmed = lines[prevLineIndex].trim();
+    //              if (prevTrimmed.startsWith('#EXT-X-STREAM-INF') || prevTrimmed.startsWith('#EXT-X-MEDIA')) {
+    //                 bestVariantUrl = resolveUrl(baseUrl, trimmedLine, resolveCache, logFn);
+    //                 logFn(`Found variant stream URI: ${bestVariantUrl}`);
+    //                 break;
+    //             }
+    //        }
+    //        if (!bestVariantUrl && (trimmedLine.endsWith('.m3u8') || trimmedLine.includes('.m3u8?'))) {
+    //             bestVariantUrl = resolveUrl(baseUrl, trimmedLine, resolveCache, logFn);
+    //            logFn(`Found likely sub-playlist URI: ${bestVariantUrl}`);
+    //              break;
+    //         }
+    //      }
+    //   }
+
+    // 使用正则一次捕获第一个 .m3u8 行，有清晰度之后用上面的
+    const match = content.match(/[^\r\n#]+\.m3u8[^\r\n]*/i);
+    const bestVariantUrl = match
+        ? resolveUrl(baseUrl, match[0].trim(), resolveCache, logFn)
+        : '';
+    logFn(`Found variant (regex): ${bestVariantUrl || 'none'}`);
+
     if (!bestVariantUrl) {
         // 添加更详细的警告日志
         if (content.includes('#EXT-X-STREAM-INF') || content.includes('#EXT-X-MEDIA:')) {
