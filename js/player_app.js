@@ -1,4 +1,5 @@
 // File: js/player_app.js
+
 // Add this helper function at the top of js/player_app.js
 if (typeof showToast !== 'function' || typeof showMessage !== 'function') {
     console.warn("UI notification functions (showToast/showMessage) are not available. Notifications might not work.");
@@ -42,6 +43,11 @@ let isScreenLocked = false;
 
 const REMEMBER_EPISODE_PROGRESS_ENABLED_KEY = 'playerRememberEpisodeProgressEnabled'; // 开关状态的键名
 const VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY = 'videoSpecificEpisodeProgresses'; // 各视频各集进度的键名
+
+// 在文件顶部添加这些，确保 AdAwareLoader 能访问到
+const AD_TRIGGER_RE_CLIENT = /#EXT(?:-X)?-(?:CUE|SCTE35|DATERANGE).*?(?:CLASS="?ad"?|CUE-OUT|SCTE35-OUT)/i;
+const AD_END_RE_CLIENT     = /#EXT(?:-X)?-(?:CUE|SCTE35).*?(CUE-IN|SCTE35-IN)/i;
+const AD_URI_RE_CLIENT     = /\/(?:ad|ads|adv|preroll)[^\/]*\.ts([?#]|$)/i; // 修改：确保匹配 .ts 结尾或带参数
 
 // 辅助函数：格式化时间)
 function formatPlayerTime(seconds) {
@@ -383,59 +389,110 @@ function initializePageContent() {
 }
 
 // --- Ad Filtering Loader (Using Legacy Logic) ---
-class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
+// --- 开始粘贴 替换 CustomHlsJsLoader ---
+class AdAwareLoader extends Hls.DefaultConfig.loader {
     constructor(config) {
         super(config);
+        this._inAdClient = false; // 用于客户端清单过滤的状态标记
+        this.logPrefix = '[AdAwareLoader]'; // 日志前缀
+
+        // 获取前端广告过滤开关的初始状态
+        const adFilteringToggleFrontend = document.getElementById('adFilterToggle');
+        this.isFrontendAdFilteringEnabled = (adFilteringToggleFrontend && adFilteringToggleFrontend.checked !== undefined)
+            ? adFilteringToggleFrontend.checked
+            : (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
+                ? window.PLAYER_CONFIG.adFilteringEnabled
+                : true; // 默认开启
+
+        if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) {
+            console.log(`${this.logPrefix} Initialized. Client-side ad filtering is ${this.isFrontendAdFilteringEnabled ? 'ENABLED' : 'DISABLED'}.`);
+        }
+    }
+
+    _stripManifest(manifestText) {
+        if (!this.isFrontendAdFilteringEnabled) { // 如果开关关闭，不进行客户端清单过滤
+            if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Manifest stripping skipped (filter disabled).`);
+            return manifestText;
+        }
+
+        if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Stripping manifest...`);
+        let localInAd = this._inAdClient; // 使用实例变量，避免多实例冲突 (虽然HLS Loader通常单个)
+        const lines = manifestText.split("\n");
+        const filtered = lines.filter(line => {
+            const trimmedLine = line.trim();
+            if (AD_TRIGGER_RE_CLIENT.test(trimmedLine)) {
+                localInAd = true;
+                if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Ad Trigger detected in manifest: ${trimmedLine}`);
+                return false; // 移除广告开始标记
+            }
+            if (localInAd && AD_END_RE_CLIENT.test(trimmedLine)) {
+                localInAd = false;
+                if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Ad End detected in manifest: ${trimmedLine}`);
+                return false; // 移除广告结束标记
+            }
+            if (localInAd) {
+                if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Skipping line in ad segment (manifest): ${trimmedLine}`);
+                return false; // 移除广告段内部行
+            }
+            // URI 过滤也应用于清单中的URL (如果需要，但主要靠服务器端和分片加载阶段)
+            // if (!trimmedLine.startsWith("#") && AD_URI_RE_CLIENT.test(trimmedLine)) {
+            //     if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Ad URI detected in manifest: ${trimmedLine}`);
+            //     return false;
+            // }
+            return true;
+        });
+        this._inAdClient = localInAd; // 更新状态
+        const result = filtered.join("\n");
+        if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode && manifestText.length !== result.length) {
+             console.log(`${this.logPrefix} Manifest stripped. Original length: ${manifestText.length}, New length: ${result.length}`);
+        }
+        return result;
     }
 
     load(context, config, callbacks) {
-        // Ensure PLAYER_CONFIG and its properties are accessible and have default fallbacks
-        const adFilteringEnabled = (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
-            ? window.PLAYER_CONFIG.adFilteringEnabled
-            : true; // Default to true if not specified
+        const { type, url } = context;
 
-        if ((context.type === 'manifest' || context.type === 'level') && adFilteringEnabled) {
-            const origOnSuccess = callbacks.onSuccess;
+        // 实时获取开关状态，因为用户可能在播放器加载后更改设置
+        const adFilteringToggleFrontend = document.getElementById('adFilterToggle');
+        this.isFrontendAdFilteringEnabled = (adFilteringToggleFrontend && adFilteringToggleFrontend.checked !== undefined)
+            ? adFilteringToggleFrontend.checked
+            : (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
+                ? window.PLAYER_CONFIG.adFilteringEnabled
+                : true;
+
+        if (!this.isFrontendAdFilteringEnabled) { // 如果总开关关闭，则行为类似默认加载器
+             if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Load passthrough (filter disabled) for URL: ${url}`);
+            return super.load(context, config, callbacks);
+        }
+
+        // 清单：直接修改 response.data
+        if (type === "manifest" || type === "level") {
+            const originalOnSuccess = callbacks.onSuccess;
             callbacks.onSuccess = (response, stats, context) => {
-                if (response.data && typeof response.data === 'string') {
-                    response.data = this.filterAdsLegacy(response.data); // Call the legacy filter
+                if (typeof response.data === "string") {
+                    if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Original manifest for ${url}:`, response.data.substring(0, 500) + "...");
+                    response.data = this._stripManifest(response.data);
+                    if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) console.log(`${this.logPrefix} Stripped manifest for ${url}:`, response.data.substring(0, 500) + "...");
                 }
-                return origOnSuccess(response, stats, context);
+                originalOnSuccess(response, stats, context);
             };
         }
-
-        // Call the original HLS.js loader's load method
-        super.load(context, config, callbacks);
-    }
-
-    // Legacy filter logic (removes lines with #EXT-X-DISCONTINUITY)
-    filterAdsLegacy(m3u8Content) {
-        if (typeof m3u8Content !== 'string' || !m3u8Content) {
-            return m3u8Content;
-        }
-
-        if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-            //   console.log('[AdFilter-Legacy] Applying legacy discontinuity filter.');
-        }
-
-        const lines = m3u8Content.split('\n');
-        const filteredLines = [];
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            if (!line.includes('#EXT-X-DISCONTINUITY')) {
-                filteredLines.push(line);
-            } else {
-                if (window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode) {
-                    //     console.log('[AdFilter-Legacy] Removing line:', line);
-                }
+        // 分片：如果 URI 看起来像广告，直接触发 error 让 Hls.js 跳过
+        else if (type === "fragment" && AD_URI_RE_CLIENT.test(url)) {
+            if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) {
+                console.warn(`${this.logPrefix} Blocking ad fragment by URI: ${url}`);
             }
+            // 伪造一个错误，让HLS.js跳过这个分片
+            // HLS.js 的错误码通常是枚举，这里用0表示一个通用错误
+            // 在 HLS.js 的错误处理中，网络错误通常会导致重试，
+            // 我们需要一个不会导致无限重试的错误。
+            // A more specific error type might be needed if HLS.js handles this poorly.
+            // For now, a generic error.
+            callbacks.onError({ code: Hls.ErrorCodes.NETWORK_ERROR, text: "Client-side ad fragment skipped" }, context, null /*xhrOrCfg*/);
+            return; // 阻止 super.load 的调用
         }
-        return filteredLines.join('\n');
-    }
 
-    // Keeping the old method name for backward compatibility, but redirecting to the legacy filter
-    filterAdsFromM3U8Legacy(m3u8Content) {
-        return this.filterAdsLegacy(m3u8Content);
+        return super.load(context, config, callbacks);
     }
 }
 
@@ -451,13 +508,36 @@ function initPlayer(videoUrl, sourceCode) {
     }
 
     const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
-    const adFilteringEnabled = (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
-        ? window.PLAYER_CONFIG.adFilteringEnabled
-        : true; // Default to true if not specified
+
+    // --- 开始粘贴 修改后的开关状态获取和URL处理 ---
+    const adFilteringToggleFrontend = document.getElementById('adFilterToggle');
+    const isFrontendAdFilteringEnabled = (adFilteringToggleFrontend && adFilteringToggleFrontend.checked !== undefined)
+        ? adFilteringToggleFrontend.checked
+        : (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
+            ? window.PLAYER_CONFIG.adFilteringEnabled
+            : true;
+
+    let finalVideoUrlForPlayer = videoUrl; // 这是将传递给DPlayer的URL
+
+    // 检查是否是代理URL，如果是，则附加参数
+    // PROXY_URL 应该在 config.js 中定义并全局可用
+    if (typeof PROXY_URL === 'string' && videoUrl.startsWith(PROXY_URL)) {
+        try {
+            const urlObj = new URL(videoUrl, window.location.origin); // 确保是绝对URL以便操作searchParams
+            urlObj.searchParams.set('ad_filter_enabled', isFrontendAdFilteringEnabled.toString());
+            finalVideoUrlForPlayer = urlObj.pathname + urlObj.search;
+             if (debugMode) console.log(`[PlayerApp] Ad filtering switch for proxy is ${isFrontendAdFilteringEnabled ? 'ON' : 'OFF'}. Proxied URL: ${finalVideoUrlForPlayer}`);
+        } catch (e) {
+            console.error(`[PlayerApp] Error modifying proxy URL: ${e}. Using original: ${videoUrl}`);
+            finalVideoUrlForPlayer = videoUrl; // 出错则使用原始URL
+        }
+    } else if (debugMode) {
+        console.log(`[PlayerApp] URL is not a proxy URL, not appending ad_filter_enabled. URL: ${videoUrl}`);
+    }
 
     const hlsConfig = {
         debug: debugMode || false,
-        loader: adFilteringEnabled ? CustomHlsJsLoader : Hls.DefaultConfig.loader,
+        loader: AdAwareLoader, // <--- 修改这里，使用新的 AdAwareLoader
         enableWorker: true, lowLatencyMode: false, backBufferLength: 90, maxBufferLength: 30,
         maxMaxBufferLength: 60, maxBufferSize: 30 * 1000 * 1000, maxBufferHole: 0.5,
         fragLoadingMaxRetry: 6, fragLoadingMaxRetryTimeout: 64000, fragLoadingRetryDelay: 1000,
@@ -475,8 +555,7 @@ function initPlayer(videoUrl, sourceCode) {
             hotkey: true, mutex: true, volume: 0.7, screenshot: true, preventClickToggle: false,
             airplay: true, chromecast: true,
             video: {
-                url: videoUrl, type: 'hls',
-                // pic: (window.SITE_CONFIG && window.SITE_CONFIG.logo) || 'https://img.picgo.net/2025/04/12/image362e7d38b4af4a74.png',
+                url: finalVideoUrlForPlayer,
                 customType: {
                     hls: function (video, player) {
                         if (currentHls && currentHls.destroy) {
@@ -504,7 +583,7 @@ function initPlayer(videoUrl, sourceCode) {
                         const existingSource = video.querySelector('source');
                         if (existingSource) existingSource.remove();
                         if (video.hasAttribute('src')) video.removeAttribute('src');
-                        hls.loadSource(src);
+                        hls.loadSource(player.options.video.url);
                         hls.attachMedia(video);
 
                         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
@@ -546,8 +625,7 @@ function initPlayer(videoUrl, sourceCode) {
             }
         });
         window.dp = dp; // Expose DPlayer instance globally
-        if (debugMode) console.log("[PlayerApp] DPlayer instance created.");
-
+        if (debugMode) console.log("[PlayerApp] DPlayer instance created/reinitialized.");
         // Add DPlayer event listeners
         addDPlayerEventListeners();
 
