@@ -1,5 +1,7 @@
 // functions/proxy/[[path]].js
 
+import { kvHelper } from "../utils/kv-helper.js";
+
 // 顶部常量区
 const resolveCache = new Map();          // 共享解析缓存
 
@@ -34,22 +36,22 @@ const OPTIONS_HEADERS = {
 export function parseNumberEnv(env, key, def = 0) {
     const raw = env[key];                // 直接拿字串
     if (raw == null || raw === '') return def;
-  
+
     const n = Number(raw);               // 或用 parseInt(raw, 10)
     return isNaN(n) || n < 0 ? def : n;
-  }
-  
-  export function parseJsonArrayEnv(env, key, def = []) {
+}
+
+export function parseJsonArrayEnv(env, key, def = []) {
     const raw = env[key];
     if (typeof raw !== 'string' || !raw.trim()) return def;
-  
+
     try {
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) && arr.length ? arr : def;
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) && arr.length ? arr : def;
     } catch (e) {
-      return def;
+        return def;
     }
-  }
+}
 
 function getBaseUrl(urlStr) {
     try {
@@ -161,30 +163,30 @@ function createM3u8Response(request, content, cacheTtl) {
 function createOtherResponse(request, content, status, originalHeaders, cacheTtl) {
     // 1️⃣ 先复制源站响应头
     const finalHeaders = new Headers(originalHeaders);
-  
+
     // 2️⃣ 过滤敏感响应头 —— 按需追加到列表即可
     [
-      'set-cookie',
-      'cookie',
-      'authorization',
-      // 'www-authenticate',       // 如有需要随时加
-      // 'proxy-authenticate',
-      // 'server',
-      // 'x-powered-by',
+        'set-cookie',
+        'cookie',
+        'authorization',
+        // 'www-authenticate',       // 如有需要随时加
+        // 'proxy-authenticate',
+        // 'server',
+        // 'x-powered-by',
     ].forEach(h => finalHeaders.delete(h));
-  
+
     // 3️⃣ 设置 CDN 缓存策略
-    finalHeaders.set('Cache-Control',     `public, max-age=${cacheTtl}`);
+    finalHeaders.set('Cache-Control', `public, max-age=${cacheTtl}`);
     finalHeaders.set('CDN-Cache-Control', `public, max-age=${cacheTtl}`);
-  
+
     // 4️⃣ 清掉会干扰缓存的头
     finalHeaders.delete('pragma');
     finalHeaders.delete('expires');
-  
+
     // 5️⃣ 构造并返回最终 Response
     return createResponse(request, content, status, finalHeaders);
-  }
-  
+}
+
 function createFetchHeaders(originalRequest, targetUrl, userAgents) {
     const headers = new Headers();
     const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
@@ -432,14 +434,16 @@ export async function onRequest(context) {
     log(`Processing request for target URL: ${targetUrl}`);
 
     try {
-        const kvNamespace = getKvNamespace(env, log);
+        const kv = env.LIBRETV_PROXY_KV
+            ? kvHelper(env.LIBRETV_PROXY_KV, CACHE_TTL, log)
+            : null;
         const rawCacheKey = `${KV_RAW_PREFIX}${targetUrl}`;
         let cachedRawData = null;
 
         // -- 尝试KV原始缓存 --
         if (kvNamespace) {
             try {
-                const cachedRawJson = await kvNamespace.get(rawCacheKey);
+                const cachedRawJson = await kv?.get(rawCacheKey);
                 if (cachedRawJson) {
                     log(`[Cache Hit - Raw]`);
                     cachedRawData = safeJsonParse(cachedRawJson, null, log);
@@ -486,10 +490,7 @@ export async function onRequest(context) {
                     const stringifiedValue = safeJsonStringify(cacheData, null, log);
                     if (stringifiedValue) {
                         try {
-                            waitUntil(
-                                kvNamespace.put(rawCacheKey, stringifiedValue, { expirationTtl: CACHE_TTL })
-                                    .catch(kvPutError => log(`[Cache Write Error - Raw KV Background]: ${kvPutError.message}`))
-                            );
+                            kv?.put(rawCacheKey, stringifiedValue);   // put 内部已 catch
                             log(`[Cache Write - Raw] Operation sent to background.`);
                         } catch (immediateKvPutError) {
                             log(`[Cache Write Error - Raw KV Immediate]: ${immediateKvPutError.message}`);
