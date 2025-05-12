@@ -1235,8 +1235,33 @@ function playEpisode(index) { // index 是目标新集数的索引
     // ② 标记“正在跳转”，让 after-save 的 beforeunload 不再写库
     isNavigatingToEpisode = true;
 
-    // ③ 再更新索引等
+        // 更新 currentEpisodeIndex，再构造最简 URL 跳转
     currentEpisodeIndex = index;
+    window.currentEpisodeIndex = index;
+
+    const episodeUrl = currentEpisodes[index];
+    if (!episodeUrl) {
+        console.warn(`[PlayerApp] No URL for episode ${index}`);
+        return;
+    }
+
+    // 只传最少必要的参数：url, title, index, source_code, af
+    const playerUrl = new URL(window.location.origin + window.location.pathname);
+    playerUrl.searchParams.set('url', episodeUrl);
+    playerUrl.searchParams.set('title', currentVideoTitle);
+    playerUrl.searchParams.set('index', index.toString());
+
+    // 来源标记
+    const sourceCode = new URLSearchParams(window.location.search).get('source_code');
+   if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
+
+    // 带上广告过滤开关
+    const adOn = getBoolConfig(PLAYER_CONFIG.adFilteringStorage, true);
+    playerUrl.searchParams.set('af', adOn ? '1' : '0');
+
+    window.location.href = playerUrl.toString();
+    // ③ 再更新索引等-old
+ /*    currentEpisodeIndex = index;
     window.currentEpisodeIndex = index; // 也更新 window 上的
 
     const episodeUrl = currentEpisodes[index];
@@ -1272,6 +1297,6 @@ function playEpisode(index) { // index 是目标新集数的索引
         localStorage.setItem('currentEpisodeIndex', index.toString());
     } catch (_) { }
 
-    window.location.href = playerUrl.toString();
+    window.location.href = playerUrl.toString(); */
 }
 window.playEpisode = playEpisode; // Expose globally

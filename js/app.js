@@ -114,8 +114,8 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
     // }
 
     // 注释掉这行，让URL不带 reversed 参数
-    const currentReversedStateForPlayer = AppState.get('episodesReversed') || false;
-    playerUrl.searchParams.set('reversed', currentReversedStateForPlayer.toString());
+    //const currentReversedStateForPlayer = AppState.get('episodesReversed') || false;
+    // playerUrl.searchParams.set('reversed', currentReversedStateForPlayer.toString());
 
     if (sourceName) playerUrl.searchParams.set('source', sourceName);
     if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
