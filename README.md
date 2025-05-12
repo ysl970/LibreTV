@@ -1,10 +1,10 @@
-只部署在cloudflare pages，方法见上游
+只部署在cloudflare pages，方法见[上游](https://github.com/LibreSpark/LibreTV)
 
 - 同页播放
 - 绑定kv
 - 复制链接：首页全集，播放页当下
 
-与上游差异
+与[上游](https://github.com/LibreSpark/LibreTV)差异
 - 预加载集数开关
 - 代码优化/瘦身，重构
 - cloudflare pages 和 播放 优化。
