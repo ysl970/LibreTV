@@ -48,13 +48,16 @@ const AD_START_PATTERNS = [
     /#EXT-X-DATERANGE:.*CLASS="ad"/i,
     /#EXT-X-SCTE35-OUT/i,
     /#EXTINF:[\d.]+,\s*ad/i,
-  ];
-  const AD_END_PATTERNS = [
+];
+const AD_END_PATTERNS = [
     /#EXT-X-DATERANGE:.*CLASS="content"/i,
     /#EXT-X-SCTE35-IN/i,
     /#EXT-X-DISCONTINUITY/i,   // 保险：有些源用 DISCONTINUITY 结束广告
-  ];
-  
+];
+
+// ==== 全局开关：是否去广告（缺省 true，可被 config.js 覆盖） ====
+let adFilteringEnabled = window.PLAYER_CONFIG?.adFilteringEnabled ?? true;
+
 // 辅助函数：格式化时间)
 function formatPlayerTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return "00:00";
@@ -429,9 +432,7 @@ function initPlayer(videoUrl, sourceCode) {
     }
 
     const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
-    const adFilteringEnabled = (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled !== 'undefined')
-        ? window.PLAYER_CONFIG.adFilteringEnabled
-        : true; // Default to true if not specified
+    adFilteringEnabled = window.PLAYER_CONFIG?.adFilteringEnabled ?? true;
 
     const hlsConfig = {
         debug: debugMode || false,
