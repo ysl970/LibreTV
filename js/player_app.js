@@ -402,6 +402,7 @@ class EnhancedAdFilterLoader extends Hls.DefaultConfig.loader {
     static cueStart = AD_START_PATTERNS;
     static cueEnd = AD_END_PATTERNS;
     static strip(content) {
+        console.log('[Strip] before length=', content.length);
         const lines = content.split('\n');
         let inAd = false;
         const out = [];
