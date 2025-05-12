@@ -30,6 +30,19 @@ const OPTIONS_HEADERS = {
 };
 
 // --- 工具函数 ---
+export function parseNumberEnv(env, key, def) {
+    const n = parseNumberEnv(env, key, 0);
+    return isNaN(n) || n < 0 ? def : n;
+}
+
+export function parseJsonArrayEnv(env, key, def) {
+    try {
+        const arr = parseJsonArrayEnv(env, key, []);
+        return Array.isArray(arr) && arr.length ? arr : def;
+    } catch {
+        return def;
+    }
+}
 
 function getBaseUrl(urlStr) {
     try {
@@ -345,12 +358,12 @@ export async function onRequest(context) {
     const log = (msg) => logDebug(DEBUG_ENABLED, msg);
 
     // 1. 读取/校验配置
-    let CACHE_TTL = parseInt(env.CACHE_TTL, 10);
+    const CACHE_TTL = parseNumberEnv(env, "CACHE_TTL", 86400);
     if (isNaN(CACHE_TTL) || CACHE_TTL < 0) {
         log(`Invalid CACHE_TTL value "${env.CACHE_TTL}". Using default: ${DEFAULT_CACHE_TTL}`);
         CACHE_TTL = DEFAULT_CACHE_TTL;
     }
-    let MAX_RECURSION = parseInt(env.MAX_RECURSION, 10);
+    const MAX_RECURSION = parseNumberEnv(env, 'MAX_RECURSION', 3);
     if (isNaN(MAX_RECURSION) || MAX_RECURSION < 0) {
         log(`Invalid MAX_RECURSION value "${env.MAX_RECURSION}". Using default: ${DEFAULT_MAX_RECURSION}`);
         MAX_RECURSION = DEFAULT_MAX_RECURSION;
