@@ -34,6 +34,140 @@ const COMMON_HEADERS = {
 };
 const OPTIONS_HEADERS = { ...COMMON_HEADERS, "Access-Control-Max-Age": "86400" };
 
+// --- 开始粘贴 新增的广告规则和stripAds函数 ---
+const AD_KEYWORDS = [
+  '/ads/',
+  'advertis',
+  '//ad.', // 注意这个是匹配域名开头的 ad.
+  '.com/ad/',
+  '.com/ads/',
+  'tracking',
+  'doubleclick.net',
+  'googleads.g.doubleclick.net',
+  'googlesyndication.com',
+  'imasdk.googleapis.com',
+  'videoad',
+  'preroll',
+  'midroll',
+  'postroll',
+  'imasdk',
+  // 您可以根据实际遇到的广告源添加更多关键词
+];
+
+const AD_REGEX_RULES = [
+  /^https?:\/\/[^\/]*?adserver\.[^\/]+\//i,
+  /^https?:\/\/[^\/]*?sponsor\.[^\/]+\//i,
+  /\/advertisements\//i,
+  // 更多自定义的正则表达式规则
+];
+
+const AD_TRIGGER_RE = /#EXT(?:-X)?-(?:CUE|SCTE35|DATERANGE).*?(?:CLASS="?ad"?|CUE-OUT|SCTE35-OUT)/i;
+const AD_END_RE = /#EXT(?:-X)?-(?:CUE|SCTE35).*?(CUE-IN|SCTE35-IN)/i;
+// 注意：他人方案中的 AD_URI_RE 我们用 AD_KEYWORDS 和 AD_REGEX_RULES 替代一部分功能，
+// 并在 processMediaPlaylist 中直接判断URL。如果需要更强的URI判断，可以引入类似 AD_URI_RE 的正则。
+// const AD_URI_RE     = /\/(?:ad|ads|adv|preroll)[^\/]*\.ts$/i; // 这是他人方案的，如果需要可以整合
+
+const SKIP_RE = /#EXT-X-SKIP:SKIPPED-SEGMENTS=(\d+)/; // 用于处理 LL-HLS 跳过片段
+
+const stripAdsFromServer = (content, adFilteringEnabled = true, logFn = console.log) => {
+  if (!adFilteringEnabled) {
+    logFn('[AdBlocker Server] Ad filtering is disabled by switch.');
+    return content;
+  }
+
+  let inAdSegment = false; // 标记是否处于一个由CUE或DATERANGE标记的广告段内
+  let skipCounter = 0;   // 用于 #EXT-X-SKIP
+  const lines = content.split(/\r?\n/);
+  const filteredLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    if (AD_TRIGGER_RE.test(trimmedLine)) {
+      inAdSegment = true;
+      logFn(`[AdBlocker Server] Ad segment start detected by TRIGGER_RE: ${trimmedLine}`);
+      filteredLines.push("#EXT-X-DISCONTINUITY"); // 可以选择性加入一个 discontinuity 标记广告被移除
+      continue; // 移除广告标记行本身
+    }
+
+    if (inAdSegment && AD_END_RE.test(trimmedLine)) {
+      inAdSegment = false;
+      logFn(`[AdBlocker Server] Ad segment end detected by END_RE: ${trimmedLine}`);
+      // 移除广告结束标记行本身，通常不需要加 discontinuity，因为内容会自然衔接
+      continue;
+    }
+
+    if (inAdSegment) {
+      logFn(`[AdBlocker Server] Skipping line inside ad segment: ${trimmedLine}`);
+      continue; // 移除广告段内部的所有行
+    }
+
+    // 处理 #EXT-X-SKIP
+    const skipMatch = trimmedLine.match(SKIP_RE);
+    if (skipMatch) {
+      const numToSkip = parseInt(skipMatch[1], 10);
+      if (!isNaN(numToSkip) && numToSkip > 0) {
+        skipCounter = numToSkip;
+        logFn(`[AdBlocker Server] #EXT-X-SKIP detected, will skip next ${skipCounter} segments.`);
+      }
+      continue; // 移除 #EXT-X-SKIP 这一行
+    }
+
+    if (skipCounter > 0 && !trimmedLine.startsWith("#") && trimmedLine.length > 0) {
+      logFn(`[AdBlocker Server] Skipping segment due to #EXT-X-SKIP: ${trimmedLine}`);
+      skipCounter--;
+      // 同时，通常也需要移除这个被跳过分片之前的 #EXTINF (如果存在)
+      if (filteredLines.length > 0 && filteredLines[filteredLines.length - 1].startsWith("#EXTINF:")) {
+        logFn(`[AdBlocker Server] Removing #EXTINF for skipped segment: ${filteredLines[filteredLines.length - 1]}`);
+        filteredLines.pop();
+      }
+      continue;
+    }
+
+
+    // 如果不是元数据行 (即可能是分片URL)
+    if (!trimmedLine.startsWith("#") && trimmedLine.length > 0) {
+      let isAdUrl = false;
+      for (const keyword of AD_KEYWORDS) {
+        if (trimmedLine.toLowerCase().includes(keyword.toLowerCase())) {
+          isAdUrl = true;
+          logFn(`[AdBlocker Server] Ad URL detected by keyword '${keyword}': ${trimmedLine}`);
+          break;
+        }
+      }
+      if (!isAdUrl) {
+        for (const regex of AD_REGEX_RULES) {
+          if (regex.test(trimmedLine)) {
+            isAdUrl = true;
+            logFn(`[AdBlocker Server] Ad URL detected by regex '${regex.source}': ${trimmedLine}`);
+            break;
+          }
+        }
+      }
+
+      if (isAdUrl) {
+        // 移除这个广告URL之前紧邻的 #EXTINF (如果存在)
+        if (filteredLines.length > 0 && filteredLines[filteredLines.length - 1].startsWith("#EXTINF:")) {
+          logFn(`[AdBlocker Server] Removing #EXTINF for ad URL: ${filteredLines[filteredLines.length - 1]}`);
+          filteredLines.pop();
+        }
+        // (可选，如果 #EXTINF 和 URL 之间还有其他特定标签)
+        // else if (filteredLines.length > 1 && filteredLines[filteredLines.length - 2].startsWith("#EXTINF:")) {
+        //    filteredLines.splice(-2, 1);
+        // }
+        logFn(`[AdBlocker Server] Skipping ad URL: ${trimmedLine}`);
+        continue; // 不添加这行广告URL
+      }
+    }
+    // 非广告行或不需要处理的元数据行，则添加到结果中
+    filteredLines.push(line);
+  }
+  return filteredLines.join("\n");
+};
+// --- 粘贴结束 新增的广告规则和stripAdsFromServer函数 ---
+
+
 // -----------------------------------------------------------------------------
 //  工具函数
 // -----------------------------------------------------------------------------
@@ -302,21 +436,38 @@ const processUriLine = (line, baseUrl, cache, logFn) => {
   return out;
 };
 
-const processMediaPlaylist = (targetUrl, content, cache, logFn) => {
+const processMediaPlaylist = (targetUrl, content, cache, logFn, adFilteringEnabled = true) => {
+  logFn(`[Proxy] Processing media playlist. Ad filtering server-side: ${adFilteringEnabled}`);
+
+  // 第一步：使用 stripAdsFromServer 移除广告标记和广告分片
+  const adFreeContent = stripAdsFromServer(content, adFilteringEnabled, logFn);
+
+  // 第二步：对处理后的内容进行URI重写 (与您之前的逻辑类似)
   const base = getBaseUrl(targetUrl);
-  const newline = /\r\n/.test(content) ? "\r\n" : "\n";                         // ★ D
-  return content
-    .split(/\r?\n/)
-    .map((line) => {
-      const t = line.trim();
-      if (!t) return "";                                                        // ★ D（避免孤立 \r）
-      if (t.startsWith("#EXT-X-KEY") || t.startsWith("#EXT-X-MAP"))
-        return processUriLine(t, base, cache, logFn);
-      if (t.startsWith("#")) return t;
+  const newline = /\r\n/.test(adFreeContent) ? "\r\n" : "\n"; // 注意基于 adFreeContent 判断换行符
+  const lines = adFreeContent.split(/\r?\n/);
+  const processedLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const t = line.trim();
+
+    if (!t) {
+      // processedLines.push(""); // 根据需要是否保留空行
+      continue;
+    }
+
+    if (t.startsWith("#EXT-X-KEY") || t.startsWith("#EXT-X-MAP")) {
+      processedLines.push(processUriLine(t, base, cache, logFn));
+    } else if (t.startsWith("#")) {
+      processedLines.push(t); // 其他元数据行直接保留
+    } else {
+      // 非注释行，应该是媒体分片URI，进行代理重写
       const abs = resolveUrl(base, t, cache, logFn);
-      return rewriteUrlToProxy(abs);
-    })
-    .join(newline);                                                             // ★
+      processedLines.push(rewriteUrlToProxy(abs));
+    }
+  }
+  return processedLines.join(newline);
 };
 
 /** 寻找首个变体 URL（支持 STREAM‑INF 与 MEDIA）。 */
@@ -354,45 +505,61 @@ const processMasterPlaylist = async (
   cache,
   logFn,
   kv,
+  adFilteringEnabled = true // <--- 新增参数
 ) => {
   if (depth > cfg.MAX_RECURSION) throw new Error("Max recursion depth reached");
 
   const variantUrl = findFirstVariantUrl(content, getBaseUrl(targetUrl), cache, logFn);
+
   if (!variantUrl) {
-    logFn("No variant found – fallback to media playlist");
-    return processMediaPlaylist(targetUrl, content, cache, logFn);
+    logFn("[Proxy] No variant found in master playlist – falling back to treat as media playlist.");
+    // 如果主播放列表没有有效的子播放列表链接，尝试直接作为媒体播放列表处理
+    return processMediaPlaylist(targetUrl, content, cache, logFn, adFilteringEnabled); // <--- 传递
   }
 
-  const cacheKey = `${KV_M3U8_PROCESSED_PREFIX}${variantUrl}`;
+  const cacheKey = `<span class="math-inline">\{KV\_M3U8\_PROCESSED\_PREFIX\}</span>{variantUrl}`; // 使用子列表URL作为处理后缓存的键
   const processedHit = kv ? await kv.get(cacheKey) : null;
   if (processedHit) {
-    logFn("[KV hit – processed M3U8]");
+    logFn(`[Proxy KV Hit] Returning processed M3U8 for variant: ${variantUrl}`);
     return processedHit;
   }
 
-  const { content: varContent, contentType } = await fetchContentWithType(
+  // 获取并处理子播放列表 (variant stream)
+  const { content: varContent, contentType: varContentType } = await fetchContentWithType(
     variantUrl,
     ctx.request,
     cfg,
     logFn,
   );
 
-  const processed = await processM3u8Recursive(
-    variantUrl,
-    varContent,
-    contentType,
+  if (typeof varContent !== 'string') { // 确保内容是字符串
+    logFn(`[Proxy] Variant content for ${variantUrl} is not a string, attempting to decode.`);
+    // 如果是 ArrayBuffer，尝试解码
+    // (您可能需要根据 fetchContentWithType 的返回类型调整这里的逻辑)
+    // 假设 varContent 是 ArrayBuffer
+    // varContent = new TextDecoder().decode(varContent);
+    // 如果 fetchContentWithType 保证M3U8内容总是字符串，则此检查可能不需要
+  }
+
+
+  const processedVariant = await processM3u8Recursive( // 递归调用
+    variantUrl, // 子列表的URL
+    varContent, // 子列表的内容
+    varContentType, // 子列表的类型
     depth + 1,
     ctx,
     cfg,
     cache,
     logFn,
     kv,
+    adFilteringEnabled // <--- 传递开关状态给递归调用
   );
 
   if (kv) {
-    kv.put(cacheKey, processed, { expirationTtl: cfg.CACHE_TTL }).catch((e) => logFn(`KV put err: ${e.message}`));
+    kv.put(cacheKey, processedVariant, { expirationTtl: cfg.CACHE_TTL })
+      .catch((e) => logFn(`[Proxy KV Error] Failed to put processed M3U8 for ${variantUrl}: ${e.message}`));
   }
-  return processed;
+  return processedVariant;
 };
 
 const processM3u8Recursive = async (
@@ -405,103 +572,140 @@ const processM3u8Recursive = async (
   cache,
   logFn,
   kv,
+  adFilteringEnabled = true // <--- 新增参数并提供默认值
 ) => {
   const isMaster =
-    content.includes("#EXT-X-STREAM-INF") || content.includes("#EXT-X-MEDIA:");
+    content.includes("#EXT-X-STREAM-INF") ||
+    content.includes("#EXT-X-MEDIA:");
   return isMaster
-    ? processMasterPlaylist(targetUrl, content, depth, ctx, cfg, cache, logFn, kv)
-    : processMediaPlaylist(targetUrl, content, cache, logFn);
+    ? processMasterPlaylist(targetUrl, content, depth, ctx, cfg, cache, logFn, kv, adFilteringEnabled) // <--- 传递
+    : processMediaPlaylist(targetUrl, content, cache, logFn, adFilteringEnabled); // <--- 传递
 };
 
 // -----------------------------------------------------------------------------
 //  主处理函数
 // -----------------------------------------------------------------------------
+// functions/proxy/[[path]].js
+
 export const onRequest = async (ctx) => {
   const { request, env } = ctx;
   const DEBUG = env.DEBUG === "true";
-  const log = (m) => logDebug(DEBUG, m);
-
+  const log = (m) => DEBUG && console.log(`[LibreTV Proxy] ${m}`); // 稍微修改了日志前缀
   const cfg = {
     CACHE_TTL: parseNumberEnv(env, "CACHE_TTL", DEFAULT_CACHE_TTL),
     MAX_RECURSION: parseNumberEnv(env, "MAX_RECURSION", DEFAULT_MAX_RECURSION),
     USER_AGENTS: parseJsonArrayEnv(env, "USER_AGENTS_JSON", DEFAULT_USER_AGENTS),
     LARGE_MAX_BYTES:
-      parseNumberEnv(env, "LARGE_MAX_MB", DEFAULT_LARGE_MAX_MB) * 1024 * 1024,   // ★ 统一命名
+      parseNumberEnv(env, "LARGE_MAX_MB", DEFAULT_LARGE_MAX_MB) * 1024 * 1024,
   };
 
-  // 提取目标 URL
-  const { pathname } = new URL(request.url);
-  const encoded = pathname.slice(7); // 去掉 "/proxy/"
+  const { pathname, search } = new URL(request.url); // 从 request.url 获取 pathname 和 search
+  const encodedTargetUrlInPath = pathname.slice(7); //  假设代理路径总是 /proxy/
   let targetUrl;
   try {
-    targetUrl = decodeURIComponent(encoded);
+    targetUrl = decodeURIComponent(encodedTargetUrlInPath);
   } catch {
-    targetUrl = encoded;
+    targetUrl = encodedTargetUrlInPath;
   }
-  if (!/^https?:\/\//i.test(targetUrl))
-    return createResponse(request, "Bad Request: invalid target URL", 400);
-  log(`Target → ${targetUrl}`);
 
-  // KV 辅助
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    return createResponse(request, "Bad Request: invalid target URL in path", 400);
+  }
+  log(`Target URL from path: ${targetUrl}`);
+
+  // --- 开始粘贴 新增的获取开关状态逻辑 ---
+  const requestUrlParams = new URLSearchParams(search); // 从 search 部分创建 URLSearchParams
+  const adFilterParam = requestUrlParams.get('ad_filter_enabled');
+  let serverAdFilteringEnabled = true; // 默认开启服务器端过滤
+  if (adFilterParam !== null) {
+    serverAdFilteringEnabled = adFilterParam === 'true';
+  }
+  log(`Server-side ad filtering is ${serverAdFilteringEnabled ? 'ENABLED' : 'DISABLED'} based on URL parameter.`);
+  // --- 粘贴结束 新增的获取开关状态逻辑 ---
+
   const kv = env.LIBRETV_PROXY_KV ? kvHelper(env.LIBRETV_PROXY_KV, cfg.CACHE_TTL, log) : null;
 
-  // RAW 缓存
-  const rawKey = `${KV_RAW_PREFIX}${targetUrl}`;
-  const rawVal = kv ? await kv.get(rawKey) : null;
-  const rawCacheObj = rawVal ? safeJsonParse(rawVal, null, log) : null;
+  // ... (您已有的 RAW 缓存逻辑，如 rawKey, rawVal, rawCacheObj) ...
+  // ... (您已有的 fetchContentWithType 调用逻辑) ...
+  // 确保在调用 fetchContentWithType 之后，如果内容是M3U8，将 serverAdFilteringEnabled 传递下去
 
-  let body,
-    contentType,
-    originHeaders;
+  let body, contentType, originHeaders;
+  // ... (从缓存或网络获取 body, contentType, originHeaders 的逻辑保持不变) ...
+  // 例如，在您的代码中，这部分逻辑可能在：
+  // if (rawCacheObj) { ... } else { const fetched = await fetchContentWithType(...); ... }
 
   if (rawCacheObj) {
-    log("[KV hit – raw]");
-    body = rawCacheObj.isBase64 ? base64ToAb(rawCacheObj.body) : rawCacheObj.body;
-    originHeaders = new Headers(Object.entries(rawCacheObj.headers));
-    contentType = originHeaders.get("content-type") || "";
+      log("[Proxy KV Hit] Raw content cache hit.");
+      body = rawCacheObj.isBase64 ? base64ToAb(rawCacheObj.body) : rawCacheObj.body;
+      originHeaders = new Headers(Object.entries(rawCacheObj.headers));
+      contentType = originHeaders.get("content-type") || "";
   } else {
-    const fetched = await fetchContentWithType(targetUrl, request, cfg, log);
-    body = fetched.content;
-    contentType = fetched.contentType;
-    originHeaders = fetched.responseHeaders;
+      log(`[Proxy] Raw content cache miss. Fetching from origin: ${targetUrl}`);
+      try {
+          const fetched = await fetchContentWithType(targetUrl, request, cfg, log);
+          body = fetched.content;
+          contentType = fetched.contentType;
+          originHeaders = fetched.responseHeaders;
 
-    // 仅缓存“非流式”结果
-    if (kv && !fetched.isStream) {
-      const rawBody = typeof body === "string" ? body : abToBase64(body);
-      kv
-        .put(
-          rawKey,
-          JSON.stringify({
-            body: rawBody,
-            isBase64: typeof body !== "string",
-            headers: Object.fromEntries([...originHeaders].map(([k, v]) => [k.toLowerCase(), v])),
-          }),
-          { expirationTtl: cfg.CACHE_TTL },
-        )
-        .catch((e) => log(`KV put err: ${e.message}`));
-    }
+          if (kv && !fetched.isStream) {
+              // ... (写入 raw 缓存的逻辑) ...
+          }
+      } catch (fetchErr) {
+          log(`[Proxy Fetch Error] Failed to fetch content from origin: ${fetchErr.message}`);
+          return createResponse(request, `Error fetching origin content: ${fetchErr.message}`, 502);
+      }
   }
 
-  // M3U8 智能处理
+
   if (isM3u8Content(body, contentType)) {
-    log("M3U8 detected → processing");
-    if (typeof body !== "string") body = new TextDecoder().decode(body);
-    const cache = new Map();
-    const processed = await processM3u8Recursive(
-      targetUrl,
-      body,
+    log(`[Proxy] M3U8 content detected for ${targetUrl}. Processing...`);
+    let m3u8TextContent = "";
+    if (typeof body === 'string') {
+        m3u8TextContent = body;
+    } else if (body instanceof ArrayBuffer) {
+        try {
+            m3u8TextContent = new TextDecoder().decode(body);
+        } catch (decodeError) {
+            log(`[Proxy Error] Failed to decode M3U8 ArrayBuffer: ${decodeError.message}`);
+            return createResponse(request, "Error decoding M3U8 content", 500);
+        }
+    } else {
+        log(`[Proxy Error] M3U8 content is of unexpected type: ${typeof body}`);
+        return createResponse(request, "Unexpected M3U8 content type", 500);
+    }
+
+    const urlForCacheAndProcessing = targetUrl; // 使用原始目标URL作为缓存和处理的基准
+
+    const processedM3u8Key = `<span class="math-inline">\{KV\_M3U8\_PROCESSED\_PREFIX\}</span>{urlForCacheAndProcessing}_filter-${serverAdFilteringEnabled}`; // 在缓存键中也加入过滤状态
+    const cachedProcessedM3u8 = kv ? await kv.get(processedM3u8Key) : null;
+
+    if (cachedProcessedM3u8) {
+        log(`[Proxy KV Hit] Returning pre-processed M3U8 from cache (filter: ${serverAdFilteringEnabled}) for: ${urlForCacheAndProcessing}`);
+        return createM3u8Response(request, cachedProcessedM3u8, cfg.CACHE_TTL);
+    }
+
+    const recursionCache = new Map(); // 本次请求的递归处理缓存
+    const processedM3u8 = await processM3u8Recursive(
+      urlForCacheAndProcessing, // 使用原始 targetUrl
+      m3u8TextContent,
       contentType,
-      0,
+      0, // initial depth
       ctx,
       cfg,
-      cache,
+      recursionCache,
       log,
-      kv,
+      kv, // 传递KV store实例
+      serverAdFilteringEnabled // <--- 传递开关状态
     );
-    return createM3u8Response(request, processed, cfg.CACHE_TTL);
+
+    if (kv) {
+         kv.put(processedM3u8Key, processedM3u8, { expirationTtl: cfg.CACHE_TTL })
+           .catch(e => log(`[Proxy KV Error] Failed to cache processed M3U8: ${e.message}`));
+    }
+    return createM3u8Response(request, processedM3u8, cfg.CACHE_TTL);
   }
 
-  // 其它资源直传
+  log(`[Proxy] Non-M3U8 content detected for ${targetUrl}. Passing through.`);
   return createOtherResponse(request, body, 200, originHeaders, cfg.CACHE_TTL);
 };
 
