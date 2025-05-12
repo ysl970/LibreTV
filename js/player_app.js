@@ -427,8 +427,8 @@ class EnhancedAdFilterLoader extends Hls.DefaultConfig.loader {
     }
     
     load(ctx, cfg, cbs) {
-        if ((ctx.type === 'manifest' || ctx.type === 'level') && window.PLAYER_CONFIG?.adFilteringEnabled !== false) {
-            const orig = cbs.onSuccess;
+        if ((ctx.type === 'manifest' || ctx.type === 'level') && window.adFilteringEnabled) {
+        const orig = cbs.onSuccess;
             cbs.onSuccess = (r, s, ctx2) => { r.data = EnhancedAdFilterLoader.strip(r.data); orig(r, s, ctx2); };
         }
         super.load(ctx, cfg, cbs);
