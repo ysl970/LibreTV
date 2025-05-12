@@ -1,24 +1,5 @@
 // File: js/player_app.js
 
-// ---- 统一取得「分片广告过滤」当前状态 ----
-function getAdFilteringEnabled() {
-    // ① 看 URL 参数
-    const urlParam = new URLSearchParams(window.location.search).get('af');
-    if (urlParam !== null) return urlParam === '1';
-
-    // ② 看 localStorage（由设置面板写入）
-    const lsVal = localStorage.getItem('adFilteringEnabled');
-    if (lsVal !== null) return lsVal === 'true';
-
-    // ③ 看 config.js 的默认
-    if (window.PLAYER_CONFIG && typeof window.PLAYER_CONFIG.adFilteringEnabled === 'boolean') {
-        return window.PLAYER_CONFIG.adFilteringEnabled;
-    }
-
-    // ④ 最后缺省
-    return true;
-}
-
 // Add this helper function at the top of js/player_app.js
 if (typeof showToast !== 'function' || typeof showMessage !== 'function') {
     console.warn("UI notification functions (showToast/showMessage) are not available. Notifications might not work.");
