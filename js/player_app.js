@@ -401,35 +401,17 @@ function initializePageContent() {
 // --- Ad Filtering Loader (Using Legacy Logic) ---
 class EnhancedAdFilterLoader extends Hls.DefaultConfig.loader {
     static cueStart = AD_START_PATTERNS;
-    static cueEnd   = AD_END_PATTERNS;
-  
+    static cueEnd = AD_END_PATTERNS;
     static strip(content) {
-      const lines = content.split('\n');
-      let inAd = false;
-      const out = [];
-  
-      for (const l of lines) {
-        const line = l.trim();
-  
-        // 遇到广告开始标记 → 插入一个 DISCONTINUITY，切换到广告段模式，不输出该行
-        if (!inAd && this.cueStart.some(re => re.test(line))) {
-          out.push('#EXT-X-DISCONTINUITY');
-          inAd = true;
-          continue;
+        const lines = content.split('\n');
+        let inAd = false, out = [];
+    
+        for (const l of lines) {
+            if (!inAd && this.cueStart.some(re => re.test(l))) { inAd = true; continue; }
+            if (inAd && this.cueEnd.some(re => re.test(l))) { inAd = false; continue; }
+            if (!inAd && !/^#EXT-X-DISCONTINUITY/.test(l)) out.push(l);
+
         }
-  
-        // 遇到广告结束标记 → 先退出广告段模式，再插入一个 DISCONTINUITY，不输出该行
-        if (inAd && this.cueEnd.some(re => re.test(line))) {
-          inAd = false;
-          out.push('#EXT-X-DISCONTINUITY');
-          continue;
-        }
-  
-        // 非广告区间的行，正常输出
-        if (!inAd) {
-          out.push(l);
-        }
-      }  
         return out.join('\n');
     }
     
