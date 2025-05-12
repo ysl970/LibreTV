@@ -2,11 +2,12 @@
 
 // 顶部常量区
 const resolveCache = new Map();          // 共享解析缓存
+
 const RE_URI = /URI\s*=\s*"([^"]+)"/g;   // 预编译正则
+
 const RE_OTHER_URI = /(DATA-URI|IV|OTHER-URI-ATTR)\s*=\s*"([^"]+)"/gi;
 
 // --- 常量/配置 ---
-const resolveCache = new Map();
 const DEFAULT_CACHE_TTL = 86400; // 24小时
 const DEFAULT_MAX_RECURSION = 5;
 const DEFAULT_USER_AGENTS = [
@@ -152,20 +153,32 @@ function createM3u8Response(request, content, cacheTtl) {
     });
 }
 function createOtherResponse(request, content, status, originalHeaders, cacheTtl) {
-    // 1. 复制源站响应头
+    // 1️⃣ 先复制源站响应头
     const finalHeaders = new Headers(originalHeaders);
-
-    // 2. 让 Cloudflare CDN 缓 24h（或你在 env.CACHE_TTL 里设的秒数）
-    finalHeaders.set('Cache-Control', `public, max-age=${cacheTtl}`);
+  
+    // 2️⃣ 过滤敏感响应头 —— 按需追加到列表即可
+    [
+      'set-cookie',
+      'cookie',
+      'authorization',
+      // 'www-authenticate',       // 如有需要随时加
+      // 'proxy-authenticate',
+      // 'server',
+      // 'x-powered-by',
+    ].forEach(h => finalHeaders.delete(h));
+  
+    // 3️⃣ 设置 CDN 缓存策略
+    finalHeaders.set('Cache-Control',     `public, max-age=${cacheTtl}`);
     finalHeaders.set('CDN-Cache-Control', `public, max-age=${cacheTtl}`);
-
-    // 3. 清理掉源站可能带来的私有或禁止缓存指令
-    finalHeaders.delete('Pragma');
-    finalHeaders.delete('Expires');
-    // 你也可以根据需要过滤 'set-cookie'、'authorization' 等 header
-
+  
+    // 4️⃣ 清掉会干扰缓存的头
+    finalHeaders.delete('pragma');
+    finalHeaders.delete('expires');
+  
+    // 5️⃣ 构造并返回最终 Response
     return createResponse(request, content, status, finalHeaders);
-}
+  }
+  
 function createFetchHeaders(originalRequest, targetUrl, userAgents) {
     const headers = new Headers();
     const userAgent = userAgents[Math.floor(Math.random() * userAgents.length)];
