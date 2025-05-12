@@ -31,19 +31,25 @@ const OPTIONS_HEADERS = {
 };
 
 // --- 工具函数 ---
-export function parseNumberEnv(env, key, def) {
-    const n = parseNumberEnv(env, key, 0);
+export function parseNumberEnv(env, key, def = 0) {
+    const raw = env[key];                // 直接拿字串
+    if (raw == null || raw === '') return def;
+  
+    const n = Number(raw);               // 或用 parseInt(raw, 10)
     return isNaN(n) || n < 0 ? def : n;
-}
-
-export function parseJsonArrayEnv(env, key, def) {
+  }
+  
+  export function parseJsonArrayEnv(env, key, def = []) {
+    const raw = env[key];
+    if (typeof raw !== 'string' || !raw.trim()) return def;
+  
     try {
-        const arr = parseJsonArrayEnv(env, key, []);
-        return Array.isArray(arr) && arr.length ? arr : def;
-    } catch {
-        return def;
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) && arr.length ? arr : def;
+    } catch (e) {
+      return def;
     }
-}
+  }
 
 function getBaseUrl(urlStr) {
     try {
