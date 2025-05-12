@@ -317,14 +317,11 @@ const createOtherResponse = (request, body, status, originHeaders, ttl) => {
 const createFetchHeaders = (req, targetUrl, agents) => {
   const h = new Headers();
   h.set("User-Agent", agents[Math.floor(Math.random() * agents.length)]);
- 
-    // ★ 只对 HLS 相关请求发“视频”Accept，其他一律用浏览器原值或 */*
-    const isHls = /\.(m3u8|ts)$/i.test(targetUrl) ||
-                  /application\/vnd\.apple\.mpegurl/i.test(req.headers.get("Accept") || "");
-    h.set("Accept", isHls
-          ? "application/x-mpegurl, video/*;q=0.75, image/*;q=0.6, */*;q=0.5"
-         : (req.headers.get("Accept") || "*/*"));
-
+  // 细抠 #5：再加 image/*，提高极端源站兼容性 ----------------------------- ★
+  h.set(
+    "Accept",
+    "application/x-mpegurl, video/*;q=0.75, image/*;q=0.6, application/json;q=0.6, */*;q=0.5",
+  );
   const al = req.headers.get("Accept-Language");
   if (al) h.set("Accept-Language", al);
   try {
@@ -637,6 +634,10 @@ log(
 
   const kv = env.LIBRETV_PROXY_KV ? kvHelper(env.LIBRETV_PROXY_KV, cfg.CACHE_TTL, log) : null;
 
+  const rawKey      = `${KV_RAW_PREFIX}${targetUrl}`;
+  const rawVal      = kv ? await kv.get(rawKey) : null;
+  const rawCacheObj = rawVal ? safeJsonParse(rawVal, null, log) : null;
+  
   let body, contentType, originHeaders;
 
   if (rawCacheObj) {
