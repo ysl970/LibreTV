@@ -56,6 +56,10 @@ const AD_END_PATTERNS = [
 // ==== 全局开关：是否去广告（缺省 true，可被 config.js 覆盖） ====
 let adFilteringEnabled = window.PLAYER_CONFIG?.adFilteringEnabled ?? true;
 
+function isMobile() {
+    return /Mobile|Tablet|iPod|iPhone|iPad|Android|BlackBerry|Windows Phone/i.test(navigator.userAgent);
+}
+
 // 辅助函数：格式化时间)
 function formatPlayerTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return "00:00";
@@ -606,7 +610,7 @@ function addDPlayerEventListeners() {
         showError('播放器遇到错误，请检查视频源');
     });
 
-    setupLongPressSpeedControl(); // Setup long press after dp is initialized
+    setupLongPressSpeedControl(); 
 
     dp.on('seeking', function () { if (debugMode) console.log("[PlayerApp] DPlayer event: seeking"); isUserSeeking = true; videoHasEnded = false; });
     dp.on('seeked', function () {
@@ -912,6 +916,9 @@ function setupLongPressSpeedControl() {
     let speedChangedByLongPress = false;
 
     playerVideoWrap.addEventListener('touchstart', function (e) {
+        if (isMobile()) {
+            e.preventDefault(); // 阻止默认行为，禁止右键菜单
+        }
         if (isScreenLocked || dp.video.paused) return; // Ignore if screen locked or paused
         const touchX = e.touches[0].clientX;
         const rect = playerVideoWrap.getBoundingClientRect();
@@ -925,7 +932,7 @@ function setupLongPressSpeedControl() {
                 if (typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
             }, 300); // 300ms delay for long press
         }
-    }, { passive: true });
+    }, { passive: false }); // 设置为 false 以确保 preventDefault 生效
 
     const endLongPress = function () {
         if (longPressTimer) clearTimeout(longPressTimer);
