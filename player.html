@@ -710,19 +710,19 @@
                 contextmenu: [                   // 自定义右键菜单
                     {
                         text: '关于 奇异影视',
-                        link: 'https://github.com/LibreSpark/LibreTV'
+                        link: 'https://github.com/'
                     },
                     {
                         text: '问题反馈',
                         click: (player) => {
-                            window.open('https://github.com/LibreSpark/LibreTV/issues', '_blank');
+                            window.open('https://github.com/', '_blank');
                         }
                     }
                 ],
                 video: {
                     url: videoUrl,
                     type: 'hls',
-                    pic: 'image/nomedia.png', // 设置视频封面图
+                    pic: '', // 设置视频封面图
                     customType: {
                         hls: function(video, player) {
                             // 清理之前的HLS实例
