@@ -5,7 +5,7 @@ permissions:
 
 on:
   schedule:
-    - cron: "0 4 * * *" # At 12PM UTC+8
+    - cron: "0 */4 * * *" # 每4小时执行一次 (0:00, 4:00, 8:00, 12:00, 16:00, 20:00 UTC)
   workflow_dispatch:
 
 jobs:
