@@ -59,6 +59,38 @@ const AD_END_PATTERNS = [
 // ==== 全局开关：是否去广告（缺省 true，可被 config.js 覆盖） ====
 let adFilteringEnabled = window.PLAYER_CONFIG?.adFilteringEnabled ?? true;
 
+/* utils.js 或 player_app.js 顶部 */
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i
+           .test(navigator.userAgent);
+}
+
+/* 代替原 oncontextmenu 方案 */
+function blockMobileContextMenu(el){
+    if(!el) return;
+
+    el.addEventListener('contextmenu', e => {
+        if (isMobileDevice()){          // 仅移动端阻断
+            e.preventDefault();
+            return false;
+        }
+    }, {passive:false});
+
+    if (isMobileDevice()){              // 只对移动端加 css
+        el.style.webkitTouchCallout = 'none';
+        ['userSelect','webkitUserSelect','MozUserSelect','msUserSelect']
+            .forEach(p => el.style[p]='none');
+    }
+}
+
+/* 初始化时同时对容器和 video 调用 */
+disableMobileContextMenu(dp.container);
+disableMobileContextMenu(dp.video);
+
+/* 倍速区域再兜底一次，防极端机型 */
+targetElement.addEventListener('contextmenu',
+    e => isMobileDevice() && e.preventDefault(), {passive:false});
+
 // 辅助函数：格式化时间)
 function formatPlayerTime(seconds) {
     if (isNaN(seconds) || seconds < 0) return "00:00";
