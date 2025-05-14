@@ -1,5 +1,5 @@
 // 全局变量
-let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["tyyszy","dyttzy", "bfzy", "ruyi"]'); // 默认选中天涯资源、暴风资源和如意资源
+let selectedAPIs = JSON.parse(localStorage.getItem('selectedAPIs') || '["tyyszy","xiaomaomi","dyttzy", "bfzy", "ruyi"]'); // 默认选中天涯资源、暴风资源和如意资源
 let customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]'); // 存储自定义API列表
 
 // 添加当前播放的集数索引
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 设置默认API选择（如果是第一次加载）
     if (!localStorage.getItem('hasInitializedDefaults')) {
         // 仅选择天涯资源、暴风资源和如意资源
-        selectedAPIs = ["tyyszy", "bfzy","dyttzy", "ruyi"];
+        selectedAPIs = ["tyyszy","xiaomaomi", "bfzy","dyttzy", "ruyi"];
         localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
         
         // 默认选中过滤开关
@@ -489,13 +489,26 @@ function setupEventListeners() {
         }
     });
 
-    // 点击外部关闭设置面板
+    // 点击外部关闭设置面板和历史记录面板
     document.addEventListener('click', function(e) {
-        const panel = document.getElementById('settingsPanel');
-        const settingsButton = document.querySelector('button[onclick="toggleSettings(event)"]');
+        // 关闭设置面板
+        const settingsPanel = document.querySelector('#settingsPanel.show');
+        const settingsButton = document.querySelector('#settingsPanel .close-btn');
         
-        if (!panel.contains(e.target) && !settingsButton.contains(e.target) && panel.classList.contains('show')) {
-            panel.classList.remove('show');
+        if (settingsPanel && settingsButton && 
+            !settingsPanel.contains(e.target) && 
+            !settingsButton.contains(e.target)) {
+            settingsPanel.classList.remove('show');
+        }
+
+        // 关闭历史记录面板
+        const historyPanel = document.querySelector('#historyPanel.show');
+        const historyButton = document.querySelector('#historyPanel .close-btn');
+        
+        if (historyPanel && historyButton && 
+            !historyPanel.contains(e.target) && 
+            !historyButton.contains(e.target)) {
+            historyPanel.classList.remove('show');
         }
     });
     
@@ -561,7 +574,7 @@ function getCustomApiInfo(customApiIndex) {
     return customAPIs[index];
 }
 
-// 搜索功能 - 修改为支持多选API
+// 搜索功能 - 修改为支持多选API和多页结果
 async function search() {
     // 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
@@ -592,7 +605,7 @@ async function search() {
         let allResults = [];
         const searchPromises = selectedAPIs.map(async (apiId) => {
             try {
-                let apiUrl, apiName;
+                let apiUrl, apiName, apiBaseUrl;
                 
                 // 处理自定义API
                 if (apiId.startsWith('custom_')) {
@@ -600,12 +613,14 @@ async function search() {
                     const customApi = getCustomApiInfo(customIndex);
                     if (!customApi) return [];
                     
-                    apiUrl = customApi.url + API_CONFIG.search.path + encodeURIComponent(query);
+                    apiBaseUrl = customApi.url;
+                    apiUrl = apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
                     apiName = customApi.name;
                 } else {
                     // 内置API
                     if (!API_SITES[apiId]) return [];
-                    apiUrl = API_SITES[apiId].api + API_CONFIG.search.path + encodeURIComponent(query);
+                    apiBaseUrl = API_SITES[apiId].api;
+                    apiUrl = apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
                     apiName = API_SITES[apiId].name;
                 }
                 
@@ -630,13 +645,74 @@ async function search() {
                     return [];
                 }
                 
-                // 添加源信息到每个结果
+                // 处理第一页结果
                 const results = data.list.map(item => ({
                     ...item,
                     source_name: apiName,
                     source_code: apiId,
                     api_url: apiId.startsWith('custom_') ? getCustomApiInfo(apiId.replace('custom_', ''))?.url : undefined
                 }));
+                
+                // 获取总页数
+                const pageCount = data.pagecount || 1;
+                // 确定需要获取的额外页数 (最多获取maxPages页)
+                const pagesToFetch = Math.min(pageCount - 1, API_CONFIG.search.maxPages - 1);
+                
+                // 如果有额外页数，获取更多页的结果
+                if (pagesToFetch > 0) {
+                    const additionalPagePromises = [];
+                    
+                    for (let page = 2; page <= pagesToFetch + 1; page++) {
+                        // 构建分页URL
+                        const pageUrl = apiBaseUrl + API_CONFIG.search.pagePath
+                            .replace('{query}', encodeURIComponent(query))
+                            .replace('{page}', page);
+                        
+                        // 创建获取额外页的Promise
+                        const pagePromise = (async () => {
+                            try {
+                                const pageController = new AbortController();
+                                const pageTimeoutId = setTimeout(() => pageController.abort(), 8000);
+                                
+                                const pageResponse = await fetch(PROXY_URL + encodeURIComponent(pageUrl), {
+                                    headers: API_CONFIG.search.headers,
+                                    signal: pageController.signal
+                                });
+                                
+                                clearTimeout(pageTimeoutId);
+                                
+                                if (!pageResponse.ok) return [];
+                                
+                                const pageData = await pageResponse.json();
+                                
+                                if (!pageData || !pageData.list || !Array.isArray(pageData.list)) return [];
+                                
+                                // 处理当前页结果
+                                return pageData.list.map(item => ({
+                                    ...item,
+                                    source_name: apiName,
+                                    source_code: apiId,
+                                    api_url: apiId.startsWith('custom_') ? getCustomApiInfo(apiId.replace('custom_', ''))?.url : undefined
+                                }));
+                            } catch (error) {
+                                console.warn(`API ${apiId} 第${page}页搜索失败:`, error);
+                                return [];
+                            }
+                        })();
+                        
+                        additionalPagePromises.push(pagePromise);
+                    }
+                    
+                    // 等待所有额外页的结果
+                    const additionalResults = await Promise.all(additionalPagePromises);
+                    
+                    // 合并所有页的结果
+                    additionalResults.forEach(pageResults => {
+                        if (pageResults.length > 0) {
+                            results.push(...pageResults);
+                        }
+                    });
+                }
                 
                 return results;
             } catch (error) {
@@ -701,7 +777,7 @@ async function search() {
         }
 
         // 添加XSS保护，使用textContent和属性转义
-        resultsDiv.innerHTML = allResults.map(item => {
+        const safeResults = allResults.map(item => {
             const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
             const safeName = (item.vod_name || '').toString()
                 .replace(/</g, '&lt;')
@@ -768,6 +844,8 @@ async function search() {
                 </div>
             `;
         }).join('');
+        
+        resultsDiv.innerHTML = safeResults;
     } catch (error) {
         console.error('搜索错误:', error);
         if (error.name === 'AbortError') {
@@ -937,9 +1015,28 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0) {
     
     // 构建播放页面URL，传递必要参数
     const playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(videoTitle)}&index=${episodeIndex}&source=${encodeURIComponent(sourceName)}&source_code=${encodeURIComponent(sourceCode)}`;
-    
-    // 在当前标签页中打开播放页面
-    window.location.href = playerUrl;
+    showVideoPlayer(playerUrl);
+}
+
+// 弹出播放器页面
+function showVideoPlayer(url) {
+    // 临时隐藏搜索结果，防止高度超出播放器而出现滚动条
+    document.getElementById('resultsArea').classList.add('hidden');
+    // 在框架中打开播放页面
+    videoPlayerFrame = document.createElement('iframe');
+    videoPlayerFrame.id = 'VideoPlayerFrame';
+    videoPlayerFrame.className = 'fixed w-full h-screen z-40';
+    videoPlayerFrame.src = url;
+    document.body.appendChild(videoPlayerFrame);
+}
+
+// 关闭播放器页面
+function closeVideoPlayer() {
+    videoPlayerFrame = document.getElementById('VideoPlayerFrame');
+    if (videoPlayerFrame) {
+        videoPlayerFrame.remove();
+        document.getElementById('resultsArea').classList.remove('hidden');
+    }
 }
 
 // 播放上一集
@@ -1058,12 +1155,34 @@ async function importConfig() {
 async function exportConfig() {
     // 存储配置数据
     const config = {};
-
-    // 读取全部 localStorage 项
     const items = {};
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        items[key] = localStorage.getItem(key);
+
+    const settingsToExport = [
+        'selectedAPIs',
+        'customAPIs',
+        'yellowFilterEnabled',
+        'adFilteringEnabled',
+        'doubanEnabled',
+        'hasInitializedDefaults'
+    ];
+
+    // 导出设置项
+    settingsToExport.forEach(key => {
+        const value = localStorage.getItem(key);
+        if (value !== null) {
+            items[key] = value;
+        }
+    });
+
+    // 导出历史记录
+    const viewingHistory = localStorage.getItem('viewingHistory');
+    if (viewingHistory) {
+        items['viewingHistory'] = viewingHistory;
+    }
+
+    const searchHistory = localStorage.getItem(SEARCH_HISTORY_KEY);
+    if (searchHistory) {
+        items[SEARCH_HISTORY_KEY] = searchHistory;
     }
 
     const times = Date.now().toString();
