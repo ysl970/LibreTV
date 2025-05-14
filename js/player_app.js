@@ -10,7 +10,6 @@ function SQuery(selector, callback, timeout = 5000, interval = 100) {
     const check = () => {
         const element = document.querySelector(selector); // Using querySelector
         if (element) {
-            // console.log(`[SQuery] Element '${selector}' found by SQuery.`);
             callback(element);
         } else {
             elapsedTime += interval;
@@ -18,8 +17,6 @@ function SQuery(selector, callback, timeout = 5000, interval = 100) {
                 setTimeout(check, interval);
             } else {
                 console.error(`[SQuery] Element '${selector}' NOT FOUND by SQuery after ${timeout}ms.`);
-                // You could call your global showError or showToast here
-                // Example: if (typeof showError === 'function') showError(`关键UI元素 '${selector}' 未找到`);
             }
         }
     };
@@ -84,8 +81,6 @@ function clearCurrentVideoAllEpisodeProgresses() {
       localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || "{}"
     );
 
-    // 构造当前视频的唯一 ID（要和保存时用的一致）
-    // 注意：window.currentVideoTitle、currentVideoTitle、source_code 都要已准备好
     const sourceCode = new URLSearchParams(window.location.search)
       .get("source_code") || "unknown_source";
     const videoId = `${currentVideoTitle}_${sourceCode}`;
@@ -126,10 +121,6 @@ function setupRememberEpisodeProgressToggle() {
         const isChecked = event.target.checked;
         localStorage.setItem(REMEMBER_EPISODE_PROGRESS_ENABLED_KEY, isChecked.toString());
         if (typeof showToast === 'function') { // 确保 showToast 可用
-            // showToast 是在 player.html 中通过 ui.js 引入的，应该全局可用
-            // 但 new6.txt 的 player_app.js (source:936-937) 中有检查 showToast/showMessage 的逻辑
-            // 并且 (source:1122-1128) 定义了本地的 showMessage
-            // 为简单起见，优先使用已有的 window.showMessage (如果它符合toast样式) 或 window.showToast
             const messageText = isChecked ? '将记住本视频的各集播放进度' : '将不再记住本视频的各集播放进度';
             if (typeof window.showMessage === 'function') { // 优先用 player_app.js 内的
                 window.showMessage(messageText, 'info');
@@ -281,8 +272,6 @@ function initializePageContent() {
                     : 0;
 
             // ② 如果 URL *没* 带 index（多半是直接点“继续播放”进入播放器），
-            //    并且有 lastPlayedEpisodeIndex，可把页面跳到那一集。
-            //    ——这一步只做“跳页”，不影响弹窗逻辑
             if ((!urlParams.has('index') || urlParams.get('index') === null)
                 && typeof savedProgressData.lastPlayedEpisodeIndex === 'number'
                 && savedProgressData.lastPlayedEpisodeIndex >= 0
@@ -662,7 +651,6 @@ function addDPlayerEventListeners() {
                 videoHasEnded = false;
             }
         }
-        // Throttled progress save is handled by initializePageContent interval now
     });
 
     // Add a timeout to show a message if loading takes too long
@@ -792,10 +780,6 @@ function saveVideoSpecificProgress() {
 
             localStorage.setItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY, JSON.stringify(allVideosProgresses));
 
-            // (可选) 调试日志
-            // if (window.PLAYER_CONFIG && PLAYER_CONFIG.debugMode) {
-            //     console.log(`Saved specific progress for '${videoSpecificId}', Episode ${currentEpisodeIndex + 1}: ${currentTime}s`);
-            // }
         } catch (e) {
             console.error('保存特定视频集数进度失败:', e);
         }
@@ -1286,43 +1270,5 @@ function playEpisode(index) { // index 是目标新集数的索引
     playerUrl.searchParams.set('af', adOn ? '1' : '0');
 
     window.location.href = playerUrl.toString();
-    // ③ 再更新索引等-old
- /*    currentEpisodeIndex = index;
-    window.currentEpisodeIndex = index; // 也更新 window 上的
-
-    const episodeUrl = currentEpisodes[index];
-    if (!episodeUrl) {
-        console.warn(`[PlayerApp] No URL found for episode index: ${index}`);
-        return;
-    }
-
-    // ... (后续构建 playerUrl 和跳转的逻辑不变) ...
-    const playerUrl = new URL(window.location.origin + window.location.pathname);
-    playerUrl.searchParams.set('url', episodeUrl);
-    playerUrl.searchParams.set('title', currentVideoTitle);
-    playerUrl.searchParams.set('index', index.toString());
-    // adFilteringEnabled 是前面已经算好的全局变量
-    playerUrl.searchParams.set('af', adFilteringEnabled ? '1' : '0');
-
-    if (Array.isArray(currentEpisodes) && currentEpisodes.length) {
-        playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(currentEpisodes)));
-    }
-    const sourceCode = new URLSearchParams(window.location.search).get('source_code');
-    if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
-
-    const currentReversedForPlayer = localStorage.getItem('episodesReversed') === 'true';
-    playerUrl.searchParams.set('reversed', currentReversedForPlayer.toString());
-    playerUrl.searchParams.delete('position');
-
-    try {
-        localStorage.setItem('currentEpisodes', JSON.stringify(currentEpisodes));
-        localStorage.setItem('currentVideoTitle', currentVideoTitle);
-        // 当跳转到新页面后，新页面的 initializePageContent 会从 URL 读取 index，
-        // 所以这里保存 currentEpisodeIndex (新的index) 到 localStorage 主要是为了
-        // 在某些极端情况下（如URL参数丢失）提供一个回退，但不是主要的恢复机制。
-        localStorage.setItem('currentEpisodeIndex', index.toString());
-    } catch (_) { }
-
-    window.location.href = playerUrl.toString(); */
 }
 window.playEpisode = playEpisode; // Expose globally
