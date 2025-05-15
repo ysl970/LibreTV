@@ -1,43 +1,32 @@
-# 工作流的名称，将显示在 GitHub 仓库 Actions 页面上
 name: Smart Upstream Sync
 
-# 权限设置：允许 GitHub Actions 自动推送代码（写入）
 permissions:
   contents: write
 
-# 触发条件：
-# - 每 5 分钟自动执行（UTC 时间）
-# - 可手动触发（在 Actions 页面点 "Run workflow"）
 on:
   schedule:
-    - cron: "*/5 * * * *"
-  workflow_dispatch:
+    - cron: "*/5 * * * *"  # 每 5 分钟执行一次
+  workflow_dispatch:       # 允许手动触发
 
 jobs:
   sync:
-    # 单个 Job 的显示名称（可在运行详情中看到）
     name: Sync from LibreSpark/LibreTV
-    runs-on: ubuntu-latest  # 使用 Ubuntu 最新版的 runner
+    runs-on: ubuntu-latest
 
     steps:
-      # 第一步：检出你自己的仓库代码（即 Fork 后的版本）
       - name: Checkout your repo
         uses: actions/checkout@v3
 
-      # 第二步：设置 Git 用户信息，用于合并提交时标记为 bot 用户
       - name: Set Git identity
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      # 第三步：添加上游远程仓库，并拉取最新代码（fetch）
       - name: Add upstream and fetch
         run: |
           git remote add upstream https://github.com/LibreSpark/LibreTV.git
           git fetch upstream
 
-      # 第四步：对比本地分支和上游分支的最新 commit hash
-      # 如果不一致，说明有更新；否则跳过后续步骤
       - name: Check for upstream updates
         id: check
         run: |
@@ -49,10 +38,10 @@ jobs:
             echo "has_updates=true" >> $GITHUB_OUTPUT
           else
             echo "has_updates=false" >> $GITHUB_OUTPUT
+          fi
 
-      # 第五步：如果有更新，则合并 upstream/main 到本地 main，并推送到远程
       - name: Merge and push if updated
         if: steps.check.outputs.has_updates == 'true'
         run: |
-          git merge upstream/main --allow-unrelated-histories --no-edit || true
+          git merge upstream/main --strategy-option theirs --allow-unrelated-histories --no-edit || true
           git push origin main
