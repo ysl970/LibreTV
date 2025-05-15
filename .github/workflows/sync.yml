@@ -1,4 +1,4 @@
-name: Smart Upstream Sync
+name: Smart Upstream Sync test
 
 permissions:
   contents: write
