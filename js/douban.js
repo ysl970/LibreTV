@@ -120,8 +120,11 @@ function updateDoubanVisibility() {
     const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
     const isSearching = document.getElementById('resultsArea') && 
         !document.getElementById('resultsArea').classList.contains('hidden');
-    // 修正：判断是否为搜索页
-    const urlHasSearch = /^(\?|&)?s=/.test(window.location.search);
+    
+    // 改进：更全面地检查URL是否包含搜索参数
+    const urlHasSearch = window.location.search.includes('?s=') || 
+                          window.location.search.includes('&s=') || 
+                          window.location.pathname.startsWith('/s=');
 
     // 只有在启用且没有搜索结果显示且不是搜索页时才显示豆瓣区域
     if (isEnabled && !isSearching && !urlHasSearch) {
