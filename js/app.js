@@ -1064,6 +1064,13 @@ function showVideoPlayer(url) {
     videoPlayerFrame.className = 'fixed w-full h-screen z-40';
     videoPlayerFrame.src = url;
     document.body.appendChild(videoPlayerFrame);
+
+    // 新增：切换地址栏为播放器页面URL
+    window.history.pushState(
+        { player: true, playerUrl: url },
+        document.title,
+        url
+    );
 }
 
 // 关闭播放器页面
@@ -1082,6 +1089,24 @@ function closeVideoPlayer() {
         if (localStorage.getItem('doubanEnabled') === 'true') {
             document.getElementById('doubanArea').classList.remove('hidden');
         }
+        // 新增：恢复地址栏为原来的搜索页URL
+        // 尝试从history中找到上一个/?s=xx的URL，否则回退
+        let lastSearchUrl = '/';
+        try {
+            // 优先恢复为当前页面的搜索参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const s = urlParams.get('s');
+            if (s) {
+                lastSearchUrl = `/?s=${encodeURIComponent(s)}`;
+            } else if (window.location.pathname.startsWith('/s=')) {
+                lastSearchUrl = window.location.pathname;
+            }
+        } catch (e) {}
+        window.history.pushState(
+            { search: true },
+            document.title,
+            lastSearchUrl
+        );
     }
 }
 
@@ -1464,6 +1489,19 @@ function saveStringAsFile(content, fileName) {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 }
+
+// 监听浏览器后退/前进，自动关闭/打开播放器
+window.addEventListener('popstate', function(e) {
+    // 如果当前有播放器iframe，且不是player页面，关闭播放器
+    const frame = document.getElementById('VideoPlayerFrame');
+    if (frame && (!e.state || !e.state.player)) {
+        closeVideoPlayer();
+    }
+    // 如果没有播放器iframe，但state是player，重新打开播放器
+    if (!frame && e.state && e.state.player && e.state.playerUrl) {
+        showVideoPlayer(e.state.playerUrl);
+    }
+});
 
 // app.js 或路由文件中
 const authMiddleware = require('./middleware/auth');

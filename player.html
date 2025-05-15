@@ -390,25 +390,26 @@
         function goBack() {
             // 检查是否是从搜索页面进入的播放器
             const referrer = document.referrer;
-            
+            // 优先使用localStorage中的lastSearchPage
+            const lastSearchPage = localStorage.getItem('lastSearchPage');
+            if (lastSearchPage && (lastSearchPage.includes('/s=') || lastSearchPage.includes('/?s='))) {
+                window.location.href = lastSearchPage;
+                return;
+            }
             // 检查 referrer 是否包含搜索参数 (支持新旧两种格式)
             if (referrer && (referrer.includes('/s=') || referrer.includes('/?s='))) {
-                // 如果是从搜索页面来的，返回到搜索页面
                 window.location.href = referrer;
                 return;
             }
-            
             // 如果是在iframe中打开的，尝试关闭iframe
             if (window.self !== window.top) {
                 try {
-                    // 尝试调用父窗口的关闭播放器函数
                     window.parent.closeVideoPlayer && window.parent.closeVideoPlayer();
                     return;
                 } catch (e) {
                     console.error('调用父窗口closeVideoPlayer失败:', e);
                 }
             }
-            
             // 默认行为：返回上一页
             window.history.back();
         }
