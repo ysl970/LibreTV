@@ -5,7 +5,7 @@ permissions:
 
 on:
   schedule:
-    - cron: "*/5 * * * *"  # 每 5 分钟执行一次
+    - cron: "*/5 * * * *"
   workflow_dispatch:       # 允许手动触发
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
             echo "has_updates=true" >> $GITHUB_OUTPUT
           else
             echo "has_updates=false" >> $GITHUB_OUTPUT
-          fi
+          fi  # 确保 fi 完整
 
       - name: Merge and push if updated
         if: steps.check.outputs.has_updates == 'true'
