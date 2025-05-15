@@ -381,11 +381,13 @@
     <script>
         // 创建全局环境变量对象
         window.__ENV__ = window.__ENV__ || {};
-        
-        // 注入服务器端环境变量 (将由服务器端替换)
+          // 注入服务器端环境变量 (将由服务器端替换)
         // PASSWORD 变量将在这里被服务器端注入
-        window.__ENV__.PASSWORD = "{{PASSWORD}}";        // 改进返回上一页功能
-        function goBack() {            // 检查是否从搜索页进入 - 通过URL参数判断
+        window.__ENV__.PASSWORD = "{{PASSWORD}}";        
+        
+        // 改进返回上一页功能
+        function goBack() {
+            // 检查是否从搜索页进入 - 通过URL参数判断
             const urlParams = new URLSearchParams(window.location.search);
             const fromSearch = urlParams.get('fromSearch') === 'true';
             
@@ -456,9 +458,7 @@
             document.getElementById('loading').style.display = 'block';
 
             initializePageContent();
-        });
-
-        // 判断是否再框架中打开
+        });        // 判断是否在框架中打开
         function inIframe() {
             try {
                 // 如果当前窗口的顶层窗口不是自身，说明在框架中
@@ -468,10 +468,14 @@
                 return true;
             }
         }
-        // 如果播放器不是在框架中打开，则隐藏上一页按钮
+        // 直接访问的播放页面也需要显示返回按钮，不再隐藏
+        // 但需要更改返回按钮的点击事件，使其返回首页
+        const goBackButton = document.getElementById('goBack');
         if (!inIframe()) {
-            goBack = document.getElementById('goBack');
-            goBack.style.display = 'none';
+            // 修改返回按钮的点击事件，直接返回首页
+            goBackButton.onclick = function() {
+                window.location.href = 'index.html';
+            };
         }
 
         // 初始化页面内容
@@ -1746,13 +1750,7 @@
             icon.innerHTML = controlsLocked
                 ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d=\"M12 15v2m0-8V7a4 4 0 00-8 0v2m8 0H4v8h16v-8H6v-6z\"/>'
                 : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d=\"M15 11V7a3 3 0 00-6 0v4m-3 4h12v6H6v-6z\"/>';
-        }
-
-        // 返回上一页
-        function goBack() {
-            const parentWindow = window.parent;
-            parentWindow.closeVideoPlayer();
-        }
+        }        // 返回上一页 - 这个方法不再使用，保留是为了向后兼容
     </script>
 </body>
 </html>
