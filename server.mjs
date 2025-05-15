@@ -39,6 +39,7 @@ app.get(['/', '/index.html', '/player.html'], async (req, res) => {
   }
 })
 
+// 保留对旧的 /s=:keyword 路径格式的支持
 app.get(['/s=:keyword'], async (req, res) => {
   try {
     let content;
@@ -53,6 +54,27 @@ app.get(['/s=:keyword'], async (req, res) => {
     res.status(500).send('读取静态页面失败')
   }
 })
+
+// 添加对新的 /?s=keyword 格式的支持
+app.get('/', async (req, res) => {
+  // 检查是否有 s 参数 (即 /?s=keyword 格式)
+  if (req.query.s) {
+    try {
+      let content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+      if (password !== '') {
+        const sha256 = await sha256Hash(password);
+        content = content.replace('{{PASSWORD}}', sha256);
+      }
+      res.send(content);
+    } catch (error) {
+      console.error(error);
+      res.status(500).send('读取静态页面失败');
+    }
+  } else {
+    // 这是常规首页请求，已在上面的路由中处理
+    res.redirect('/index.html');
+  }
+});
 
 app.get('/proxy/:encodedUrl', async (req, res) => {
   try {

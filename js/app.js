@@ -783,11 +783,11 @@ async function search() {
         try {
             // 使用URI编码确保特殊字符能够正确显示
             const encodedQuery = encodeURIComponent(query);
-            // 使用HTML5 History API更新URL，不刷新页面
+            // 使用HTML5 History API更新URL，不刷新页面 - 使用新的URL格式
             window.history.pushState(
                 { search: query }, 
                 `搜索: ${query} - LibreTV`, 
-                `/s=${encodedQuery}`
+                `/?s=${encodedQuery}`
             );
             // 更新页面标题
             document.title = `搜索: ${query} - LibreTV`;
@@ -969,7 +969,7 @@ async function showDetails(id, vod_name, sourceCode) {
                     </button>
                     <button title="批量复制播放链接" onclick="copyLinks()" class="ml-2 px-2 py-1 bg-[#222] hover:bg-[#333] border border-[#333] text-white rounded-lg transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                         </svg>
                     </button>
                 </div>
