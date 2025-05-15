@@ -454,7 +454,31 @@
     <script>
         // 在页面加载完成后检查URL中的搜索参数
         document.addEventListener('DOMContentLoaded', function() {
-            // 首先检查页面路径中的搜索参数 (格式: /s=keyword)
+            // 检查查询字符串中的搜索参数 (优先处理新格式: ?s=keyword)
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchQuery = urlParams.get('s');
+            
+            if (searchQuery) {
+                // 设置搜索框的值
+                document.getElementById('searchInput').value = searchQuery;
+                // 执行搜索
+                setTimeout(() => {
+                    search();
+                    // 更新浏览器历史，不改变URL (保持搜索参数在地址栏)
+                    try {
+                        window.history.replaceState(
+                            { search: searchQuery }, 
+                            `搜索: ${searchQuery} - LibreTV`, 
+                            window.location.href
+                        );
+                    } catch (e) {
+                        console.error('更新浏览器历史失败:', e);
+                    }
+                }, 300);
+                return; // 找到新格式参数后返回，不再处理旧格式
+            }
+
+            // 如果没有找到新格式的参数，检查旧格式 (兼容处理: /s=keyword)
             const path = window.location.pathname;
             const searchPrefix = '/s=';
             
@@ -468,7 +492,7 @@
                     setTimeout(() => {
                         // 使用setTimeout确保其他DOM加载和初始化完成
                         search();
-                        // 更新浏览器历史，不改变URL (保持搜索参数在地址栏)
+                        // 选项1: 保持旧格式URL，但后续搜索会使用新格式
                         try {
                             window.history.replaceState(
                                 { search: keyword }, 
@@ -478,21 +502,58 @@
                         } catch (e) {
                             console.error('更新浏览器历史失败:', e);
                         }
+                        
+                        // 选项2: 更新为新格式URL (取消注释以启用)
+                        /*
+                        try {
+                            window.history.replaceState(
+                                { search: keyword }, 
+                                `搜索: ${keyword} - LibreTV`, 
+                                `/?s=${encodeURIComponent(keyword)}`
+                            );
+                        } catch (e) {
+                            console.error('更新浏览器历史失败:', e);
+                        }
+                        */
                     }, 300);
                 }
             }
-            
-            // 也检查查询字符串中的搜索参数 (格式: ?s=keyword)
+        });
+    </script>
+
+    <!-- 添加历史状态（back/forward按钮）处理脚本 -->
+    <script>
+        window.addEventListener('popstate', function(e) {
+            // 检查URL是否包含搜索参数
             const urlParams = new URLSearchParams(window.location.search);
             const searchQuery = urlParams.get('s');
             
             if (searchQuery) {
-                // 设置搜索框的值
-                document.getElementById('searchInput').value = searchQuery;
-                // 执行搜索
-                setTimeout(() => {
-                    search();
-                }, 300);
+                // 搜索页面，确保搜索框的值与URL一致
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput && searchInput.value !== searchQuery) {
+                    searchInput.value = searchQuery;
+                }
+                
+                // 确保结果区域可见
+                const resultsArea = document.getElementById('resultsArea');
+                if (resultsArea) {
+                    resultsArea.classList.remove('hidden');
+                }
+                
+                // 确保豆瓣区域隐藏
+                const doubanArea = document.getElementById('doubanArea');
+                if (doubanArea) {
+                    doubanArea.classList.add('hidden');
+                }
+            } else {
+                // 非搜索页面，如果启用了豆瓣功能则显示豆瓣区域
+                if (localStorage.getItem('doubanEnabled') === 'true') {
+                    const doubanArea = document.getElementById('doubanArea');
+                    if (doubanArea) {
+                        doubanArea.classList.remove('hidden');
+                    }
+                }
             }
         });
     </script>

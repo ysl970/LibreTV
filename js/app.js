@@ -783,11 +783,11 @@ async function search() {
         try {
             // 使用URI编码确保特殊字符能够正确显示
             const encodedQuery = encodeURIComponent(query);
-            // 使用HTML5 History API更新URL，不刷新页面
+            // 使用HTML5 History API更新URL，不刷新页面 - 使用新的URL格式
             window.history.pushState(
                 { search: query }, 
                 `搜索: ${query} - LibreTV`, 
-                `/s=${encodedQuery}`
+                `/?s=${encodedQuery}`
             );
             // 更新页面标题
             document.title = `搜索: ${query} - LibreTV`;
@@ -969,7 +969,7 @@ async function showDetails(id, vod_name, sourceCode) {
                     </button>
                     <button title="批量复制播放链接" onclick="copyLinks()" class="ml-2 px-2 py-1 bg-[#222] hover:bg-[#333] border border-[#333] text-white rounded-lg transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                         </svg>
                     </button>
                 </div>
@@ -1064,6 +1064,20 @@ function showVideoPlayer(url) {
     videoPlayerFrame.className = 'fixed w-full h-screen z-40';
     videoPlayerFrame.src = url;
     document.body.appendChild(videoPlayerFrame);
+
+    // 新增：切换地址栏为播放器页面URL
+    // 记录当前搜索页URL（带?s=xx）到localStorage，供返回时恢复
+    try {
+        const currentUrl = window.location.pathname + window.location.search;
+        if (currentUrl.includes('?s=')) {
+            localStorage.setItem('lastSearchPage', currentUrl);
+        }
+    } catch (e) {}
+    window.history.pushState(
+        { player: true, playerUrl: url },
+        document.title,
+        url
+    );
 }
 
 // 关闭播放器页面
@@ -1078,9 +1092,49 @@ function closeVideoPlayer() {
         if (detailModal) {
             detailModal.classList.add('hidden');
         }
-        // 如果启用豆瓣区域则显示豆瓣区域
-        if (localStorage.getItem('doubanEnabled') === 'true') {
-            document.getElementById('doubanArea').classList.remove('hidden');
+        
+        // 新增：恢复地址栏为原来的搜索页URL
+        // 优先使用localStorage中保存的lastSearchPage
+        let lastSearchUrl = '/';
+        let isSearchPage = false;
+        try {
+            const stored = localStorage.getItem('lastSearchPage');
+            if (stored && stored.includes('?s=')) {
+                lastSearchUrl = stored;
+                isSearchPage = true;
+            } else {
+                // 兼容旧逻辑
+                const urlParams = new URLSearchParams(window.location.search);
+                const s = urlParams.get('s');
+                if (s) {
+                    lastSearchUrl = `/?s=${encodeURIComponent(s)}`;
+                    isSearchPage = true;
+                } else if (window.location.pathname.startsWith('/s=')) {
+                    lastSearchUrl = window.location.pathname;
+                    isSearchPage = true;
+                }
+            }
+        } catch (e) {}
+        
+        window.history.pushState(
+            { search: isSearchPage },
+            document.title,
+            lastSearchUrl
+        );
+        
+        // 处理豆瓣区域显示
+        // 在搜索页面不显示豆瓣区域
+        if (isSearchPage) {
+            const doubanArea = document.getElementById('doubanArea');
+            if (doubanArea) {
+                doubanArea.classList.add('hidden');
+            }
+        } else if (localStorage.getItem('doubanEnabled') === 'true') {
+            // 非搜索页面且豆瓣功能启用时显示豆瓣区域
+            const doubanArea = document.getElementById('doubanArea');
+            if (doubanArea) {
+                doubanArea.classList.remove('hidden');
+            }
         }
     }
 }
@@ -1464,6 +1518,19 @@ function saveStringAsFile(content, fileName) {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 }
+
+// 监听浏览器后退/前进，自动关闭/打开播放器
+window.addEventListener('popstate', function(e) {
+    // 如果当前有播放器iframe，且不是player页面，关闭播放器
+    const frame = document.getElementById('VideoPlayerFrame');
+    if (frame && (!e.state || !e.state.player)) {
+        closeVideoPlayer();
+    }
+    // 如果没有播放器iframe，但state是player，重新打开播放器
+    if (!frame && e.state && e.state.player && e.state.playerUrl) {
+        showVideoPlayer(e.state.playerUrl);
+    }
+});
 
 // app.js 或路由文件中
 const authMiddleware = require('./middleware/auth');

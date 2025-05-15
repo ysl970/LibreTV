@@ -120,9 +120,11 @@ function updateDoubanVisibility() {
     const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
     const isSearching = document.getElementById('resultsArea') && 
         !document.getElementById('resultsArea').classList.contains('hidden');
-    
-    // 只有在启用且没有搜索结果显示时才显示豆瓣区域
-    if (isEnabled && !isSearching) {
+    // 修正：判断是否为搜索页
+    const urlHasSearch = /^(\?|&)?s=/.test(window.location.search);
+
+    // 只有在启用且没有搜索结果显示且不是搜索页时才显示豆瓣区域
+    if (isEnabled && !isSearching && !urlHasSearch) {
         doubanArea.classList.remove('hidden');
         // 如果豆瓣结果为空，重新加载
         if (document.getElementById('douban-results').children.length === 0) {
