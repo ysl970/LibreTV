@@ -1,54 +1,39 @@
-/**
- * Wake Lock API 工具函数
- * 用于防止设备屏幕在视频播放时自动关闭
- */
-
+// 请求唤醒锁
 let wakeLock = null;
 
-// 请求屏幕常亮锁
-async function requestWakeLock() {
-  if ('wakeLock' in navigator) {
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-      console.log('Wake Lock is active');
-      
-      // 当页面可见性变化时处理
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-      
-      return true;
-    } catch (err) {
-      console.error(`Wake Lock error: ${err.name}, ${err.message}`);
-      return false;
+const requestWakeLock = async () => {
+  try {
+    // 如果已经有激活的唤醒锁，先释放它
+    if (wakeLock !== null) {
+      await wakeLock.release();
+      wakeLock = null;
     }
-  } else {
-    console.log('Wake Lock API not supported');
-    return false;
-  }
-}
 
-// 释放屏幕常亮锁
-function releaseWakeLock() {
-  if (wakeLock) {
-    wakeLock.release()
-      .then(() => {
-        console.log('Wake Lock released');
-        wakeLock = null;
-      })
-      .catch((err) => {
-        console.error(`Error releasing Wake Lock: ${err.name}, ${err.message}`);
-      });
+    // 请求新的唤醒锁
+    wakeLock = await navigator.wakeLock.request('screen');
+  } catch (err) {
+    console.error('请求屏幕唤醒锁失败:', err);
   }
-}
+};
 
 // 处理页面可见性变化
-async function handleVisibilityChange() {
-  if (wakeLock !== null && document.visibilityState === 'visible') {
-    // 页面变为可见时，重新请求锁
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible') {
+    // 页面变为可见时，请求唤醒锁
     await requestWakeLock();
+  } else if (wakeLock !== null) {
+    // 页面变为不可见时，释放唤醒锁
+    try {
+      await wakeLock.release();
+      wakeLock = null;
+    } catch (err) {
+      console.error('释放屏幕唤醒锁失败:', err);
+    }
   }
-}
-
-// 自动在页面卸载时释放锁
-window.addEventListener('beforeunload', () => {
-  releaseWakeLock();
 });
+
+// 初始请求唤醒锁（仅当页面 visibleState === 'visible'）
+if (document.visibilityState === 'visible') {
+  requestWakeLock();
+  console.log('请求唤醒锁成功');
+}
