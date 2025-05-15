@@ -1,0 +1,48 @@
+name: Smart Upstream Sync
+
+permissions:
+  contents: write    # 允许推送代码
+  workflows: write   # 允许修改工作流文件
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Sync from LibreSpark/LibreTV
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v3
+
+      - name: Set Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote add upstream https://github.com/LibreSpark/LibreTV.git
+          git fetch upstream
+
+      - name: Check for upstream updates
+        id: check
+        run: |
+          LOCAL_HASH=$(git rev-parse HEAD)
+          UPSTREAM_HASH=$(git rev-parse upstream/main)
+          echo "local=$LOCAL_HASH" >> $GITHUB_OUTPUT
+          echo "upstream=$UPSTREAM_HASH" >> $GITHUB_OUTPUT
+          if [ "$LOCAL_HASH" != "$UPSTREAM_HASH" ]; then
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Merge and push if updated
+        if: steps.check.outputs.has_updates == 'true'
+        run: |
+          git merge upstream/main --strategy-option theirs --allow-unrelated-histories --no-edit || true
+          git push origin main
