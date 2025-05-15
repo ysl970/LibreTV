@@ -1092,33 +1092,50 @@ function closeVideoPlayer() {
         if (detailModal) {
             detailModal.classList.add('hidden');
         }
-        // 如果启用豆瓣区域则显示豆瓣区域
-        if (localStorage.getItem('doubanEnabled') === 'true') {
-            document.getElementById('doubanArea').classList.remove('hidden');
-        }
+        
         // 新增：恢复地址栏为原来的搜索页URL
         // 优先使用localStorage中保存的lastSearchPage
         let lastSearchUrl = '/';
+        let isSearchPage = false;
         try {
             const stored = localStorage.getItem('lastSearchPage');
             if (stored && stored.includes('?s=')) {
                 lastSearchUrl = stored;
+                isSearchPage = true;
             } else {
                 // 兼容旧逻辑
                 const urlParams = new URLSearchParams(window.location.search);
                 const s = urlParams.get('s');
                 if (s) {
                     lastSearchUrl = `/?s=${encodeURIComponent(s)}`;
+                    isSearchPage = true;
                 } else if (window.location.pathname.startsWith('/s=')) {
                     lastSearchUrl = window.location.pathname;
+                    isSearchPage = true;
                 }
             }
         } catch (e) {}
+        
         window.history.pushState(
-            { search: true },
+            { search: isSearchPage },
             document.title,
             lastSearchUrl
         );
+        
+        // 处理豆瓣区域显示
+        // 在搜索页面不显示豆瓣区域
+        if (isSearchPage) {
+            const doubanArea = document.getElementById('doubanArea');
+            if (doubanArea) {
+                doubanArea.classList.add('hidden');
+            }
+        } else if (localStorage.getItem('doubanEnabled') === 'true') {
+            // 非搜索页面且豆瓣功能启用时显示豆瓣区域
+            const doubanArea = document.getElementById('doubanArea');
+            if (doubanArea) {
+                doubanArea.classList.remove('hidden');
+            }
+        }
     }
 }
 

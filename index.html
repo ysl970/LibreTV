@@ -520,5 +520,42 @@
             }
         });
     </script>
+
+    <!-- 添加历史状态（back/forward按钮）处理脚本 -->
+    <script>
+        window.addEventListener('popstate', function(e) {
+            // 检查URL是否包含搜索参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchQuery = urlParams.get('s');
+            
+            if (searchQuery) {
+                // 搜索页面，确保搜索框的值与URL一致
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput && searchInput.value !== searchQuery) {
+                    searchInput.value = searchQuery;
+                }
+                
+                // 确保结果区域可见
+                const resultsArea = document.getElementById('resultsArea');
+                if (resultsArea) {
+                    resultsArea.classList.remove('hidden');
+                }
+                
+                // 确保豆瓣区域隐藏
+                const doubanArea = document.getElementById('doubanArea');
+                if (doubanArea) {
+                    doubanArea.classList.add('hidden');
+                }
+            } else {
+                // 非搜索页面，如果启用了豆瓣功能则显示豆瓣区域
+                if (localStorage.getItem('doubanEnabled') === 'true') {
+                    const doubanArea = document.getElementById('doubanArea');
+                    if (doubanArea) {
+                        doubanArea.classList.remove('hidden');
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>
