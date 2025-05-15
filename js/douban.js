@@ -118,16 +118,20 @@ function updateDoubanVisibility() {
     if (!doubanArea) return;
     
     const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
-    const isSearching = document.getElementById('resultsArea') && 
-        !document.getElementById('resultsArea').classList.contains('hidden');
-    
-    // 改进：更全面地检查URL是否包含搜索参数
-    const urlHasSearch = window.location.search.includes('?s=') || 
-                          window.location.search.includes('&s=') || 
-                          window.location.pathname.startsWith('/s=');
+    const resultsArea = document.getElementById('resultsArea');
+    const resultsDiv = document.getElementById('results');
+    // 判断是否正在显示搜索结果页（resultsArea未隐藏且有内容）
+    const isResultsVisible = resultsArea && !resultsArea.classList.contains('hidden');
+    const hasSearchResults = resultsDiv && resultsDiv.innerHTML.trim().length > 0;
+    // 判断是否为搜索页
+    const urlHasSearch = /^(\?|&)?s=/.test(window.location.search);
 
     // 只有在启用且没有搜索结果显示且不是搜索页时才显示豆瓣区域
-    if (isEnabled && !isSearching && !urlHasSearch) {
+    if (
+        isEnabled &&
+        (!isResultsVisible || !hasSearchResults) &&
+        !urlHasSearch
+    ) {
         doubanArea.classList.remove('hidden');
         // 如果豆瓣结果为空，重新加载
         if (document.getElementById('douban-results').children.length === 0) {

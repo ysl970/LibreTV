@@ -1092,18 +1092,10 @@ function closeVideoPlayer() {
         if (detailModal) {
             detailModal.classList.add('hidden');
         }
-        
-        // 修改：仅在不是搜索页面时才考虑显示豆瓣区域
-        const hasSearchParams = window.location.search.includes('?s=') || 
-                               window.location.search.includes('&s=') || 
-                               window.location.pathname.startsWith('/s=');
-        
-        if (localStorage.getItem('doubanEnabled') === 'true' && !hasSearchParams) {
+        // 如果启用豆瓣区域则显示豆瓣区域
+        if (localStorage.getItem('doubanEnabled') === 'true') {
             document.getElementById('doubanArea').classList.remove('hidden');
-        } else {
-            document.getElementById('doubanArea').classList.add('hidden');
         }
-        
         // 新增：恢复地址栏为原来的搜索页URL
         // 优先使用localStorage中保存的lastSearchPage
         let lastSearchUrl = '/';
@@ -1317,7 +1309,7 @@ async function importConfig() {
     showImportBox(async (file) => {
         try {
             // 检查文件类型
-            if (!(file.type === 'application/json' || file.name.endswith('.json'))) throw '文件类型不正确';
+            if (!(file.type === 'application/json' || file.name.endsWith('.json'))) throw '文件类型不正确';
 
             // 检查文件大小
             if(file.size > 1024 * 1024 * 10) throw new Error('文件大小超过 10MB');
