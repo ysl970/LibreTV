@@ -11,8 +11,8 @@
             // 获取当前URL的查询参数
             const currentParams = new URLSearchParams(window.location.search);
             
-            // 创建player.html的URL
-            let playerUrl = "player.html";
+            // 创建player.html的URL（改为绝对路径）
+            let playerUrl = "/player.html";
             
             // 如果有查询参数，添加到player.html的URL
             if (currentParams.toString()) {
