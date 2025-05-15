@@ -388,16 +388,15 @@
 
         // 改进返回上一页功能
         function goBack() {
-            // 检查是否是从搜索页面进入的播放器
-            const referrer = document.referrer;
             // 优先使用localStorage中的lastSearchPage
             const lastSearchPage = localStorage.getItem('lastSearchPage');
-            if (lastSearchPage && (lastSearchPage.includes('/s=') || lastSearchPage.includes('/?s='))) {
+            if (lastSearchPage && (lastSearchPage.includes('?s=') || lastSearchPage.includes('/s='))) {
                 window.location.href = lastSearchPage;
                 return;
             }
             // 检查 referrer 是否包含搜索参数 (支持新旧两种格式)
-            if (referrer && (referrer.includes('/s=') || referrer.includes('/?s='))) {
+            const referrer = document.referrer;
+            if (referrer && (referrer.includes('?s=') || referrer.includes('/s='))) {
                 window.location.href = referrer;
                 return;
             }

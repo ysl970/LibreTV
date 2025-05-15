@@ -1066,6 +1066,13 @@ function showVideoPlayer(url) {
     document.body.appendChild(videoPlayerFrame);
 
     // 新增：切换地址栏为播放器页面URL
+    // 记录当前搜索页URL（带?s=xx）到localStorage，供返回时恢复
+    try {
+        const currentUrl = window.location.pathname + window.location.search;
+        if (currentUrl.includes('?s=')) {
+            localStorage.setItem('lastSearchPage', currentUrl);
+        }
+    } catch (e) {}
     window.history.pushState(
         { player: true, playerUrl: url },
         document.title,
@@ -1090,16 +1097,21 @@ function closeVideoPlayer() {
             document.getElementById('doubanArea').classList.remove('hidden');
         }
         // 新增：恢复地址栏为原来的搜索页URL
-        // 尝试从history中找到上一个/?s=xx的URL，否则回退
+        // 优先使用localStorage中保存的lastSearchPage
         let lastSearchUrl = '/';
         try {
-            // 优先恢复为当前页面的搜索参数
-            const urlParams = new URLSearchParams(window.location.search);
-            const s = urlParams.get('s');
-            if (s) {
-                lastSearchUrl = `/?s=${encodeURIComponent(s)}`;
-            } else if (window.location.pathname.startsWith('/s=')) {
-                lastSearchUrl = window.location.pathname;
+            const stored = localStorage.getItem('lastSearchPage');
+            if (stored && stored.includes('?s=')) {
+                lastSearchUrl = stored;
+            } else {
+                // 兼容旧逻辑
+                const urlParams = new URLSearchParams(window.location.search);
+                const s = urlParams.get('s');
+                if (s) {
+                    lastSearchUrl = `/?s=${encodeURIComponent(s)}`;
+                } else if (window.location.pathname.startsWith('/s=')) {
+                    lastSearchUrl = window.location.pathname;
+                }
             }
         } catch (e) {}
         window.history.pushState(
