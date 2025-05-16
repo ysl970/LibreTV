@@ -104,6 +104,9 @@ const API_SITES = {
     ikun: {
         api: 'https://ikunzyapi.com',
         name: 'iKun资源'
+    hsex: {
+        api: 'https://hsex.men/',
+        name: 'hsex资源'
     },
     testSource: {
         api: 'https://www.example.com',
