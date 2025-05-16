@@ -106,8 +106,8 @@ const API_SITES = {
         name: 'iKun资源'
     },     
     大人片: {
-        api: 'https://hsex.men/',
-        name: 'hsex资源'
+        api: 'https://zh.xhaccess.com/',
+        name: '大人资源'
     },
 
     testSource: {
