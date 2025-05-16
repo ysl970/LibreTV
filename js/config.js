@@ -104,10 +104,12 @@ const API_SITES = {
     ikun: {
         api: 'https://ikunzyapi.com',
         name: 'iKun资源'
-    hsex: {
+    },     
+    大人片: {
         api: 'https://hsex.men/',
         name: 'hsex资源'
     },
+
     testSource: {
         api: 'https://www.example.com',
         name: '空内容测试源',
