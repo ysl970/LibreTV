@@ -611,71 +611,88 @@ function addDPlayerEventListeners() {
         }
     });
 
-    // In js/player_app.js -> addDPlayerEventListeners function
-// In js/player_app.js -> addDPlayerEventListeners function
-dp.on('loadedmetadata', function () {
-    const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
-    if (debugMode) console.log(`[PlayerApp][loadedmetadata] Event triggered. dp valid: ${!!(dp && dp.video)}, Duration: ${dp && dp.video ? dp.video.duration : 'N/A'}`);
 
-    const loadingEl = document.getElementById('loading');
-    if (loadingEl) {
-        loadingEl.style.display = 'none';
-        document.documentElement.classList.remove('show-loading');
-    }
-    videoHasEnded = false;
+    dp.on('loadedmetadata', function () {
+        const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
+        if (debugMode) console.log(`[PlayerApp][loadedmetadata] 事件已触发。dp 是否有效: ${!!(dp && dp.video)}, 视频时长: ${dp && dp.video ? dp.video.duration : 'N/A'}`);
 
-    if (typeof setupProgressBarPreciseClicks === 'function') setupProgressBarPreciseClicks();
-
-    // Safely attempt to seek if nextSeekPosition is set
-    if (nextSeekPosition > 0 && dp && dp.video && dp.video.duration > 0) {
-        if (nextSeekPosition < dp.video.duration) {
-            if (typeof dp.seek === 'function') {
-                console.log(`[PlayerApp][loadedmetadata] Attempting to seek to nextSeekPosition: ${nextSeekPosition}`);
-                dp.seek(nextSeekPosition);
-                if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(nextSeekPosition);
-            } else {
-                console.error("[PlayerApp][loadedmetadata] dp.seek is not a function! Cannot restore position.");
-            }
-        } else {
-            console.warn(`[PlayerApp][loadedmetadata] nextSeekPosition (${nextSeekPosition}) is beyond video duration (${dp.video.duration}). Not seeking.`);
+        // 隐藏加载提示
+        const loadingEl = document.getElementById('loading');
+        if (loadingEl) {
+            loadingEl.style.display = 'none';
+            document.documentElement.classList.remove('show-loading');
         }
-    }
-    nextSeekPosition = 0; // Reset after use
+        videoHasEnded = false; // 为新加载的视频重置结束标记
 
-    if (typeof saveToHistory === 'function') {
-        // console.log("[PlayerApp][loadedmetadata] Calling saveToHistory for the new episode.");
-        saveToHistory(); // Should capture current time, hopefully after seek if it occurred
-    }
-    if (typeof startProgressSaveInterval === 'function') {
-        // console.log("[PlayerApp][loadedmetadata] Calling startProgressSaveInterval.");
-        startProgressSaveInterval();
-    }
+        // 如果有精确点击进度条的功能，重新设置
+        if (typeof setupProgressBarPreciseClicks === 'function') setupProgressBarPreciseClicks();
 
-    isNavigatingToEpisode = false;
-    if (debugMode) console.log("[PlayerApp][loadedmetadata] isNavigatingToEpisode RESET to false.");
-    
-    // Safer dp.play() call:
-    if (dp && dp.video && dp.video.paused) { // Ensure dp and dp.video are valid
-        if (typeof dp.play === 'function') {
-            // Check DPlayer's own autoplay option (from constructor) and our custom autoplayEnabled flag
-            const dplayerAutoplayOption = dp.options && dp.options.autoplay; // DPlayer stores constructor options here
-            if (dplayerAutoplayOption || autoplayEnabled) { 
-                 console.log(`[PlayerApp][loadedmetadata] Video is paused. Attempting dp.play(). DPlayer internal autoplay: ${dplayerAutoplayOption}, Custom autoplayEnabled: ${autoplayEnabled}`);
-                 dp.play().catch(e => {
-                    console.warn("[PlayerApp][loadedmetadata] dp.play() was prevented by browser or an error occurred. User may need to click play.", e);
-                 });
+        // 安全地尝试跳转（seek）到之前记住的播放位置 (nextSeekPosition)
+        if (nextSeekPosition > 0 && dp && dp.video && dp.video.duration > 0) {
+            if (nextSeekPosition < dp.video.duration) { // 确保跳转位置在视频有效时长内
+                if (typeof dp.seek === 'function') { // 再次检查 seek 方法是否存在
+                    console.log(`[PlayerApp][loadedmetadata] 尝试跳转到 nextSeekPosition: ${nextSeekPosition}`);
+                    dp.seek(nextSeekPosition); // 执行跳转
+                    if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(nextSeekPosition);
+                } else {
+                    console.error("[PlayerApp][loadedmetadata] dp.seek 不是一个函数！无法恢复播放位置。");
+                }
             } else {
-                // console.log("[PlayerApp][loadedmetadata] Video is paused, but autoplay is disabled.");
+                console.warn(`[PlayerApp][loadedmetadata] nextSeekPosition (${nextSeekPosition}) 超出或等于视频时长 (${dp.video.duration})。不进行跳转。`);
             }
-        } else {
-            console.error("[PlayerApp][loadedmetadata] CRITICAL: dp.play is not a function! DPlayer instance might be corrupted or not fully initialized at this point.", dp);
         }
-    } else if (dp && dp.video && !dp.video.paused) {
-        // console.log("[PlayerApp][loadedmetadata] Video is already playing or not ready to check paused state.");
-    } else {
-        console.warn("[PlayerApp][loadedmetadata] dp instance or dp.video not available for play check after loadedmetadata.");
-    }
-});
+        nextSeekPosition = 0; // 无论成功与否，用后重置
+
+        // 为新加载的剧集（在其初始状态或跳转后的状态）保存到观看历史
+        if (typeof saveToHistory === 'function') {
+            // console.log("[PlayerApp][loadedmetadata] 为新剧集调用 saveToHistory。");
+            saveToHistory(); // 此函数应能获取到跳转（如果发生）后的当前时间
+        }
+        // 启动或重置周期性保存播放进度的计时器
+        if (typeof startProgressSaveInterval === 'function') {
+            // console.log("[PlayerApp][loadedmetadata] 调用 startProgressSaveInterval。");
+            startProgressSaveInterval();
+        }
+
+        isNavigatingToEpisode = false; // 重置“正在切换剧集”的标记
+        if (debugMode) console.log("[PlayerApp][loadedmetadata] isNavigatingToEpisode 已重置为 false。");
+
+        // ---- 修改核心：延迟并更安全地调用 dp.play() ----
+        setTimeout(() => {
+            // 在 setTimeout 的回调函数执行时，再次检查 dp 和 dp.video 的有效性，
+            // 因为在延迟期间，它们的状态理论上仍有可能发生变化（尽管概率较小）。
+            if (!dp || !dp.video) {
+                console.warn("[PlayerApp][loadedmetadata][timeout] dp 或 dp.video 在 setTimeout 回调执行时已不再有效。无法尝试播放。");
+                return;
+            }
+
+            if (dp.video.paused) { // 只在视频确实处于暂停状态时才尝试播放
+                const playFunction = dp.play; // 将 dp.play 赋值给一个局部变量，以锁定检查时的引用
+
+                if (typeof playFunction === 'function') { // 再次（在延迟后）检查 playFunction 是否为函数
+                    const dplayerAutoplayOption = dp.options && dp.options.autoplay; // 获取 DPlayer 构造函数中的 autoplay 设置
+                    // autoplayEnabled 是我们在 player_app.js 中定义的用于控制自动播放下一集的开关状态
+                    const customAutoplayEnabled = typeof autoplayEnabled !== 'undefined' ? autoplayEnabled : true;
+
+                    if (dplayerAutoplayOption || customAutoplayEnabled) {
+                        console.log(`[PlayerApp][loadedmetadata][timeout] 视频已暂停。尝试调用 dp.play()。DPlayer 内置 autoplay: ${dplayerAutoplayOption}, 自定义 autoplayEnabled: ${customAutoplayEnabled}`);
+                        // 使用 .call(dp) 来确保 playFunction 的 'this' 上下文是 dp 实例，虽然直接调用通常也没问题
+                        playFunction.call(dp).catch(e => {
+                            console.warn("[PlayerApp][loadedmetadata][timeout] dp.play() (通过延迟调用) 被浏览器阻止或发生错误。用户可能需要手动点击播放按钮。", e);
+                        });
+                    } else {
+                        // console.log("[PlayerApp][loadedmetadata][timeout] 视频已暂停，但所有自动播放选项均已禁用。");
+                    }
+                } else {
+                    // 如果到这里 dp.play 仍然不是函数，说明 DPlayer 实例确实存在更深层次的问题
+                    console.error("[PlayerApp][loadedmetadata][timeout] 严重错误：dp.play (在延迟后检查) 仍然不是一个函数！DPlayer 实例状态:", dp);
+                }
+            } else {
+                // console.log("[PlayerApp][loadedmetadata][timeout] 视频已在播放中或不处于可检查暂停的状态。");
+            }
+        }, 100); // 延迟 100 毫秒执行。如果问题依旧，可以尝试略微增加这个延迟时间，例如 200 或 300 毫秒。
+        // ---- 修改核心结束 ----
+    });
 
     dp.on('error', function (e) {
         console.error("DPlayer error event:", e);
@@ -1378,9 +1395,9 @@ function playEpisode(index) { // index is the target new episode's 0-based index
                 } else {
                     if (typeof showMessage === "function") showMessage("已从头开始播放", "info");
                 }
-            } 
-        } 
-    } 
+            }
+        }
+    }
 
     // 4. Update UI elements (titles, episode list highlights, buttons)
     const siteName = (window.SITE_CONFIG && window.SITE_CONFIG.name) ? window.SITE_CONFIG.name : '播放器';
@@ -1406,7 +1423,7 @@ function playEpisode(index) { // index is the target new episode's 0-based index
     // 6. Instruct DPlayer to switch video source
     _tempUrlForCustomHls = newEpisodeUrl; // Pass URL to customType.hls via module scope as a fallback
 
-    dp.video.pause(); 
+    dp.video.pause();
 
     dp.switchVideo({
         url: newEpisodeUrl,
