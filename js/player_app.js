@@ -595,6 +595,7 @@ function addDPlayerEventListeners() {
             el.style.display = 'none';                     // 原来的
             document.documentElement.classList.remove('show-loading'); // ← 新增
         }
+        isNavigatingToEpisode = false;
         videoHasEnded = false;
         setupProgressBarPreciseClicks();
         setTimeout(saveToHistory, 3000); // Save initial state to history
@@ -1238,75 +1239,122 @@ function getVideoId() {
  * 跳播到指定集数；已就绪时仅切流，不再整页刷新
  * @param {number} index 目标集数索引（0-based）
  */
-function playEpisode(index) {
-    // —— 参数校验 ——
-    if (!currentEpisodes || index < 0 || index >= currentEpisodes.length) {
-        console.warn(`[PlayerApp] Invalid episode index: ${index}`);
+// 文件: js/player_app.js
+// ... (player_app.js 文件中的其他代码保持不变) ...
+
+function playEpisode(index) { // index 是目标新集数的索引
+    // 防止在播放器未准备好、或已在处理相同目标集数时重复触发
+    if (!dp) {
+        console.error("[PlayerApp] DPlayer 实例 (dp) 未找到，无法切换剧集。");
+        if (typeof showError === 'function') showError("播放器异常，请刷新");
+        return;
+    }
+    if (isNavigatingToEpisode && currentEpisodeIndex === index) {
+        // 如果正在切换到同一集（例如，快速点击或事件重复触发），则中止
+        console.warn(`[PlayerApp Debug] playEpisode 已在处理切换到目标集数 ${index}，中止重复操作。`);
         return;
     }
 
-    /* 1. 切集前先保存“正在看的这一集”的进度 */
-    try { saveVideoSpecificProgress(); } catch (e) {
-        console.warn('Save progress before switching episode failed:', e);
-    }
-
-    isNavigatingToEpisode = true;          // 避免 beforeunload 时误保存
-
-    const episodeUrl = currentEpisodes[index];
-    if (!episodeUrl) {
-        console.warn(`[PlayerApp] No URL for episode ${index}`);
-        isNavigatingToEpisode = false;
+    if (index < 0 || index >= currentEpisodes.length) {
+        console.warn(`[PlayerApp] 尝试播放无效的剧集索引: ${index}`);
         return;
     }
 
-    /* 2. 如果播放器已实例化且支持 switchVideo → 直接就地切流 */
-    if (dp && typeof dp.switchVideo === 'function') {
-        currentEpisodeIndex = index;
-        window.currentEpisodeIndex = index;
-
-        /* 2-1 更新地址栏查询参数（url / index），但不刷新页面 */
-        try {
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('url', episodeUrl);
-            newUrl.searchParams.set('index', index.toString());
-            history.replaceState({}, '', newUrl.toString());
-        } catch (e) { console.warn('replaceState failed:', e); }
-
-        /* 2-2 切流播放 */
-        dp.switchVideo({ url: episodeUrl, type: 'hls' });
-        dp.play().catch(() => { /* 自动播放被阻止时忽略 */ });
-
-        /* 2-3 同步标题 & UI */
-        document.title = `${currentVideoTitle} - 第 ${currentEpisodeIndex + 1} 集 - ${ (SITE_CONFIG && SITE_CONFIG.name) || '播放器' }`;
-        const titleEl = document.getElementById('video-title');
-        if (titleEl) titleEl.textContent = `${currentVideoTitle} (第 ${currentEpisodeIndex + 1} 集)`;
-
-        renderEpisodes();           // 高亮当前集
-        updateEpisodeInfo();        // “第 x / y 集” 文字
-        updateButtonStates();       // 上/下一集按钮可用性
-
-        startProgressSaveInterval(); // 重新开始定时保存
-        saveToHistory();             // 立刻写入观看历史
-
-        isNavigatingToEpisode = false;
-        return;                     // 已切流，无需整页跳转
+    // 1. 为【当前正在播放的旧剧集】保存播放进度
+    //    确保 dp.video 存在且 currentEpisodeIndex 是有效的
+    if (dp.video && dp.video.src && typeof currentEpisodeIndex === 'number' && currentEpisodes[currentEpisodeIndex] && dp.video.currentTime > 1) {
+        // console.log(`[PlayerApp Debug] 切换剧集前，保存旧剧集 (索引 ${currentEpisodeIndex} / 第 ${currentEpisodeIndex + 1} 集) 的进度。`);
+        saveVideoSpecificProgress(); // 此函数内部会使用当前的 currentVideoTitle, currentEpisodeIndex, dp.video.currentTime
     }
 
-    /* 3. 回退方案：播放器未就绪时保持原先整页跳转逻辑 */
+    // 2. 设置“正在切换剧集”的标记
+    //    此标记将在 DPlayer 的 'loadedmetadata' 事件中被重置
+    isNavigatingToEpisode = true;
+
+    const oldEpisodeIndexForRevert = currentEpisodeIndex; // 保存旧索引，以便在出错时可以回滚状态
+
+    // 3. 更新全局和模块内的当前剧集索引为【新剧集】的索引
     currentEpisodeIndex = index;
-    window.currentEpisodeIndex = index;
+    window.currentEpisodeIndex = index; // 更新全局变量，供其他模块或调试使用
 
-    const playerUrl = new URL(window.location.origin + window.location.pathname);
-    playerUrl.searchParams.set('url', episodeUrl);
-    playerUrl.searchParams.set('title', currentVideoTitle);
-    playerUrl.searchParams.set('index', index.toString());
+    const newEpisodeUrl = currentEpisodes[index];
+    if (!newEpisodeUrl) {
+        console.warn(`[PlayerApp] 新剧集 (索引 ${index}) 的 URL 无效。正在回滚剧集索引。`);
+        currentEpisodeIndex = oldEpisodeIndexForRevert; // URL 无效，回滚索引状态
+        window.currentEpisodeIndex = oldEpisodeIndexForRevert;
+        isNavigatingToEpisode = false; // 重置标记，因为切换已中止
+        if (typeof showError === 'function') showError("该剧集链接无效");
+        return;
+    }
 
-    const sourceCode = new URLSearchParams(window.location.search).get('source_code');
-    if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
+    // console.log(`[PlayerApp Debug] 准备切换到剧集 ${index + 1} (索引 ${currentEpisodeIndex})，URL: ${newEpisodeUrl}`);
 
-    const adOn = getBoolConfig(PLAYER_CONFIG.adFilteringStorage, true);
-    playerUrl.searchParams.set('af', adOn ? '1' : '0');
+    // 4. 更新与剧集信息相关的 UI 元素
+    document.title = `${currentVideoTitle} - 第 ${currentEpisodeIndex + 1} 集 - ${(window.SITE_CONFIG && window.SITE_CONFIG.name) ? window.SITE_CONFIG.name : '播放器'}`;
+    const videoTitleElement = document.getElementById('video-title');
+    if (videoTitleElement) {
+        videoTitleElement.textContent = `${currentVideoTitle} (第 ${currentEpisodeIndex + 1} 集)`;
+    }
 
-    window.location.href = playerUrl.toString();     // 整页跳转（兼容兜底）
+    if (typeof updateEpisodeInfo === 'function') updateEpisodeInfo(); // 更新如 "第 X / Y 集" 的文本
+    if (typeof renderEpisodes === 'function') renderEpisodes();       // 重新渲染选集按钮列表，并高亮当前播放的剧集
+    if (typeof updateButtonStates === 'function') updateButtonStates(); // 更新“上一集”/“下一集”按钮的禁用状态
+
+    // 5. 在 DPlayer 中切换视频源
+    //    首先，显示加载提示，隐藏错误提示
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+        const loadingTextEl = loadingEl.querySelector('div:last-child'); // 通常是显示文本的元素
+        if (loadingTextEl) loadingTextEl.textContent = '切换剧集中...';    // 更新加载文本
+        loadingEl.style.display = 'flex';
+        document.documentElement.classList.add('show-loading'); // 确保根元素class用于全局样式控制
+    }
+    const errorEl = document.getElementById('error');
+    if (errorEl) errorEl.style.display = 'none';
+
+    dp.switchVideo({
+        url: newEpisodeUrl,
+        type: 'hls', // DPlayer 的 customType.hls 配置会处理 HLS.js 实例的重新初始化
+        // pic: '可选的封面图片URL' // 如果需要，可以在这里为新视频指定封面
+    });
+    // 通常 DPlayer 的 autoplay 设置或其内部逻辑会在 switchVideo 后尝试播放
+    // 'loadedmetadata' 事件后，加载状态也会被正确处理
+    videoHasEnded = false; // 重置视频结束标记，以确保自动连播等逻辑正常工作
+
+    // 6. 更新浏览器地址栏的 URL (不刷新页面)
+    const newUrlForBrowser = new URL(window.location.href); // 基于当前URL创建，以保留其他可能存在的参数
+    newUrlForBrowser.searchParams.set('url', newEpisodeUrl);
+    newUrlForBrowser.searchParams.set('title', currentVideoTitle); // 确保URL中的标题与当前视频标题一致
+    newUrlForBrowser.searchParams.set('index', index.toString());
+
+    // 保留或设置 source_code 参数
+    const currentSourceCode = new URLSearchParams(window.location.search).get('source_code');
+    if (currentSourceCode) {
+        newUrlForBrowser.searchParams.set('source_code', currentSourceCode);
+    }
+
+    // 保留或设置 af (广告过滤) 参数
+    const adFilteringStorageKey = (PLAYER_CONFIG && PLAYER_CONFIG.adFilteringStorage) ? PLAYER_CONFIG.adFilteringStorage : 'adFilteringEnabled';
+    const adFilteringActive = getBoolConfig(adFilteringStorageKey, true); // getBoolConfig 应在 config.js 中定义并全局可用
+    newUrlForBrowser.searchParams.set('af', adFilteringActive ? '1' : '0');
+
+    // 新剧集从头播放，移除可能存在的 position 参数
+    newUrlForBrowser.searchParams.delete('position');
+
+    window.history.pushState(
+        { path: newUrlForBrowser.toString(), episodeIndex: index }, // stateObject 可以包含有用的状态信息
+        '', // title 参数，现代浏览器通常忽略
+        newUrlForBrowser.toString() // new URL
+    );
+
+    // 7. 切换后的操作：
+    //    - 为新剧集保存初始观看历史 (saveToHistory) 将在 DPlayer 的 'loadedmetadata' 事件中调用。
+    //    - 周期性保存进度的计时器 (startProgressSaveInterval) 也会在 'loadedmetadata' 中重新启动或确认。
+    //    - isNavigatingToEpisode 标记会在 'loadedmetadata' 中重置为 false。
 }
+
+// 确保 playEpisode 函数在全局作用域可用 (通常在 player_app.js 文件末尾已有此操作)
+// window.playEpisode = playEpisode;
+
+// ... (player_app.js 文件中的其他代码保持不变) ...
 window.playEpisode = playEpisode;   // 保持全局可调用
