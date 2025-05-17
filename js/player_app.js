@@ -37,6 +37,8 @@ let userClickedPosition = null;
 let shortcutHintTimeout = null;
 let progressSaveInterval = null;
 let isScreenLocked = false;
+let nextSeekPosition = 0; // Stores the position to seek to for the next episode
+let _tempUrlForCustomHls = ''; // Temporary holder for the URL if DPlayer options are stale in customType
 
 const REMEMBER_EPISODE_PROGRESS_ENABLED_KEY = 'playerRememberEpisodeProgressEnabled'; // 开关状态的键名
 const VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY = 'videoSpecificEpisodeProgresses'; // 各视频各集进度的键名
@@ -79,32 +81,32 @@ window.currentEpisodeIndex = 0;
  * 关闭“记住进度”时，清除当前视频在 localStorage 中保存的所有集数进度
  */
 function clearCurrentVideoAllEpisodeProgresses() {
-  try {
-    // 取出本地所有已保存的视频进度数据
-    const all = JSON.parse(
-      localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || "{}"
-    );
+    try {
+        // 取出本地所有已保存的视频进度数据
+        const all = JSON.parse(
+            localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || "{}"
+        );
 
-    const sourceCode = new URLSearchParams(window.location.search)
-      .get("source_code") || "unknown_source";
-    const videoId = `${currentVideoTitle}_${sourceCode}`;
+        const sourceCode = new URLSearchParams(window.location.search)
+            .get("source_code") || "unknown_source";
+        const videoId = `${currentVideoTitle}_${sourceCode}`;
 
-    // 如果存在该视频的进度记录，则删除
-    if (all[videoId]) {
-      delete all[videoId];
-      localStorage.setItem(
-        VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY,
-        JSON.stringify(all)
-      );
+        // 如果存在该视频的进度记录，则删除
+        if (all[videoId]) {
+            delete all[videoId];
+            localStorage.setItem(
+                VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY,
+                JSON.stringify(all)
+            );
 
-      // 给用户一个清除成功的提示
-      const msg = `已清除《${currentVideoTitle}》的所有集数播放进度`;
-      if (typeof showMessage === "function") showMessage(msg, "success");
-      else if (typeof showToast === "function") showToast(msg, "success");
+            // 给用户一个清除成功的提示
+            const msg = `已清除《${currentVideoTitle}》的所有集数播放进度`;
+            if (typeof showMessage === "function") showMessage(msg, "success");
+            else if (typeof showToast === "function") showToast(msg, "success");
+        }
+    } catch (e) {
+        console.error("清除特定视频集数进度失败:", e);
     }
-  } catch (e) {
-    console.error("清除特定视频集数进度失败:", e);
-  }
 }
 
 function setupRememberEpisodeProgressToggle() {
@@ -477,73 +479,94 @@ function initPlayer(videoUrl, sourceCode) {
             autoplay: true, theme: '#00ccff', preload: 'auto', loop: false, lang: 'zh-cn',
             hotkey: true, mutex: true, volume: 0.7, screenshot: true, preventClickToggle: false,
             airplay: true, chromecast: true,
+            // Inside initPlayer function:
+            // ...
             video: {
                 url: videoUrl, type: 'hls',
-                // pic: (window.SITE_CONFIG && window.SITE_CONFIG.logo) || 'https://img.picgo.net/2025/04/12/image362e7d38b4af4a74.png',
+                // In js/player_app.js -> initPlayer -> video.customType.hls
                 customType: {
-                    hls: function (video, player) {
-                        if (currentHls && currentHls.destroy) {
-                            try { currentHls.destroy(); } catch (e) { console.warn('销毁旧HLS实例时出错:', e); }
-                        }
-                        const hls = new Hls(hlsConfig);
-                        currentHls = hls; window.currentHls = currentHls; // Expose if needed
+                    hls: function (video, player) { // `video` is DPlayer's video element, `player` is the DPlayer instance
+                        // Use the URL passed directly to switchVideo (via _tempUrlForCustomHls) or from player options.
+                        const newSourceUrlToLoad = _tempUrlForCustomHls || (player.options.video && player.options.video.url);
+                        _tempUrlForCustomHls = ''; // Clear after use, ensuring it's only used once per switchVideo call
 
-                        let errorDisplayed = false, errorCount = 0, playbackStarted = false, bufferAppendErrorCount = 0;
+                        console.log(`[CustomHLS] Initializing. Target URL: "${newSourceUrlToLoad}". DPlayer options URL: "${player.options.video ? player.options.video.url : 'N/A'}"`);
 
-                        video.addEventListener('playing', function onPlaying() {
-                            playbackStarted = true;
-                            const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'none';
-                            const errorEl = document.getElementById('error'); if (errorEl) errorEl.style.display = 'none';
-                            // video.removeEventListener('playing', onPlaying); // Maybe keep listening?
-                        });
-
-                        video.disableRemotePlayback = false;
-                        // ★ 先拿到“正确的新地址”
-                        const src = player.options && player.options.video
-                            ? player.options.video.url
-                            : '';           // 理论上一定有
-
-                        // ★ 然后再去清理旧 DOM，避免把新地址弄丢
-                        const existingSource = video.querySelector('source');
-                        if (existingSource) existingSource.remove();
-                        if (video.hasAttribute('src')) video.removeAttribute('src');
-                        hls.loadSource(src);
-                        hls.attachMedia(video);
-
-                        hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-                            if (debugMode) console.log("[PlayerApp] HLS Media Attached");
-                            // DPlayer usually handles play(), but ensure it happens
-                            // setTimeout(() => { player.play().catch(e => console.warn("Autoplay prevented:", e)); }, 100);
-                        });
-
-                        hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                            if (debugMode) console.log("[PlayerApp] HLS Manifest Parsed");
-                            // Don't call video.play() here, let DPlayer handle it after MEDIA_ATTACHED/MANIFEST_PARSED
-                        });
-
-                        hls.on(Hls.Events.ERROR, function (event, data) {
-                            if (debugMode) console.log('[HLS Event] Error:', event, data);
-                            errorCount++;
-                            if (data.details === 'bufferAppendError') {
-                                bufferAppendErrorCount++;
-                                if (debugMode) console.warn(`bufferAppendError occurred ${bufferAppendErrorCount} times`);
-                                if (playbackStarted) return;
-                                if (bufferAppendErrorCount >= 3) hls.recoverMediaError();
+                        if (!newSourceUrlToLoad) {
+                            console.error("[CustomHLS] CRITICAL: No valid source URL provided to load.");
+                            if (typeof showError === 'function') showError("视频链接无效，无法加载。"); // Show error in UI
+                            // Trigger DPlayer's error event manually if HLS setup can't proceed
+                            if (player && typeof player.error === 'function') {
+                                player.error('No valid source URL for HLS customType.');
                             }
-                            if (data.fatal && !playbackStarted) {
-                                console.error('Fatal HLS Error:', data);
-                                switch (data.type) {
-                                    case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-                                    case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                                    default:
-                                        if (errorCount > 3 && !errorDisplayed) { errorDisplayed = true; showError('视频加载失败 (HLS)'); }
-                                        break;
+                            return; // Stop further execution if no URL
+                        }
+
+                        // 1. Destroy any existing HLS instance
+                        if (window.currentHls) {
+                            console.log("[CustomHLS] Previous HLS instance (window.currentHls) detected. Destroying it.");
+                            window.currentHls.destroy(); // This should also detach media if attached
+                            window.currentHls = null; // Clear the reference
+                        } else {
+                            console.log("[CustomHLS] No previous HLS instance (window.currentHls) found to destroy.");
+                        }
+
+                        // 2. Aggressively reset the HTML video element state
+                        console.log("[CustomHLS] Resetting video element: pause, remove src/source attributes, call load().");
+                        video.pause();
+                        video.removeAttribute('src'); // Remove direct src attribute
+                        // Remove any child <source> elements
+                        while (video.firstChild) {
+                            video.removeChild(video.firstChild);
+                        }
+                        // Setting src to empty or calling load() can help reset the media element's internal state.
+                        // This is important to prevent the browser from holding onto the previous stream.
+                        video.src = ""; // Setting to empty can sometimes help clear buffers
+                        video.load();   // This tells the browser to discard the current media resource state.
+
+                        // 3. Create and configure the new HLS instance
+                        console.log("[CustomHLS] Creating new HLS.js instance.");
+                        const hls = new Hls(hlsConfig); // hlsConfig should be defined with ad filtering etc.
+                        window.currentHls = hls; // Store the new instance
+
+                        // 4. Setup HLS event listeners for the new instance
+                        hls.on(Hls.Events.ERROR, function (event, data) {
+                            console.error(`[CustomHLS] HLS.js Error. Fatal: ${data.fatal}. Type: ${data.type}. Details: ${data.details}. URL: ${data.url || newSourceUrlToLoad}`, data);
+                            if (data.fatal) {
+                                if (player && typeof player.error === 'function') { // Use DPlayer's error mechanism
+                                    player.error(`HLS.js fatal error: ${data.type} - ${data.details}`);
+                                }
+                            } else if (data.details === 'bufferSeekOverHole' || data.details === 'bufferAppendError' || data.details === 'bufferNudgeOnStall') {
+                                console.warn(`[CustomHLS] HLS.js non-fatal media warning: ${data.details}. Attempting recovery if possible.`);
+                                // HLS.js often tries to recover from these. If seeking, it might indicate a bad spot in the stream.
+                                if (data.type === Hls.ErrorTypes.MEDIA_ERROR && typeof hls.recoverMediaError === 'function') {
+                                    try { hls.recoverMediaError(); } catch (e) { console.error("Error on hls.recoverMediaError()", e); }
                                 }
                             }
                         });
-                        const loadingElement = document.getElementById('loading');
-                        hls.on(Hls.Events.FRAG_LOADED, () => { if (loadingElement) loadingElement.style.display = 'none'; });
-                        hls.on(Hls.Events.LEVEL_LOADED, () => { if (loadingElement) loadingElement.style.display = 'none'; });
+                        hls.on(Hls.Events.MANIFEST_LOADED, function (event, data) {
+                            console.log(`[CustomHLS] HLS.js Manifest loaded successfully for: ${data.url}`);
+                            // DPlayer usually handles play if autoplay is on.
+                        });
+                        // Add other essential HLS event logging (FRAG_LOADED, LEVEL_LOADED for loading UI)
+                        hls.on(Hls.Events.FRAG_LOADED, () => {
+                            const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'none';
+                            // console.log("[CustomHLS] Fragment loaded.");
+                        });
+                        hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
+                            const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'none';
+                            // console.log(`[CustomHLS] Level loaded. Bitrate: ${data.bitrate}`);
+                        });
+
+
+                        // 5. Attach HLS to the media element and load the source
+                        console.log(`[CustomHLS] Attaching media element to new HLS instance.`);
+                        hls.attachMedia(video);
+
+                        hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+                            console.log(`[CustomHLS] Media element attached. Loading source via hls.loadSource(): ${newSourceUrlToLoad}`);
+                            hls.loadSource(newSourceUrlToLoad);
+                        });
                     }
                 }
             }
@@ -588,17 +611,87 @@ function addDPlayerEventListeners() {
         }
     });
 
+
     dp.on('loadedmetadata', function () {
-        if (debugMode) console.log("[PlayerApp] DPlayer event: loadedmetadata");
-        const el = document.getElementById('loading');
-        if (el) {
-            el.style.display = 'none';                     // 原来的
-            document.documentElement.classList.remove('show-loading'); // ← 新增
+        const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
+        if (debugMode) console.log(`[PlayerApp][loadedmetadata] 事件已触发。dp 是否有效: ${!!(dp && dp.video)}, 视频时长: ${dp && dp.video ? dp.video.duration : 'N/A'}`);
+
+        // 隐藏加载提示
+        const loadingEl = document.getElementById('loading');
+        if (loadingEl) {
+            loadingEl.style.display = 'none';
+            document.documentElement.classList.remove('show-loading');
         }
-        videoHasEnded = false;
-        setupProgressBarPreciseClicks();
-        setTimeout(saveToHistory, 3000); // Save initial state to history
-        startProgressSaveInterval(); // Start periodic saving
+        videoHasEnded = false; // 为新加载的视频重置结束标记
+
+        // 如果有精确点击进度条的功能，重新设置
+        if (typeof setupProgressBarPreciseClicks === 'function') setupProgressBarPreciseClicks();
+
+        // 安全地尝试跳转（seek）到之前记住的播放位置 (nextSeekPosition)
+        if (nextSeekPosition > 0 && dp && dp.video && dp.video.duration > 0) {
+            if (nextSeekPosition < dp.video.duration) { // 确保跳转位置在视频有效时长内
+                if (typeof dp.seek === 'function') { // 再次检查 seek 方法是否存在
+                    console.log(`[PlayerApp][loadedmetadata] 尝试跳转到 nextSeekPosition: ${nextSeekPosition}`);
+                    dp.seek(nextSeekPosition); // 执行跳转
+                    if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(nextSeekPosition);
+                } else {
+                    console.error("[PlayerApp][loadedmetadata] dp.seek 不是一个函数！无法恢复播放位置。");
+                }
+            } else {
+                console.warn(`[PlayerApp][loadedmetadata] nextSeekPosition (${nextSeekPosition}) 超出或等于视频时长 (${dp.video.duration})。不进行跳转。`);
+            }
+        }
+        nextSeekPosition = 0; // 无论成功与否，用后重置
+
+        // 为新加载的剧集（在其初始状态或跳转后的状态）保存到观看历史
+        if (typeof saveToHistory === 'function') {
+            // console.log("[PlayerApp][loadedmetadata] 为新剧集调用 saveToHistory。");
+            saveToHistory(); // 此函数应能获取到跳转（如果发生）后的当前时间
+        }
+        // 启动或重置周期性保存播放进度的计时器
+        if (typeof startProgressSaveInterval === 'function') {
+            // console.log("[PlayerApp][loadedmetadata] 调用 startProgressSaveInterval。");
+            startProgressSaveInterval();
+        }
+
+        isNavigatingToEpisode = false; // 重置“正在切换剧集”的标记
+        if (debugMode) console.log("[PlayerApp][loadedmetadata] isNavigatingToEpisode 已重置为 false。");
+
+        // ---- 修改核心：延迟并更安全地调用 dp.play() ----
+        setTimeout(() => {
+            // 在 setTimeout 的回调函数执行时，再次检查 dp 和 dp.video 的有效性，
+            // 因为在延迟期间，它们的状态理论上仍有可能发生变化（尽管概率较小）。
+            if (!dp || !dp.video) {
+                console.warn("[PlayerApp][loadedmetadata][timeout] dp 或 dp.video 在 setTimeout 回调执行时已不再有效。无法尝试播放。");
+                return;
+            }
+
+            if (dp.video.paused) { // 只在视频确实处于暂停状态时才尝试播放
+                const playFunction = dp.play; // 将 dp.play 赋值给一个局部变量，以锁定检查时的引用
+
+                if (typeof playFunction === 'function') { // 再次（在延迟后）检查 playFunction 是否为函数
+                    const dplayerAutoplayOption = dp.options && dp.options.autoplay; // 获取 DPlayer 构造函数中的 autoplay 设置
+                    // autoplayEnabled 是我们在 player_app.js 中定义的用于控制自动播放下一集的开关状态
+                    const customAutoplayEnabled = typeof autoplayEnabled !== 'undefined' ? autoplayEnabled : true;
+
+                    if (dplayerAutoplayOption || customAutoplayEnabled) {
+                        console.log(`[PlayerApp][loadedmetadata][timeout] 视频已暂停。尝试调用 dp.play()。DPlayer 内置 autoplay: ${dplayerAutoplayOption}, 自定义 autoplayEnabled: ${customAutoplayEnabled}`);
+                        // 使用 .call(dp) 来确保 playFunction 的 'this' 上下文是 dp 实例，虽然直接调用通常也没问题
+                        playFunction.call(dp).catch(e => {
+                            console.warn("[PlayerApp][loadedmetadata][timeout] dp.play() (通过延迟调用) 被浏览器阻止或发生错误。用户可能需要手动点击播放按钮。", e);
+                        });
+                    } else {
+                        // console.log("[PlayerApp][loadedmetadata][timeout] 视频已暂停，但所有自动播放选项均已禁用。");
+                    }
+                } else {
+                    // 如果到这里 dp.play 仍然不是函数，说明 DPlayer 实例确实存在更深层次的问题
+                    console.error("[PlayerApp][loadedmetadata][timeout] 严重错误：dp.play (在延迟后检查) 仍然不是一个函数！DPlayer 实例状态:", dp);
+                }
+            } else {
+                // console.log("[PlayerApp][loadedmetadata][timeout] 视频已在播放中或不处于可检查暂停的状态。");
+            }
+        }, 100); // 延迟 100 毫秒执行。如果问题依旧，可以尝试略微增加这个延迟时间，例如 200 或 300 毫秒。
+        // ---- 修改核心结束 ----
     });
 
     dp.on('error', function (e) {
@@ -610,7 +703,7 @@ function addDPlayerEventListeners() {
         showError('播放器遇到错误，请检查视频源');
     });
 
-    setupLongPressSpeedControl(); 
+    setupLongPressSpeedControl();
 
     dp.on('seeking', function () { if (debugMode) console.log("[PlayerApp] DPlayer event: seeking"); isUserSeeking = true; videoHasEnded = false; });
     dp.on('seeked', function () {
@@ -1234,48 +1327,127 @@ function getVideoId() {
     return `${encodeURIComponent(currentVideoTitle)}_${sourceCode}_ep${window.currentEpisodeIndex}`;
 }
 
-// js/player_app.js
-function playEpisode(index) { // index 是目标新集数的索引
-    if (index < 0 || index >= currentEpisodes.length) {
-        console.warn(`[PlayerApp] Invalid episode index: ${index}`);
+/**
+ * 跳播到指定集数；已就绪时仅切流，不再整页刷新
+ * @param {number} index 目标集数索引（0-based）
+ */
+
+// In js/player_app.js
+
+function playEpisode(index) { // index is the target new episode's 0-based index
+
+    if (!dp) {
+        if (typeof showError === 'function') showError("播放器遇到问题，无法切换。");
+        return;
+    }
+    if (!currentEpisodes || index < 0 || index >= currentEpisodes.length) {
+        if (typeof showError === 'function') showError("无效的剧集选择。");
+        return;
+    }
+    // Prevent re-entry if already processing the switch to the same episode
+    if (isNavigatingToEpisode && currentEpisodeIndex === index) {
         return;
     }
 
-    // 关键：在更新 currentEpisodeIndex 和跳转之前，为【当前正在结束的这一集】保存一次进度
-    // 使用当前的、模块级的 currentEpisodeIndex (这是旧的集数) 和 dp.video.currentTime
-    if (dp && dp.video && typeof currentEpisodeIndex === 'number' && currentEpisodes[currentEpisodeIndex]) {
-        // 只有当 dp 存在，并且 currentEpisodeIndex 是一个有效的、已加载的集数时才保存
-        console.log(`[PlayerApp Debug] Saving progress for OLD episode ${currentEpisodeIndex + 1} before switching to ${index + 1}`);
-        saveVideoSpecificProgress(); // 这个函数内部会使用当前的 currentVideoTitle, currentEpisodeIndex, dp.video.currentTime
+    // 1. Save progress for the *current* (soon-to-be old) episode
+    if (dp.video && dp.video.src && typeof currentEpisodeIndex === 'number' && currentEpisodes[currentEpisodeIndex] && dp.video.currentTime > 5) {
+        saveVideoSpecificProgress(); // Uses module-scoped currentEpisodeIndex, currentVideoTitle
+    } else {
     }
 
-    // ② 标记“正在跳转”，让 after-save 的 beforeunload 不再写库
-    isNavigatingToEpisode = true;
+    isNavigatingToEpisode = true; // Set flag: indicates an episode switch is in progress
 
-        // 更新 currentEpisodeIndex，再构造最简 URL 跳转
+    const oldEpisodeIndexForRevertOnError = currentEpisodeIndex; // For reverting state if needed
+
+    // 2. Update current episode index to the new target
     currentEpisodeIndex = index;
-    window.currentEpisodeIndex = index;
+    window.currentEpisodeIndex = index; // Update global reference if used elsewhere
 
-    const episodeUrl = currentEpisodes[index];
-    if (!episodeUrl) {
-        console.warn(`[PlayerApp] No URL for episode ${index}`);
+    const newEpisodeUrl = currentEpisodes[currentEpisodeIndex]; // Get URL for the new episode
+    if (!newEpisodeUrl || typeof newEpisodeUrl !== 'string' || !newEpisodeUrl.trim()) {
+        currentEpisodeIndex = oldEpisodeIndexForRevertOnError; // Revert
+        window.currentEpisodeIndex = oldEpisodeIndexForRevertOnError;
+        isNavigatingToEpisode = false; // Reset flag
+        if (typeof showError === 'function') showError("此剧集链接无效，无法播放。");
         return;
     }
 
-    // 只传最少必要的参数：url, title, index, source_code, af
-    const playerUrl = new URL(window.location.origin + window.location.pathname);
-    playerUrl.searchParams.set('url', episodeUrl);
-    playerUrl.searchParams.set('title', currentVideoTitle);
-    playerUrl.searchParams.set('index', index.toString());
+    // 3. Prepare for progress restoration for the NEW episode (if any)
+    nextSeekPosition = 0; // Reset for this episode switch
+    const rememberEpisodeProgressToggle = document.getElementById('remember-episode-progress-toggle');
+    const shouldRestoreSpecificProgress = rememberEpisodeProgressToggle ? rememberEpisodeProgressToggle.checked : true;
 
-    // 来源标记
-    const sourceCode = new URLSearchParams(window.location.search).get('source_code');
-   if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
+    if (shouldRestoreSpecificProgress) {
+        const sourceCodeFromUrl = new URLSearchParams(window.location.search).get('source_code') || 'unknown_source';
+        const videoSpecificIdForRestore = `${currentVideoTitle}_${sourceCodeFromUrl}`;
+        let allSpecificProgresses = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || '{}');
+        const savedProgressDataForVideo = allSpecificProgresses[videoSpecificIdForRestore];
 
-    // 带上广告过滤开关
-    const adOn = getBoolConfig(PLAYER_CONFIG.adFilteringStorage, true);
-    playerUrl.searchParams.set('af', adOn ? '1' : '0');
+        if (savedProgressDataForVideo) {
+            const positionToResume = savedProgressDataForVideo[currentEpisodeIndex.toString()] // Use NEW currentEpisodeIndex
+                ? parseInt(savedProgressDataForVideo[currentEpisodeIndex.toString()])
+                : 0;
 
-    window.location.href = playerUrl.toString();
+            if (positionToResume > 5) {
+                if (confirm(`《${currentVideoTitle}》第 ${currentEpisodeIndex + 1} 集有播放记录，是否从 ${formatPlayerTime(positionToResume)} 继续播放？`)) {
+                    nextSeekPosition = positionToResume;
+                    if (typeof showMessage === "function") showMessage(`将从 ${formatPlayerTime(nextSeekPosition)} 继续播放`, "info");
+                } else {
+                    if (typeof showMessage === "function") showMessage("已从头开始播放", "info");
+                }
+            }
+        }
+    }
+
+    // 4. Update UI elements (titles, episode list highlights, buttons)
+    const siteName = (window.SITE_CONFIG && window.SITE_CONFIG.name) ? window.SITE_CONFIG.name : '播放器';
+    document.title = `${currentVideoTitle} - 第 ${currentEpisodeIndex + 1} 集 - ${siteName}`;
+    const videoTitleElement = document.getElementById('video-title');
+    if (videoTitleElement) videoTitleElement.textContent = `${currentVideoTitle} (第 ${currentEpisodeIndex + 1} 集)`;
+
+    if (typeof updateEpisodeInfo === 'function') updateEpisodeInfo();
+    if (typeof renderEpisodes === 'function') renderEpisodes(); // This will re-render buttons, new one highlighted
+    if (typeof updateButtonStates === 'function') updateButtonStates();
+
+    // 5. Show loading indicator and hide any previous error messages
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+        const loadingTextEl = loadingEl.querySelector('div:last-child');
+        if (loadingTextEl) loadingTextEl.textContent = '正在加载剧集...';
+        loadingEl.style.display = 'flex';
+        document.documentElement.classList.add('show-loading');
+    }
+    const errorEl = document.getElementById('error');
+    if (errorEl) errorEl.style.display = 'none';
+
+    // 6. Instruct DPlayer to switch video source
+    _tempUrlForCustomHls = newEpisodeUrl; // Pass URL to customType.hls via module scope as a fallback
+
+    dp.video.pause();
+
+    dp.switchVideo({
+        url: newEpisodeUrl,
+        type: 'hls',
+    });
+    videoHasEnded = false; // Reset for autoplay-next logic for the new episode
+
+    // 7. Update browser URL using history.pushState (no page reload)
+    const newUrlForBrowser = new URL(window.location.href); // Base on current URL
+    newUrlForBrowser.searchParams.set('url', newEpisodeUrl);
+    newUrlForBrowser.searchParams.set('title', currentVideoTitle);
+    newUrlForBrowser.searchParams.set('index', currentEpisodeIndex.toString()); // currentEpisodeIndex is the new index
+
+    const currentSourceCode = new URLSearchParams(window.location.search).get('source_code');
+    if (currentSourceCode) newUrlForBrowser.searchParams.set('source_code', currentSourceCode);
+
+    const adFilteringStorageKey = (PLAYER_CONFIG && PLAYER_CONFIG.adFilteringStorage) ? PLAYER_CONFIG.adFilteringStorage : 'adFilteringEnabled';
+    const adFilteringActive = (typeof getBoolConfig === 'function') ? getBoolConfig(adFilteringStorageKey, true) : true;
+    newUrlForBrowser.searchParams.set('af', adFilteringActive ? '1' : '0');
+    newUrlForBrowser.searchParams.delete('position'); // New episodes start from beginning unless `nextSeekPosition` handles it
+    window.history.pushState(
+        { path: newUrlForBrowser.toString(), episodeIndex: currentEpisodeIndex },
+        '',
+        newUrlForBrowser.toString()
+    );
 }
-window.playEpisode = playEpisode; // Expose globally
+window.playEpisode = playEpisode;   // 保持全局可调用
