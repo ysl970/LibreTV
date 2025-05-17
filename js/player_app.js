@@ -1234,48 +1234,79 @@ function getVideoId() {
     return `${encodeURIComponent(currentVideoTitle)}_${sourceCode}_ep${window.currentEpisodeIndex}`;
 }
 
-// js/player_app.js
-function playEpisode(index) { // index 是目标新集数的索引
-    if (index < 0 || index >= currentEpisodes.length) {
+/**
+ * 跳播到指定集数；已就绪时仅切流，不再整页刷新
+ * @param {number} index 目标集数索引（0-based）
+ */
+function playEpisode(index) {
+    // —— 参数校验 ——
+    if (!currentEpisodes || index < 0 || index >= currentEpisodes.length) {
         console.warn(`[PlayerApp] Invalid episode index: ${index}`);
         return;
     }
 
-    // 关键：在更新 currentEpisodeIndex 和跳转之前，为【当前正在结束的这一集】保存一次进度
-    // 使用当前的、模块级的 currentEpisodeIndex (这是旧的集数) 和 dp.video.currentTime
-    if (dp && dp.video && typeof currentEpisodeIndex === 'number' && currentEpisodes[currentEpisodeIndex]) {
-        // 只有当 dp 存在，并且 currentEpisodeIndex 是一个有效的、已加载的集数时才保存
-        console.log(`[PlayerApp Debug] Saving progress for OLD episode ${currentEpisodeIndex + 1} before switching to ${index + 1}`);
-        saveVideoSpecificProgress(); // 这个函数内部会使用当前的 currentVideoTitle, currentEpisodeIndex, dp.video.currentTime
+    /* 1. 切集前先保存“正在看的这一集”的进度 */
+    try { saveVideoSpecificProgress(); } catch (e) {
+        console.warn('Save progress before switching episode failed:', e);
     }
 
-    // ② 标记“正在跳转”，让 after-save 的 beforeunload 不再写库
-    isNavigatingToEpisode = true;
-
-        // 更新 currentEpisodeIndex，再构造最简 URL 跳转
-    currentEpisodeIndex = index;
-    window.currentEpisodeIndex = index;
+    isNavigatingToEpisode = true;          // 避免 beforeunload 时误保存
 
     const episodeUrl = currentEpisodes[index];
     if (!episodeUrl) {
         console.warn(`[PlayerApp] No URL for episode ${index}`);
+        isNavigatingToEpisode = false;
         return;
     }
 
-    // 只传最少必要的参数：url, title, index, source_code, af
+    /* 2. 如果播放器已实例化且支持 switchVideo → 直接就地切流 */
+    if (dp && typeof dp.switchVideo === 'function') {
+        currentEpisodeIndex = index;
+        window.currentEpisodeIndex = index;
+
+        /* 2-1 更新地址栏查询参数（url / index），但不刷新页面 */
+        try {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('url', episodeUrl);
+            newUrl.searchParams.set('index', index.toString());
+            history.replaceState({}, '', newUrl.toString());
+        } catch (e) { console.warn('replaceState failed:', e); }
+
+        /* 2-2 切流播放 */
+        dp.switchVideo({ url: episodeUrl, type: 'hls' });
+        dp.play().catch(() => { /* 自动播放被阻止时忽略 */ });
+
+        /* 2-3 同步标题 & UI */
+        document.title = `${currentVideoTitle} - 第 ${currentEpisodeIndex + 1} 集 - ${ (SITE_CONFIG && SITE_CONFIG.name) || '播放器' }`;
+        const titleEl = document.getElementById('video-title');
+        if (titleEl) titleEl.textContent = `${currentVideoTitle} (第 ${currentEpisodeIndex + 1} 集)`;
+
+        renderEpisodes();           // 高亮当前集
+        updateEpisodeInfo();        // “第 x / y 集” 文字
+        updateButtonStates();       // 上/下一集按钮可用性
+
+        startProgressSaveInterval(); // 重新开始定时保存
+        saveToHistory();             // 立刻写入观看历史
+
+        isNavigatingToEpisode = false;
+        return;                     // 已切流，无需整页跳转
+    }
+
+    /* 3. 回退方案：播放器未就绪时保持原先整页跳转逻辑 */
+    currentEpisodeIndex = index;
+    window.currentEpisodeIndex = index;
+
     const playerUrl = new URL(window.location.origin + window.location.pathname);
     playerUrl.searchParams.set('url', episodeUrl);
     playerUrl.searchParams.set('title', currentVideoTitle);
     playerUrl.searchParams.set('index', index.toString());
 
-    // 来源标记
     const sourceCode = new URLSearchParams(window.location.search).get('source_code');
-   if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
+    if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
 
-    // 带上广告过滤开关
     const adOn = getBoolConfig(PLAYER_CONFIG.adFilteringStorage, true);
     playerUrl.searchParams.set('af', adOn ? '1' : '0');
 
-    window.location.href = playerUrl.toString();
+    window.location.href = playerUrl.toString();     // 整页跳转（兼容兜底）
 }
-window.playEpisode = playEpisode; // Expose globally
+window.playEpisode = playEpisode;   // 保持全局可调用
