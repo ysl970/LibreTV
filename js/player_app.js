@@ -1318,37 +1318,27 @@ function getVideoId() {
 // In js/player_app.js
 
 function playEpisode(index) { // index is the target new episode's 0-based index
-    console.log(`[PlayerApp] playEpisode CALLED with target index: ${index}`);
 
     if (!dp) {
-        console.error("[PlayerApp] DPlayer instance (dp) is not available. Cannot switch episode.");
         if (typeof showError === 'function') showError("播放器遇到问题，无法切换。");
         return;
     }
     if (!currentEpisodes || index < 0 || index >= currentEpisodes.length) {
-        console.warn(`[PlayerApp] Invalid target episode index: ${index}. Total episodes: ${currentEpisodes ? currentEpisodes.length : 'N/A'}`);
         if (typeof showError === 'function') showError("无效的剧集选择。");
         return;
     }
     // Prevent re-entry if already processing the switch to the same episode
     if (isNavigatingToEpisode && currentEpisodeIndex === index) {
-        console.warn(`[PlayerApp] Already navigating to episode index ${index}. Call ignored.`);
         return;
     }
 
-    console.log(`[PlayerApp] ---- Initiating episode switch ----`);
-    console.log(`[PlayerApp] From old index: ${currentEpisodeIndex} TO new index: ${index}`);
-
     // 1. Save progress for the *current* (soon-to-be old) episode
     if (dp.video && dp.video.src && typeof currentEpisodeIndex === 'number' && currentEpisodes[currentEpisodeIndex] && dp.video.currentTime > 5) {
-        console.log(`[PlayerApp] Saving progress for old episode (index ${currentEpisodeIndex}), playback time: ${dp.video.currentTime}`);
         saveVideoSpecificProgress(); // Uses module-scoped currentEpisodeIndex, currentVideoTitle
     } else {
-        console.log(`[PlayerApp] Progress for old episode (index ${currentEpisodeIndex}) not saved (condition not met).`);
     }
 
     isNavigatingToEpisode = true; // Set flag: indicates an episode switch is in progress
-    console.log("[PlayerApp] isNavigatingToEpisode SET to true.");
 
     const oldEpisodeIndexForRevertOnError = currentEpisodeIndex; // For reverting state if needed
 
@@ -1358,15 +1348,12 @@ function playEpisode(index) { // index is the target new episode's 0-based index
 
     const newEpisodeUrl = currentEpisodes[currentEpisodeIndex]; // Get URL for the new episode
     if (!newEpisodeUrl || typeof newEpisodeUrl !== 'string' || !newEpisodeUrl.trim()) {
-        console.error(`[PlayerApp] ERROR: URL for new episode (index ${currentEpisodeIndex}) is invalid: "${newEpisodeUrl}". Reverting index.`);
         currentEpisodeIndex = oldEpisodeIndexForRevertOnError; // Revert
         window.currentEpisodeIndex = oldEpisodeIndexForRevertOnError;
         isNavigatingToEpisode = false; // Reset flag
-        console.log("[PlayerApp] isNavigatingToEpisode RESET to false due to invalid new URL.");
         if (typeof showError === 'function') showError("此剧集链接无效，无法播放。");
         return;
     }
-    console.log(`[PlayerApp] New episode (index ${currentEpisodeIndex}) URL: ${newEpisodeUrl}`);
 
     // 3. Prepare for progress restoration for the NEW episode (if any)
     nextSeekPosition = 0; // Reset for this episode switch
@@ -1384,32 +1371,16 @@ function playEpisode(index) { // index is the target new episode's 0-based index
                 ? parseInt(savedProgressDataForVideo[currentEpisodeIndex.toString()])
                 : 0;
 
-            // Check if there's meaningful progress and video duration is known (or assume it's longer)
-            // The duration check for dp.video.duration might be for the *old* video here.
-            // It's safer to check positionToResume > 5 and let 'loadedmetadata' handle seek if duration is valid.
             if (positionToResume > 5) {
-                console.log(`[PlayerApp] Found saved progress for new episode (index ${currentEpisodeIndex}): ${positionToResume}s`);
                 if (confirm(`《${currentVideoTitle}》第 ${currentEpisodeIndex + 1} 集有播放记录，是否从 ${formatPlayerTime(positionToResume)} 继续播放？`)) {
                     nextSeekPosition = positionToResume;
-                    console.log(`[PlayerApp] User chose to resume. nextSeekPosition SET to: ${nextSeekPosition}`);
                     if (typeof showMessage === "function") showMessage(`将从 ${formatPlayerTime(nextSeekPosition)} 继续播放`, "info");
                 } else {
-                    console.log(`[PlayerApp] User chose NOT to resume. Playing from beginning.`);
                     if (typeof showMessage === "function") showMessage("已从头开始播放", "info");
-                    // Optional: If user explicitly says "no", clear this specific episode's progress
-                    // to avoid asking again next time. This requires careful handling to not delete other progresses.
-                    // delete savedProgressDataForVideo[currentEpisodeIndex.toString()];
-                    // localStorage.setItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY, JSON.stringify(allSpecificProgresses));
                 }
-            } else {
-                console.log(`[PlayerApp] No meaningful saved progress (<=5s) for new episode (index ${currentEpisodeIndex}).`);
-            }
-        } else {
-            console.log(`[PlayerApp] No saved progress data found for video ID: ${videoSpecificIdForRestore}`);
-        }
-    } else {
-        console.log("[PlayerApp] 'Remember progress' is disabled. Playing new episode from beginning.");
-    }
+            } 
+        } 
+    } 
 
     // 4. Update UI elements (titles, episode list highlights, buttons)
     const siteName = (window.SITE_CONFIG && window.SITE_CONFIG.name) ? window.SITE_CONFIG.name : '播放器';
@@ -1420,7 +1391,6 @@ function playEpisode(index) { // index is the target new episode's 0-based index
     if (typeof updateEpisodeInfo === 'function') updateEpisodeInfo();
     if (typeof renderEpisodes === 'function') renderEpisodes(); // This will re-render buttons, new one highlighted
     if (typeof updateButtonStates === 'function') updateButtonStates();
-    console.log("[PlayerApp] UI elements updated for new episode.");
 
     // 5. Show loading indicator and hide any previous error messages
     const loadingEl = document.getElementById('loading');
@@ -1432,23 +1402,17 @@ function playEpisode(index) { // index is the target new episode's 0-based index
     }
     const errorEl = document.getElementById('error');
     if (errorEl) errorEl.style.display = 'none';
-    console.log("[PlayerApp] Loading indicator shown.");
 
     // 6. Instruct DPlayer to switch video source
     _tempUrlForCustomHls = newEpisodeUrl; // Pass URL to customType.hls via module scope as a fallback
-    console.log(`[PlayerApp] Calling dp.switchVideo with URL: ${newEpisodeUrl}. _tempUrlForCustomHls SET.`);
 
-    dp.video.pause(); // Explicitly pause before switch (helps some browsers/HLS.js versions)
-    // dp.video.innerHTML = ""; // Clear any <source> tags DPlayer might have added if not using customType
-    // dp.video.removeAttribute('src'); // DPlayer or customType.hls should handle this
+    dp.video.pause(); 
 
     dp.switchVideo({
         url: newEpisodeUrl,
         type: 'hls',
-        // pic: 'optional_new_thumbnail_url'
     });
     videoHasEnded = false; // Reset for autoplay-next logic for the new episode
-    console.log("[PlayerApp] dp.switchVideo called. videoHasEnded flag reset.");
 
     // 7. Update browser URL using history.pushState (no page reload)
     const newUrlForBrowser = new URL(window.location.href); // Base on current URL
@@ -1462,16 +1426,11 @@ function playEpisode(index) { // index is the target new episode's 0-based index
     const adFilteringStorageKey = (PLAYER_CONFIG && PLAYER_CONFIG.adFilteringStorage) ? PLAYER_CONFIG.adFilteringStorage : 'adFilteringEnabled';
     const adFilteringActive = (typeof getBoolConfig === 'function') ? getBoolConfig(adFilteringStorageKey, true) : true;
     newUrlForBrowser.searchParams.set('af', adFilteringActive ? '1' : '0');
-
     newUrlForBrowser.searchParams.delete('position'); // New episodes start from beginning unless `nextSeekPosition` handles it
-
     window.history.pushState(
         { path: newUrlForBrowser.toString(), episodeIndex: currentEpisodeIndex },
         '',
         newUrlForBrowser.toString()
     );
-    console.log(`[PlayerApp] Browser URL updated via pushState: ${newUrlForBrowser.toString()}`);
-    console.log(`[PlayerApp] ---- Episode switch initiated for index ${currentEpisodeIndex} ----`);
-    // `isNavigatingToEpisode` will be reset to `false` in the `loadedmetadata` event handler.
 }
 window.playEpisode = playEpisode;   // 保持全局可调用
