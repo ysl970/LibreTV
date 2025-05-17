@@ -483,71 +483,89 @@ function initPlayer(videoUrl, sourceCode) {
             // ...
             video: {
                 url: videoUrl, type: 'hls',
+                // In js/player_app.js -> initPlayer -> video.customType.hls
                 customType: {
                     hls: function (video, player) { // `video` is DPlayer's video element, `player` is the DPlayer instance
-                        const newSourceUrlToLoad = _tempUrlForCustomHls || player.options.video.url; // Prioritize explicitly passed URL
-                        _tempUrlForCustomHls = ''; // Clear after use
+                        // Use the URL passed directly to switchVideo (via _tempUrlForCustomHls) or from player options.
+                        const newSourceUrlToLoad = _tempUrlForCustomHls || (player.options.video && player.options.video.url);
+                        _tempUrlForCustomHls = ''; // Clear after use, ensuring it's only used once per switchVideo call
 
-                        console.log(`[CustomHLS] Initializing for URL: ${newSourceUrlToLoad}. DPlayer options URL: ${player.options.video.url}`);
+                        console.log(`[CustomHLS] Initializing. Target URL: "${newSourceUrlToLoad}". DPlayer options URL: "${player.options.video ? player.options.video.url : 'N/A'}"`);
 
-                        if (window.currentHls) {
-                            console.log("[CustomHLS] Previous HLS instance (window.currentHls) exists. Detaching and destroying.");
-                            if (window.currentHls.media === video) { // Check if it's attached to the *current* video element
-                                console.log("[CustomHLS] Detaching from current video element.");
-                                window.currentHls.detachMedia();
+                        if (!newSourceUrlToLoad) {
+                            console.error("[CustomHLS] CRITICAL: No valid source URL provided to load.");
+                            if (typeof showError === 'function') showError("视频链接无效，无法加载。"); // Show error in UI
+                            // Trigger DPlayer's error event manually if HLS setup can't proceed
+                            if (player && typeof player.error === 'function') {
+                                player.error('No valid source URL for HLS customType.');
                             }
-                            window.currentHls.destroy();
-                            console.log("[CustomHLS] Previous HLS instance destroyed.");
+                            return; // Stop further execution if no URL
+                        }
+
+                        // 1. Destroy any existing HLS instance
+                        if (window.currentHls) {
+                            console.log("[CustomHLS] Previous HLS instance (window.currentHls) detected. Destroying it.");
+                            window.currentHls.destroy(); // This should also detach media if attached
+                            window.currentHls = null; // Clear the reference
                         } else {
                             console.log("[CustomHLS] No previous HLS instance (window.currentHls) found to destroy.");
                         }
 
-                        // Clean the video element from any previous source attributes or tags
-                        video.removeAttribute('src'); // Essential
-                        const existingSourceTag = video.querySelector('source');
-                        if (existingSourceTag) {
-                            console.log("[CustomHLS] Removing existing <source> tag.");
-                            existingSourceTag.remove();
+                        // 2. Aggressively reset the HTML video element state
+                        console.log("[CustomHLS] Resetting video element: pause, remove src/source attributes, call load().");
+                        video.pause();
+                        video.removeAttribute('src'); // Remove direct src attribute
+                        // Remove any child <source> elements
+                        while (video.firstChild) {
+                            video.removeChild(video.firstChild);
                         }
-                        // Consider video.load() if problems persist, but it can cause issues too.
-                        // video.pause(); // Ensure it's paused before loading new source. DPlayer might handle this.
+                        // Setting src to empty or calling load() can help reset the media element's internal state.
+                        // This is important to prevent the browser from holding onto the previous stream.
+                        video.src = ""; // Setting to empty can sometimes help clear buffers
+                        video.load();   // This tells the browser to discard the current media resource state.
 
+                        // 3. Create and configure the new HLS instance
                         console.log("[CustomHLS] Creating new HLS.js instance.");
                         const hls = new Hls(hlsConfig); // hlsConfig should be defined with ad filtering etc.
-                        window.currentHls = hls;
+                        window.currentHls = hls; // Store the new instance
 
+                        // 4. Setup HLS event listeners for the new instance
                         hls.on(Hls.Events.ERROR, function (event, data) {
-                            console.error(`[CustomHLS] HLS.js Error. Fatal: ${data.fatal}. Type: ${data.type}. Details: ${data.details}. URL: ${data.url || newSourceUrlToLoad}`);
+                            console.error(`[CustomHLS] HLS.js Error. Fatal: ${data.fatal}. Type: ${data.type}. Details: ${data.details}. URL: ${data.url || newSourceUrlToLoad}`, data);
                             if (data.fatal) {
-                                // Basic recovery attempts. More sophisticated logic might be needed.
-                                switch (data.type) {
-                                    case Hls.ErrorTypes.NETWORK_ERROR:
-                                        console.warn("[CustomHLS] Network error, trying hls.startLoad().");
-                                        try { hls.startLoad(); } catch (e) { console.error("Error on hls.startLoad()", e); }
-                                        break;
-                                    case Hls.ErrorTypes.MEDIA_ERROR:
-                                        console.warn("[CustomHLS] Media error, trying hls.recoverMediaError().");
-                                        try { hls.recoverMediaError(); } catch (e) { console.error("Error on hls.recoverMediaError()", e); }
-                                        break;
-                                    default:
-                                        console.error("[CustomHLS] Unrecoverable HLS error.");
-                                        // DPlayer itself might emit an error event which player_app.js can handle to show UI error.
-                                        break;
+                                if (player && typeof player.error === 'function') { // Use DPlayer's error mechanism
+                                    player.error(`HLS.js fatal error: ${data.type} - ${data.details}`);
+                                }
+                            } else if (data.details === 'bufferSeekOverHole' || data.details === 'bufferAppendError' || data.details === 'bufferNudgeOnStall') {
+                                console.warn(`[CustomHLS] HLS.js non-fatal media warning: ${data.details}. Attempting recovery if possible.`);
+                                // HLS.js often tries to recover from these. If seeking, it might indicate a bad spot in the stream.
+                                if (data.type === Hls.ErrorTypes.MEDIA_ERROR && typeof hls.recoverMediaError === 'function') {
+                                    try { hls.recoverMediaError(); } catch (e) { console.error("Error on hls.recoverMediaError()", e); }
                                 }
                             }
                         });
                         hls.on(Hls.Events.MANIFEST_LOADED, function (event, data) {
                             console.log(`[CustomHLS] HLS.js Manifest loaded successfully for: ${data.url}`);
+                            // DPlayer usually handles play if autoplay is on.
                         });
-                        // ... other HLS event listeners if you had them (FRAG_LOADED, LEVEL_LOADED etc. for loading screen)
+                        // Add other essential HLS event logging (FRAG_LOADED, LEVEL_LOADED for loading UI)
+                        hls.on(Hls.Events.FRAG_LOADED, () => {
+                            const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'none';
+                            // console.log("[CustomHLS] Fragment loaded.");
+                        });
+                        hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
+                            const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'none';
+                            // console.log(`[CustomHLS] Level loaded. Bitrate: ${data.bitrate}`);
+                        });
 
+
+                        // 5. Attach HLS to the media element and load the source
                         console.log(`[CustomHLS] Attaching media element to new HLS instance.`);
                         hls.attachMedia(video);
 
                         hls.on(Hls.Events.MEDIA_ATTACHED, function () {
                             console.log(`[CustomHLS] Media element attached. Loading source via hls.loadSource(): ${newSourceUrlToLoad}`);
                             hls.loadSource(newSourceUrlToLoad);
-                            // DPlayer will typically call video.play() if autoplay is enabled.
                         });
                     }
                 }
@@ -593,53 +611,69 @@ function addDPlayerEventListeners() {
         }
     });
 
+    // In js/player_app.js -> addDPlayerEventListeners function
 // In js/player_app.js -> addDPlayerEventListeners function
 dp.on('loadedmetadata', function () {
     const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
-    if (debugMode) console.log(`[PlayerApp][loadedmetadata] Event triggered. Video duration: ${dp.video.duration}`);
+    if (debugMode) console.log(`[PlayerApp][loadedmetadata] Event triggered. dp valid: ${!!(dp && dp.video)}, Duration: ${dp && dp.video ? dp.video.duration : 'N/A'}`);
 
     const loadingEl = document.getElementById('loading');
     if (loadingEl) {
         loadingEl.style.display = 'none';
         document.documentElement.classList.remove('show-loading');
     }
-    videoHasEnded = false; // Reset for the new video
+    videoHasEnded = false;
 
     if (typeof setupProgressBarPreciseClicks === 'function') setupProgressBarPreciseClicks();
 
-    // Seek to restored position if nextSeekPosition was set
-    if (nextSeekPosition > 0 && dp.video && dp.video.duration > 0) {
+    // Safely attempt to seek if nextSeekPosition is set
+    if (nextSeekPosition > 0 && dp && dp.video && dp.video.duration > 0) {
         if (nextSeekPosition < dp.video.duration) {
-            console.log(`[PlayerApp][loadedmetadata] Seeking to nextSeekPosition: ${nextSeekPosition}`);
-            dp.seek(nextSeekPosition);
-            if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(nextSeekPosition);
+            if (typeof dp.seek === 'function') {
+                console.log(`[PlayerApp][loadedmetadata] Attempting to seek to nextSeekPosition: ${nextSeekPosition}`);
+                dp.seek(nextSeekPosition);
+                if (typeof showPositionRestoreHint === 'function') showPositionRestoreHint(nextSeekPosition);
+            } else {
+                console.error("[PlayerApp][loadedmetadata] dp.seek is not a function! Cannot restore position.");
+            }
         } else {
-            console.warn(`[PlayerApp][loadedmetadata] nextSeekPosition (${nextSeekPosition}) is beyond or at video duration (${dp.video.duration}). Not seeking.`);
+            console.warn(`[PlayerApp][loadedmetadata] nextSeekPosition (${nextSeekPosition}) is beyond video duration (${dp.video.duration}). Not seeking.`);
         }
     }
-    nextSeekPosition = 0; // Reset after attempting to use it
+    nextSeekPosition = 0; // Reset after use
 
-    // Save to viewing history for the newly loaded episode (initial state or resumed state)
     if (typeof saveToHistory === 'function') {
-        console.log("[PlayerApp][loadedmetadata] Calling saveToHistory for the new episode.");
-        saveToHistory(); // This function should capture current time after seek
+        // console.log("[PlayerApp][loadedmetadata] Calling saveToHistory for the new episode.");
+        saveToHistory(); // Should capture current time, hopefully after seek if it occurred
     }
     if (typeof startProgressSaveInterval === 'function') {
-        console.log("[PlayerApp][loadedmetadata] Calling startProgressSaveInterval.");
+        // console.log("[PlayerApp][loadedmetadata] Calling startProgressSaveInterval.");
         startProgressSaveInterval();
     }
 
     isNavigatingToEpisode = false;
     if (debugMode) console.log("[PlayerApp][loadedmetadata] isNavigatingToEpisode RESET to false.");
     
-    // Ensure playback starts if autoplay is intended or if DPlayer hasn't started it.
-    // DPlayer's autoplay usually handles this if video was not playing due to loading.
-    if (dp.video.paused && dp.options.autoplay) { // dp.options.autoplay is DPlayer's internal autoplay setting
-         console.log("[PlayerApp][loadedmetadata] Video is paused but DPlayer autoplay is true, attempting dp.play().");
-         dp.play().catch(e => console.warn("[PlayerApp][loadedmetadata] Autoplay after loadedmetadata was prevented:", e));
-    } else if (dp.video.paused && autoplayEnabled) { // autoplayEnabled is our custom setting
-         console.log("[PlayerApp][loadedmetadata] Video is paused but custom autoplayEnabled is true, attempting dp.play().");
-         dp.play().catch(e => console.warn("[PlayerApp][loadedmetadata] Autoplay after loadedmetadata (custom) was prevented:", e));
+    // Safer dp.play() call:
+    if (dp && dp.video && dp.video.paused) { // Ensure dp and dp.video are valid
+        if (typeof dp.play === 'function') {
+            // Check DPlayer's own autoplay option (from constructor) and our custom autoplayEnabled flag
+            const dplayerAutoplayOption = dp.options && dp.options.autoplay; // DPlayer stores constructor options here
+            if (dplayerAutoplayOption || autoplayEnabled) { 
+                 console.log(`[PlayerApp][loadedmetadata] Video is paused. Attempting dp.play(). DPlayer internal autoplay: ${dplayerAutoplayOption}, Custom autoplayEnabled: ${autoplayEnabled}`);
+                 dp.play().catch(e => {
+                    console.warn("[PlayerApp][loadedmetadata] dp.play() was prevented by browser or an error occurred. User may need to click play.", e);
+                 });
+            } else {
+                // console.log("[PlayerApp][loadedmetadata] Video is paused, but autoplay is disabled.");
+            }
+        } else {
+            console.error("[PlayerApp][loadedmetadata] CRITICAL: dp.play is not a function! DPlayer instance might be corrupted or not fully initialized at this point.", dp);
+        }
+    } else if (dp && dp.video && !dp.video.paused) {
+        // console.log("[PlayerApp][loadedmetadata] Video is already playing or not ready to check paused state.");
+    } else {
+        console.warn("[PlayerApp][loadedmetadata] dp instance or dp.video not available for play check after loadedmetadata.");
     }
 });
 
@@ -1382,7 +1416,7 @@ function playEpisode(index) { // index is the target new episode's 0-based index
     document.title = `${currentVideoTitle} - 第 ${currentEpisodeIndex + 1} 集 - ${siteName}`;
     const videoTitleElement = document.getElementById('video-title');
     if (videoTitleElement) videoTitleElement.textContent = `${currentVideoTitle} (第 ${currentEpisodeIndex + 1} 集)`;
-    
+
     if (typeof updateEpisodeInfo === 'function') updateEpisodeInfo();
     if (typeof renderEpisodes === 'function') renderEpisodes(); // This will re-render buttons, new one highlighted
     if (typeof updateButtonStates === 'function') updateButtonStates();
@@ -1403,7 +1437,7 @@ function playEpisode(index) { // index is the target new episode's 0-based index
     // 6. Instruct DPlayer to switch video source
     _tempUrlForCustomHls = newEpisodeUrl; // Pass URL to customType.hls via module scope as a fallback
     console.log(`[PlayerApp] Calling dp.switchVideo with URL: ${newEpisodeUrl}. _tempUrlForCustomHls SET.`);
-    
+
     dp.video.pause(); // Explicitly pause before switch (helps some browsers/HLS.js versions)
     // dp.video.innerHTML = ""; // Clear any <source> tags DPlayer might have added if not using customType
     // dp.video.removeAttribute('src'); // DPlayer or customType.hls should handle this
@@ -1428,7 +1462,7 @@ function playEpisode(index) { // index is the target new episode's 0-based index
     const adFilteringStorageKey = (PLAYER_CONFIG && PLAYER_CONFIG.adFilteringStorage) ? PLAYER_CONFIG.adFilteringStorage : 'adFilteringEnabled';
     const adFilteringActive = (typeof getBoolConfig === 'function') ? getBoolConfig(adFilteringStorageKey, true) : true;
     newUrlForBrowser.searchParams.set('af', adFilteringActive ? '1' : '0');
-    
+
     newUrlForBrowser.searchParams.delete('position'); // New episodes start from beginning unless `nextSeekPosition` handles it
 
     window.history.pushState(
