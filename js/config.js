@@ -153,12 +153,12 @@ const API_SITES = {
          name: '玉兔资源',
          adult: true
      },
-    yutu: {
+    hmen: {
          api: 'https://hsex.men/',
          name: '好色TV1',
          adult: true
      },
-    yutu: {
+    hicu: {
          api: 'https://hsex.icu/',
          name: '好色TV2',
          adult: true
