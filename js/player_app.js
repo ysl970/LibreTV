@@ -1014,8 +1014,6 @@ function showShortcutHint(text, direction) {
     shortcutHintTimeout = setTimeout(() => hintElement.classList.remove('show'), 1500);
 }
 
-// 在 js/player_app.js 文件中，可以放在 setupLongPressSpeedControl 函数的上方或下方
-
 /**
  * 设置双击播放/暂停功能
  * @param {object} dpInstance DPlayer 实例
@@ -1088,27 +1086,17 @@ function setupLongPressSpeedControl() {
     }
 
     // 全局捕获 contextmenu 事件，确保右半区拦截
-    if (!setupLongPressSpeedControl._docCtxGuard) {
-        const ctxPreventer = (e) => {
-            if (!isMobile()) return;
-
-            // 锁屏时任何位置都拦
-            if (isScreenLocked) { e.preventDefault(); return; }
-
-            const rect = playerVideoWrap.getBoundingClientRect();
-            // 使用坐标判断事件是否在播放器的右半区
-            if (
-                e.clientX < rect.left || e.clientX > rect.right ||
-                e.clientY < rect.top || e.clientY > rect.bottom
-            ) return; // 如果不在右半区，放行
-
-            if (e.clientX > rect.left + rect.width / 2) {
-                e.preventDefault();               // 只挡右半区
-            }
-        };
-        document.addEventListener('contextmenu', ctxPreventer, { capture: true });
-        setupLongPressSpeedControl._docCtxGuard = true;
-    }
+    playerVideoWrap.addEventListener('contextmenu', function (e) {
+        const rect = playerVideoWrap.getBoundingClientRect();
+        const x = e.clientX, y = e.clientY;
+        if (
+            x >= rect.left && x <= rect.right &&
+            y >= rect.top && y <= rect.bottom &&
+            x > rect.left + rect.width / 2
+        ) {
+            e.preventDefault();
+        }
+    }, { capture: true });
 
     /* ---------- 2. iOS touch-callout 兜底 ---------- */
     if (!document.getElementById('dp-touch-callout-fix')) {
