@@ -1077,6 +1077,18 @@ function setupDoubleClickToPlayPause(dpInstance, videoWrapElement) {
 }
 
 function setupLongPressSpeedControl() {
+    const ctxPreventer = (e) => {
+        if (!isMobile()) return;
+
+        const rect = playerVideoWrap.getBoundingClientRect();
+        const inRightHalf = e.clientX > rect.left + rect.width / 2;
+
+        if (inRightHalf) {
+            e.preventDefault();
+        }
+    };
+    document.addEventListener('contextmenu', ctxPreventer, { capture: true });
+
     if (!dp) return;
 
     const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
