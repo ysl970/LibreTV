@@ -1077,11 +1077,6 @@ function setupDoubleClickToPlayPause(dpInstance, videoWrapElement) {
 }
 
 function setupLongPressSpeedControl() {
-    // 检查是否已绑定过，避免重复绑定
-    if (setupLongPressSpeedControl._isBound) return;
-    setupLongPressSpeedControl._isBound = true;
-
-    // 原有代码逻辑（从 `setupLongPressSpeedControl` 函数中提取）
     if (!dp) return;
 
     const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
@@ -1090,10 +1085,58 @@ function setupLongPressSpeedControl() {
         return;
     }
 
-    // 移除旧的 contextmenu 监听器（避免重复绑定）
-    document.removeEventListener('contextmenu', ctxPreventer);
+    // 全局捕获 contextmenu 事件，确保右半区拦截
+    if (!setupLongPressSpeedControl._docCtxGuard) {
+        const ctxPreventer = (e) => {
+            if (!isMobile()) {
+                console.log('Not a mobile device, skipping contextmenu prevention.');
+                return;
+            }
 
-    // 新增触摸事件处理
+            // 锁屏时任何位置都拦
+            if (isScreenLocked) {
+                e.preventDefault();
+                console.log('Screen is locked, preventing contextmenu.');
+                return;
+            }
+
+            const rect = playerVideoWrap.getBoundingClientRect();
+            // 使用坐标判断事件是否在播放器的右半区
+            if (
+                e.clientX < rect.left || e.clientX > rect.right ||
+                e.clientY < rect.top || e.clientY > rect.bottom
+            ) {
+                console.log('Click outside player area, skipping contextmenu prevention.');
+                return;
+            }
+
+            if (e.clientX > rect.left + rect.width / 2) {
+                e.preventDefault();
+                console.log('Click in right half of player, preventing contextmenu.');
+            }
+        };
+        document.addEventListener('contextmenu', ctxPreventer, { capture: true });
+        setupLongPressSpeedControl._docCtxGuard = true;
+    }
+
+    /* ---------- 2. iOS touch - callout 兜底 ---------- */
+    if (!document.getElementById('dp-touch-callout-fix')) {
+        const st = document.createElement('style');
+        st.id = 'dp-touch-callout-fix';
+        st.textContent = `
+            #dplayer .dplayer-video-wrap video {
+                -webkit-touch-callout: none;
+                touch-callout: none;
+            }`;
+        document.head.appendChild(st);
+    }
+
+    /* ---------- 3. 原有长按加速逻辑（区分短按 / 长按） ---------- */
+    let longPressTimer = null,
+        originalSpeed = 1,
+        speedChangedByLongPress = false,
+        isLongPress = false;
+
     playerVideoWrap.addEventListener('touchstart', (e) => {
         if (isScreenLocked) return;
 
@@ -1102,33 +1145,41 @@ function setupLongPressSpeedControl() {
         const inRightHalf = clientX > rect.left + rect.width / 2;
 
         if (!inRightHalf) {
-            // 非右半区：不阻止默认行为
+            clearTimeout(longPressTimer);
+            speedChangedByLongPress = false;
             return;
         }
 
-        // 右半区：阻止系统默认行为（如长按菜单）
-        e.preventDefault(); // 阻止默认的触摸操作
-        e.stopPropagation(); // 防止事件冒泡
-
-        // 启动长按计时器
+        // 右半区：设置长按计时器，<300 ms 视为“短按”→ 交给 DPlayer 自己处理
         originalSpeed = dp.video.playbackRate;
         clearTimeout(longPressTimer);
         speedChangedByLongPress = false;
         isLongPress = false;
 
+        const startEvent = e;
         longPressTimer = setTimeout(() => {
             isLongPress = true;
+            startEvent.preventDefault();
+
             if (isScreenLocked || dp.video.paused) return;
             dp.speed(2.0);
             speedChangedByLongPress = true;
             showMessage?.('播放速度: 2.0x', 'info', 1000);
         }, 300);
-    }, { passive: false }); // 设置 passive: false 以允许 preventDefault()
+    }, { passive: false });
 
+    const endLongPress = () => {
+        clearTimeout(longPressTimer);
+        if (isLongPress && speedChangedByLongPress) {
+            dp.speed(originalSpeed);
+            showMessage?.(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
+        }
+        isLongPress = false;
+        speedChangedByLongPress = false;
+    };
     playerVideoWrap.addEventListener('touchend', endLongPress);
     playerVideoWrap.addEventListener('touchcancel', endLongPress);
 }
-
 
 
 function showPositionRestoreHint(position) {

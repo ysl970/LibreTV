@@ -253,9 +253,3 @@ input:checked+.slider:before {
   display: none !important;
   /* 使用 !important 确保覆盖 Tailwind 的类 */
 }
-
-/* 在样式文件中添加 */
-#dplayer .dplayer-video-wrap video {
-  -webkit-touch-callout: none; /* 禁用 iOS 的长按菜单 */
-  touch-callout: none;         /* 禁用 Android 的长按菜单 */
-}
