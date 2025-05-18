@@ -1080,64 +1080,74 @@ function setupDoubleClickToPlayPause(dpInstance, videoWrapElement) {
 
 function setupLongPressSpeedControl() {
     if (!dp) return;
+
     const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
-    if (!playerVideoWrap) {
-        console.warn('DPlayer video wrap for long press not found.');
+    if (!playerVideoWrap) {                      // ← 缺失的空值守护
+        console.warn('DPlayer video wrap not found.');
         return;
     }
 
-    let longPressTimer = null;
-    let originalSpeed = 1.0;
-    let speedChangedByLongPress = false; // Flag to track if speed was changed by our long press
+    /* ---------- 1. 全局 contextmenu 捕获 ---------- */
+    if (!setupLongPressSpeedControl._docCtxGuard) {
+        const ctxPreventer = (e) => {
+            if (!isMobile()) return;
+            if (!playerVideoWrap.contains(e.target)) return;
 
-    // TOUCHSTART: Handles setting up the long press for speed change
-    playerVideoWrap.addEventListener('touchstart', function (e) {
+            // 锁屏时任何位置都拦
+            if (isScreenLocked) { e.preventDefault(); return; }
+
+            const rect = playerVideoWrap.getBoundingClientRect();
+            if (e.clientX > rect.left + rect.width / 2) {
+                e.preventDefault();               // 只挡右半区
+            }
+        };
+        document.addEventListener('contextmenu', ctxPreventer, { capture:true });
+        setupLongPressSpeedControl._docCtxGuard = true;
+    }
+
+    /* ---------- 2. iOS touch-callout 兜底 ---------- */
+    if (!document.getElementById('dp-touch-callout-fix')) {
+        const st = document.createElement('style');
+        st.id = 'dp-touch-callout-fix';
+        st.textContent = `
+            #dplayer .dplayer-video-wrap video {
+                -webkit-touch-callout: none;
+                touch-callout: none;
+            }`;
+        document.head.appendChild(st);
+    }
+    /* ---------- 3. 原有长按加速逻辑 ---------- */
+    let longPressTimer = null, originalSpeed = 1, speedChangedByLongPress = false;
+
+    playerVideoWrap.addEventListener('touchstart', (e) => {
         if (isScreenLocked) return;
 
-        const touchX = e.touches[0].clientX;
+        const { clientX } = e.touches[0];
         const rect = playerVideoWrap.getBoundingClientRect();
-
-        // Only set up long press if touch starts on the right half
-        if (touchX > rect.left + rect.width / 2) {
-            // DO NOT call e.preventDefault() here.
-            // This allows DPlayer to handle short taps normally for UI toggle.
-            // Context menu will be handled by the 'contextmenu' event listener.
-
-            originalSpeed = dp.video.playbackRate;
-            if (longPressTimer) clearTimeout(longPressTimer);
-
-            speedChangedByLongPress = false; // Reset before setting timer
-
-            longPressTimer = setTimeout(() => {
-                if (isScreenLocked || !dp || !dp.video || dp.video.paused) {
-                    speedChangedByLongPress = false; // Ensure flag is false if bailing
-                    return;
-                }
-                dp.speed(2.0);
-                speedChangedByLongPress = true; // Set flag only if speed actually changes
-                if (typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
-            }, 300);
-        } else {
-            // Touch started on the left half, clear any pending long press timer from a previous touch
-            if (longPressTimer) clearTimeout(longPressTimer);
-            speedChangedByLongPress = false;
+        if (clientX <= rect.left + rect.width / 2) {           // 左半区：直接清理
+            clearTimeout(longPressTimer); speedChangedByLongPress = false;
+            return;
         }
-    }, { passive: true }); // IMPORTANT: Use passive: true if not calling preventDefault
 
-    // TOUCHEND / TOUCHCANCEL: Handles reverting speed if long press occurred
-    const endLongPress = function () {
-        if (longPressTimer) clearTimeout(longPressTimer);
-        longPressTimer = null;
+        originalSpeed = dp.video.playbackRate;
+        clearTimeout(longPressTimer);
+        speedChangedByLongPress = false;
 
+        longPressTimer = setTimeout(() => {
+            if (isScreenLocked || dp.video.paused) return;
+            dp.speed(2.0); speedChangedByLongPress = true;
+            showMessage?.('播放速度: 2.0x', 'info', 1000);
+        }, 300);
+    }, { passive: false });     // ← 若将来需要阻止默认，可改为 false
+
+    const endLongPress = () => {
+        clearTimeout(longPressTimer);
         if (speedChangedByLongPress) {
-            if (dp && dp.video) {
-                dp.speed(originalSpeed);
-            }
-            if (typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
+            dp.speed(originalSpeed);
+            showMessage?.(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
         }
-        speedChangedByLongPress = false; // Reset flag on touch end/cancel
+        speedChangedByLongPress = false;
     };
-
     playerVideoWrap.addEventListener('touchend', endLongPress);
     playerVideoWrap.addEventListener('touchcancel', endLongPress);
 
