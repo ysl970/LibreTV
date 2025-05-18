@@ -1007,66 +1007,72 @@ function showShortcutHint(text, direction) {
 }
 
 // In js/player_app.js
-// Find the setupLongPressSpeedControl function
+// Find and replace the entire setupLongPressSpeedControl function with this:
 
 function setupLongPressSpeedControl() {
     if (!dp) return;
     const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
-    if (!playerVideoWrap) { console.warn('DPlayer video wrap for long press not found.'); return; }
+    if (!playerVideoWrap) {
+        console.warn('DPlayer video wrap for long press not found.');
+        return;
+    }
 
     let longPressTimer = null;
     let originalSpeed = 1.0;
     let speedChangedByLongPress = false;
-    let potentialLongPress = false; // Flag to indicate if a long press might be happening
 
     playerVideoWrap.addEventListener('touchstart', function (e) {
-        potentialLongPress = false; // Reset flag
         if (isScreenLocked || dp.video.paused) return;
 
         const touchX = e.touches[0].clientX;
         const rect = playerVideoWrap.getBoundingClientRect();
 
-        // Only consider long press if touch is on the right half of the player
+        // Check if the touch is on the right half of the player
         if (touchX > rect.left + rect.width / 2) {
-            potentialLongPress = true; // This touch *could* become a long press
-            // If you still want to prevent context menu on mobile for this specific area:
-            if (isMobile()) {
-                // e.preventDefault(); // Consider if this is strictly needed here or can be delayed
-                // If DPlayer handles context menu prevention, this might not be needed
-                // If you DO need it, this is a better place than at the very top.
+            // This is the long-press activation zone.
+            // Prevent default behavior (like context menu) for this zone on mobile.
+            if (isMobile() && e.cancelable) {
+                e.preventDefault();
             }
 
             originalSpeed = dp.video.playbackRate;
+            // Clear any existing timer to prevent multiple instances
+            if (longPressTimer) clearTimeout(longPressTimer);
             longPressTimer = setTimeout(() => {
-                if (isScreenLocked || dp.video.paused) return; // Double check
-
-                // If preventDefault wasn't called earlier and you need it now for the active long press:
-                if (isMobile() && potentialLongPress && e.cancelable) { // Check if event is cancelable
-                    e.preventDefault();
+                if (isScreenLocked || dp.video.paused) { // Re-check conditions
+                    // Ensure speedChangedByLongPress is false if we bail out
+                    speedChangedByLongPress = false;
+                    return;
                 }
-
                 dp.speed(2.0);
                 speedChangedByLongPress = true;
                 if (typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
             }, 300); // 300ms delay for long press
+        } else {
+            // Touch is on the left half. Do NOT preventDefault here.
+            // Allow DPlayer to handle tap for controls.
+            // It's also good practice to clear the timer if a touch starts on the left,
+            // in case a multi-touch scenario or drag occurred.
+            if (longPressTimer) clearTimeout(longPressTimer);
+            speedChangedByLongPress = false;
         }
-    }, { passive: !isMobile() }); // MODIFIED: Set passive: true if NOT mobile, or if you handle preventDefault carefully
-    // If you call preventDefault conditionally, you still need passive: false for those cases.
-    // A simpler approach if conditional preventDefault is tricky:
-    // }, { passive: false }); // And then be very careful with when e.preventDefault() is called.
+    }, { passive: false }); // passive: false is necessary if you intend to call preventDefault
 
     const endLongPress = function () {
         if (longPressTimer) clearTimeout(longPressTimer);
-        longPressTimer = null;
-        if (speedChangedByLongPress) {
-            dp.speed(originalSpeed);
-            speedChangedByLongPress = false;
+        longPressTimer = null; // Clear the timer ID
+
+        if (speedChangedByLongPress) { // Only revert speed if it was changed
+            if (dp && dp.video) { // Ensure dp and dp.video are still valid
+                dp.speed(originalSpeed);
+            }
+            speedChangedByLongPress = false; // Reset the flag
             if (typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
         }
-        potentialLongPress = false; // Reset flag
     };
+
     playerVideoWrap.addEventListener('touchend', endLongPress);
-    playerVideoWrap.addEventListener('touchcancel', endLongPress);
+    playerVideoWrap.addEventListener('touchcancel', endLongPress); // Important for interruptions
 }
 
 function showPositionRestoreHint(position) {
