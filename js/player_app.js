@@ -1006,6 +1006,9 @@ function showShortcutHint(text, direction) {
     shortcutHintTimeout = setTimeout(() => hintElement.classList.remove('show'), 1500);
 }
 
+// In js/player_app.js
+// Find the setupLongPressSpeedControl function
+
 function setupLongPressSpeedControl() {
     if (!dp) return;
     const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
@@ -1014,25 +1017,43 @@ function setupLongPressSpeedControl() {
     let longPressTimer = null;
     let originalSpeed = 1.0;
     let speedChangedByLongPress = false;
+    let potentialLongPress = false; // Flag to indicate if a long press might be happening
 
     playerVideoWrap.addEventListener('touchstart', function (e) {
-        if (isMobile()) {
-            e.preventDefault(); // 阻止默认行为，禁止右键菜单
-        }
-        if (isScreenLocked || dp.video.paused) return; // Ignore if screen locked or paused
+        potentialLongPress = false; // Reset flag
+        if (isScreenLocked || dp.video.paused) return;
+
         const touchX = e.touches[0].clientX;
         const rect = playerVideoWrap.getBoundingClientRect();
-        // Only trigger if touch is on the right half of the player
+
+        // Only consider long press if touch is on the right half of the player
         if (touchX > rect.left + rect.width / 2) {
+            potentialLongPress = true; // This touch *could* become a long press
+            // If you still want to prevent context menu on mobile for this specific area:
+            if (isMobile()) {
+                // e.preventDefault(); // Consider if this is strictly needed here or can be delayed
+                // If DPlayer handles context menu prevention, this might not be needed
+                // If you DO need it, this is a better place than at the very top.
+            }
+
             originalSpeed = dp.video.playbackRate;
             longPressTimer = setTimeout(() => {
                 if (isScreenLocked || dp.video.paused) return; // Double check
+
+                // If preventDefault wasn't called earlier and you need it now for the active long press:
+                if (isMobile() && potentialLongPress && e.cancelable) { // Check if event is cancelable
+                    e.preventDefault();
+                }
+
                 dp.speed(2.0);
                 speedChangedByLongPress = true;
                 if (typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
             }, 300); // 300ms delay for long press
         }
-    }, { passive: false }); // 设置为 false 以确保 preventDefault 生效
+    }, { passive: !isMobile() }); // MODIFIED: Set passive: true if NOT mobile, or if you handle preventDefault carefully
+    // If you call preventDefault conditionally, you still need passive: false for those cases.
+    // A simpler approach if conditional preventDefault is tricky:
+    // }, { passive: false }); // And then be very careful with when e.preventDefault() is called.
 
     const endLongPress = function () {
         if (longPressTimer) clearTimeout(longPressTimer);
@@ -1042,6 +1063,7 @@ function setupLongPressSpeedControl() {
             speedChangedByLongPress = false;
             if (typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
         }
+        potentialLongPress = false; // Reset flag
     };
     playerVideoWrap.addEventListener('touchend', endLongPress);
     playerVideoWrap.addEventListener('touchcancel', endLongPress);
