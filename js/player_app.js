@@ -22,6 +22,38 @@ function SQuery(selector, callback, timeout = 5000, interval = 100) {
     };
     check();
 }
+
+// 递归禁止contextmenu，防止安卓右半边长按出现系统菜单
+function disableContextMenuDeep(element) {
+    if (!element) return;
+    element.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }, { passive: false });
+    for (const child of element.children || []) {
+        disableContextMenuDeep(child);
+    }
+}
+// 自动加属性防止安卓video系统菜单
+function patchAndroidVideoHack() {
+    if (!/Android/i.test(navigator.userAgent)) return;
+    setTimeout(function () {
+        const wrap = document.querySelector('#dplayer .dplayer-video-wrap');
+        const dplayerMain = document.getElementById('dplayer');
+        if (wrap) disableContextMenuDeep(wrap);
+        if (dplayerMain) disableContextMenuDeep(dplayerMain);
+        const dpvideo = wrap ? wrap.querySelector('video') : null;
+        if (dpvideo) {
+            disableContextMenuDeep(dpvideo);
+            // 这些属性可减少系统菜单
+            dpvideo.setAttribute('controlsList', 'nodownload nofullscreen noremoteplayback');
+            dpvideo.setAttribute('webkit-playsinline', 'true');
+            dpvideo.setAttribute('playsinline', 'true');
+        }
+    }, 800); // 确保DPlayer结构已渲染
+}
+
 // --- 模块内变量 ---
 let isNavigatingToEpisode = false;   // 正在换集时置 true，避免误保存
 let currentVideoTitle = '';
@@ -579,6 +611,9 @@ function initPlayer(videoUrl, sourceCode) {
 
         // Add DPlayer event listeners
         addDPlayerEventListeners();
+
+        // 安卓特殊hack，防止右半屏菜单
+        patchAndroidVideoHack();
 
     } catch (playerError) {
         console.error("Failed to initialize DPlayer:", playerError);
@@ -1449,8 +1484,6 @@ function getVideoId() {
  * @param {number} index 目标集数索引（0-based）
  */
 
-// In js/player_app.js
-
 function playEpisode(index) { // index is the target new episode's 0-based index
 
     if (!dp) {
@@ -1546,6 +1579,7 @@ function playEpisode(index) { // index is the target new episode's 0-based index
         url: newEpisodeUrl,
         type: 'hls',
     });
+    patchAndroidVideoHack();
     videoHasEnded = false; // Reset for autoplay-next logic for the new episode
 
     // 7. Update browser URL using history.pushState (no page reload)
