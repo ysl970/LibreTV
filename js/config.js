@@ -23,11 +23,11 @@ const API_SITES = {
     // 影视资源
     heimuer: { api: 'https://json.heimuer.xyz', name: '黑木耳', detail: 'https://heimuer.tv' },
     bfzy: { api: 'https://bfzyapi.com', name: '暴风资源' },
-    dyttzy: { api: 'http://caiji.dyttzyapi.com', name: '电影天堂', detail: 'http://caiji.dyttzyapi.com' },
     tyyszy: { api: 'https://tyyszy.com', name: '天涯资源' },
     ruyi: { api: 'https://cj.rycjapi.com', name: '如意资源' },
     dbzy: { api: 'https://dbzy.com', name: '豆瓣资源' },
     wolong: { api: 'https://wolongzyw.com', name: '卧龙资源' },
+    dyttzy: { api: 'http://caiji.dyttzyapi.com', name: '电影天堂', detail: 'http://caiji.dyttzyapi.com' },
     zy360: { api: 'https://360zy.com', name: '360资源' },
     hwba: { api: 'https://cjhwba.com', name: '华为吧资源' },
     jisu: { api: 'https://jszyapi.com', name: '极速资源', detail: 'https://jszyapi.com' },
