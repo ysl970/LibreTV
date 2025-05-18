@@ -1121,42 +1121,50 @@ function setupLongPressSpeedControl() {
             }`;
         document.head.appendChild(st);
     }
-    /* ---------- 3. 原有长按加速逻辑 ---------- */
-    let longPressTimer = null, originalSpeed = 1, speedChangedByLongPress = false;
+
+    /* ---------- 3. 原有长按加速逻辑（区分短按 / 长按） ---------- */
+    let longPressTimer = null,
+        originalSpeed = 1,
+        speedChangedByLongPress = false,
+        isLongPress = false;   // 新增：标记本次触摸是否判定为长按
 
     playerVideoWrap.addEventListener('touchstart', (e) => {
         if (isScreenLocked) return;
 
         const { clientX } = e.touches[0];
         const rect = playerVideoWrap.getBoundingClientRect();
-        /* ---------- 关键新增 ---------- */
-        if (clientX > rect.left + rect.width / 2) {
-            e.preventDefault();             // 右半区：立即阻止系统长按菜单
-        }
-        /* -------------------------------- */
+        const inRightHalf = clientX > rect.left + rect.width / 2;
 
-        if (clientX <= rect.left + rect.width / 2) {           // 左半区：直接清理
+        if (!inRightHalf) {
             clearTimeout(longPressTimer); speedChangedByLongPress = false;
             return;
         }
 
+        // 右半区：设置长按计时器，<300 ms 视为“短按”→ 交给 DPlayer 自己处理
         originalSpeed = dp.video.playbackRate;
         clearTimeout(longPressTimer);
         speedChangedByLongPress = false;
+        isLongPress = false;
 
+        const startEvent = e;                      // 保存事件对象，稍后 preventDefault()
         longPressTimer = setTimeout(() => {
+            isLongPress = true;                    // 标记为长按
+            startEvent.preventDefault();           // 此时再阻止系统菜单（≈300 ms < 500 ms）
+
             if (isScreenLocked || dp.video.paused) return;
-            dp.speed(2.0); speedChangedByLongPress = true;
+            dp.speed(2.0);
+            speedChangedByLongPress = true;
             showMessage?.('播放速度: 2.0x', 'info', 1000);
         }, 300);
     }, { passive: false });     // ← 若将来需要阻止默认，可改为 false
 
     const endLongPress = () => {
         clearTimeout(longPressTimer);
-        if (speedChangedByLongPress) {
+        if (isLongPress && speedChangedByLongPress) {  // 仅长按时才恢复
             dp.speed(originalSpeed);
             showMessage?.(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
         }
+        isLongPress = false;
         speedChangedByLongPress = false;
     };
     playerVideoWrap.addEventListener('touchend', endLongPress);
