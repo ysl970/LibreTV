@@ -39,6 +39,9 @@ let progressSaveInterval = null;
 let isScreenLocked = false;
 let nextSeekPosition = 0; // Stores the position to seek to for the next episode
 let _tempUrlForCustomHls = ''; // Temporary holder for the URL if DPlayer options are stale in customType
+let lastTapTimeForDoubleTap = 0;
+
+const DOUBLE_TAP_INTERVAL = 300; // 双击的最大时间间隔 (毫秒)
 
 const REMEMBER_EPISODE_PROGRESS_ENABLED_KEY = 'playerRememberEpisodeProgressEnabled'; // 开关状态的键名
 const VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY = 'videoSpecificEpisodeProgresses'; // 各视频各集进度的键名
@@ -586,6 +589,7 @@ function initPlayer(videoUrl, sourceCode) {
 function addDPlayerEventListeners() {
     if (!dp) return;
     const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
+    const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap'); // 获取 videoWrap
 
     dp.on('fullscreen', () => {
         if (debugMode) console.log("[PlayerApp] DPlayer event: fullscreen");
@@ -710,6 +714,10 @@ function addDPlayerEventListeners() {
     });
 
     setupLongPressSpeedControl();
+    // 新增：调用双击处理函数
+    if (playerVideoWrap) { 
+        setupDoubleClickToPlayPause(dp, playerVideoWrap);
+    }
 
     dp.on('seeking', function () { if (debugMode) console.log("[PlayerApp] DPlayer event: seeking"); isUserSeeking = true; videoHasEnded = false; });
     dp.on('seeked', function () {
@@ -1006,8 +1014,69 @@ function showShortcutHint(text, direction) {
     shortcutHintTimeout = setTimeout(() => hintElement.classList.remove('show'), 1500);
 }
 
-// In js/player_app.js
-// Find and replace the entire setupLongPressSpeedControl function with this:
+// 在 js/player_app.js 文件中，可以放在 setupLongPressSpeedControl 函数的上方或下方
+
+/**
+ * 设置双击播放/暂停功能
+ * @param {object} dpInstance DPlayer 实例
+ * @param {HTMLElement} videoWrapElement 视频的包装元素 (通常是 .dplayer-video-wrap)
+ */
+function setupDoubleClickToPlayPause(dpInstance, videoWrapElement) {
+        if (!dpInstance || !videoWrapElement) {
+            console.warn('[DoubleClick] DPlayer instance or video wrap element not provided.');
+            return;
+        }
+    
+        if (videoWrapElement._doubleTapListenerAttached) {
+            return; // 防止重复绑定监听器
+        }
+    
+        videoWrapElement.addEventListener('touchend', function(e) {
+            if (isScreenLocked) { // isScreenLocked 是您代码中已有的全局变量
+                return; // 屏幕锁定时，不响应双击
+            }
+    
+            // 选择器数组，用于判断触摸是否发生在DPlayer的控件上
+            const controlSelectors = [
+                '.dplayer-controller', // DPlayer 主控制条区域
+                '.dplayer-setting',    // 设置菜单
+                '.dplayer-comment',    // 弹幕相关（如果启用并可交互）
+                '.dplayer-notice',     // 播放器通知
+                '#episode-grid button',// 外部的选集按钮
+                // 可以根据需要添加其他自定义的、位于 videoWrapElement 内的交互控件选择器
+            ];
+    
+            let tappedOnControl = false;
+            for (const selector of controlSelectors) {
+                if (e.target.closest(selector)) {
+                    tappedOnControl = true;
+                    break;
+                }
+            }
+    
+            if (tappedOnControl) {
+                // 如果点击发生在控件上，则重置lastTapTimeForDoubleTap，避免影响下一次真正的视频区域点击
+                lastTapTimeForDoubleTap = 0; 
+                return; // 不执行双击播放/暂停逻辑
+            }
+    
+            const currentTime = new Date().getTime();
+            if ((currentTime - lastTapTimeForDoubleTap) < DOUBLE_TAP_INTERVAL) {
+                // 检测到双击
+                if (dpInstance && typeof dpInstance.toggle === 'function') {
+                    dpInstance.toggle(); // 切换播放/暂停状态
+                }
+                lastTapTimeForDoubleTap = 0; // 重置时间戳，防止连续三次点击被误判
+            } else {
+                // 单击 (或者是双击的第一次点击)
+                lastTapTimeForDoubleTap = currentTime;
+            }
+            // DPlayer 自己的单击事件会处理UI显隐，我们这里不需要额外操作
+            // 也不要在这里调用 e.preventDefault() 或 e.stopPropagation()，除非有非常明确的理由
+        }, { passive: true }); // 使用 passive: true 明确表示我们不阻止默认的单击行为
+    
+        videoWrapElement._doubleTapListenerAttached = true; // 添加标记，表示已绑定
+    }
 
 function setupLongPressSpeedControl() {
     if (!dp) return;
