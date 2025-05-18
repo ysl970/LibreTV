@@ -1087,28 +1087,28 @@ function setupLongPressSpeedControl() {
         return;
     }
 
-       // 全局捕获 contextmenu 事件，确保右半区拦截
-       if (!setupLongPressSpeedControl._docCtxGuard) {
-           const ctxPreventer = (e) => {
-               if (!isMobile()) return;
-    
-               // 锁屏时任何位置都拦
-               if (isScreenLocked) { e.preventDefault(); return; }
-    
-               const rect = playerVideoWrap.getBoundingClientRect();
-               // 使用坐标判断事件是否在播放器的右半区
-              if (
-                   e.clientX < rect.left  || e.clientX > rect.right ||
-                   e.clientY < rect.top   || e.clientY > rect.bottom
-               ) return; // 如果不在右半区，放行
-    
-               if (e.clientX > rect.left + rect.width / 2) {
-                   e.preventDefault();               // 只挡右半区
-               }
-           };
-           document.addEventListener('contextmenu', ctxPreventer, { capture:true });
-           setupLongPressSpeedControl._docCtxGuard = true;
-       }
+    // 全局捕获 contextmenu 事件，确保右半区拦截
+    if (!setupLongPressSpeedControl._docCtxGuard) {
+        const ctxPreventer = (e) => {
+            if (!isMobile()) return;
+
+            // 锁屏时任何位置都拦
+            if (isScreenLocked) { e.preventDefault(); return; }
+
+            const rect = playerVideoWrap.getBoundingClientRect();
+            // 使用坐标判断事件是否在播放器的右半区
+            if (
+                e.clientX < rect.left || e.clientX > rect.right ||
+                e.clientY < rect.top || e.clientY > rect.bottom
+            ) return; // 如果不在右半区，放行
+
+            if (e.clientX > rect.left + rect.width / 2) {
+                e.preventDefault();               // 只挡右半区
+            }
+        };
+        document.addEventListener('contextmenu', ctxPreventer, { capture: true });
+        setupLongPressSpeedControl._docCtxGuard = true;
+    }
 
     /* ---------- 2. iOS touch-callout 兜底 ---------- */
     if (!document.getElementById('dp-touch-callout-fix')) {
@@ -1129,6 +1129,12 @@ function setupLongPressSpeedControl() {
 
         const { clientX } = e.touches[0];
         const rect = playerVideoWrap.getBoundingClientRect();
+        /* ---------- 关键新增 ---------- */
+        if (clientX > rect.left + rect.width / 2) {
+            e.preventDefault();             // 右半区：立即阻止系统长按菜单
+        }
+        /* -------------------------------- */
+
         if (clientX <= rect.left + rect.width / 2) {           // 左半区：直接清理
             clearTimeout(longPressTimer); speedChangedByLongPress = false;
             return;
