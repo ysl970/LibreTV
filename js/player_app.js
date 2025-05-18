@@ -1086,17 +1086,27 @@ function setupLongPressSpeedControl() {
     }
 
     // 全局捕获 contextmenu 事件，确保右半区拦截
-    playerVideoWrap.addEventListener('contextmenu', function (e) {
-        const rect = playerVideoWrap.getBoundingClientRect();
-        const x = e.clientX, y = e.clientY;
-        if (
-            x >= rect.left && x <= rect.right &&
-            y >= rect.top && y <= rect.bottom &&
-            x > rect.left + rect.width / 2
-        ) {
-            e.preventDefault();
-        }
-    }, { capture: true });
+    if (!setupLongPressSpeedControl._docCtxGuard) {
+        const ctxPreventer = (e) => {
+            if (!isMobile()) return;
+
+            // 锁屏时任何位置都拦
+            if (isScreenLocked) { e.preventDefault(); return; }
+
+            const rect = playerVideoWrap.getBoundingClientRect();
+            // 使用坐标判断事件是否在播放器的右半区
+            if (
+                e.clientX < rect.left || e.clientX > rect.right ||
+                e.clientY < rect.top || e.clientY > rect.bottom
+            ) return; // 如果不在右半区，放行
+
+            if (e.clientX > rect.left + rect.width / 2) {
+                e.preventDefault();               // 只挡右半区
+            }
+        };
+        document.addEventListener('contextmenu', ctxPreventer, { capture: true });
+        setupLongPressSpeedControl._docCtxGuard = true;
+    }
 
     /* ---------- 2. iOS touch-callout 兜底 ---------- */
     if (!document.getElementById('dp-touch-callout-fix')) {
@@ -1146,7 +1156,10 @@ function setupLongPressSpeedControl() {
         }, 300);
     }, { passive: false });     // ← 若将来需要阻止默认，可改为 false
 
-    const endLongPress = () => {
+    const endLongPress = (e) => {
+        if (isLongPress) {
+            e.preventDefault(); // 关键：阻止长按时触发系统菜单
+        }
         clearTimeout(longPressTimer);
         if (isLongPress && speedChangedByLongPress) {  // 仅长按时才恢复
             dp.speed(originalSpeed);
