@@ -1087,23 +1087,28 @@ function setupLongPressSpeedControl() {
         return;
     }
 
-    /* ---------- 1. 全局 contextmenu 捕获 ---------- */
-    if (!setupLongPressSpeedControl._docCtxGuard) {
-        const ctxPreventer = (e) => {
-            if (!isMobile()) return;
-            if (!playerVideoWrap.contains(e.target)) return;
-
-            // 锁屏时任何位置都拦
-            if (isScreenLocked) { e.preventDefault(); return; }
-
-            const rect = playerVideoWrap.getBoundingClientRect();
-            if (e.clientX > rect.left + rect.width / 2) {
-                e.preventDefault();               // 只挡右半区
-            }
-        };
-        document.addEventListener('contextmenu', ctxPreventer, { capture:true });
-        setupLongPressSpeedControl._docCtxGuard = true;
-    }
+       // 全局捕获 contextmenu 事件，确保右半区拦截
+       if (!setupLongPressSpeedControl._docCtxGuard) {
+           const ctxPreventer = (e) => {
+               if (!isMobile()) return;
+    
+               // 锁屏时任何位置都拦
+               if (isScreenLocked) { e.preventDefault(); return; }
+    
+               const rect = playerVideoWrap.getBoundingClientRect();
+               // 使用坐标判断事件是否在播放器的右半区
+              if (
+                   e.clientX < rect.left  || e.clientX > rect.right ||
+                   e.clientY < rect.top   || e.clientY > rect.bottom
+               ) return; // 如果不在右半区，放行
+    
+               if (e.clientX > rect.left + rect.width / 2) {
+                   e.preventDefault();               // 只挡右半区
+               }
+           };
+           document.addEventListener('contextmenu', ctxPreventer, { capture:true });
+           setupLongPressSpeedControl._docCtxGuard = true;
+       }
 
     /* ---------- 2. iOS touch-callout 兜底 ---------- */
     if (!document.getElementById('dp-touch-callout-fix')) {
@@ -1150,21 +1155,6 @@ function setupLongPressSpeedControl() {
     };
     playerVideoWrap.addEventListener('touchend', endLongPress);
     playerVideoWrap.addEventListener('touchcancel', endLongPress);
-
-    // CONTEXTMENU: Handles preventing the context menu on mobile for the right half
-    // Add this listener only once
-    if (!playerVideoWrap._contextMenuListenerAttached) {
-        playerVideoWrap.addEventListener('contextmenu', function (e) {
-            if (!isMobile()) return; // Only act on mobile
-
-            const rect = playerVideoWrap.getBoundingClientRect();
-            // Use event's clientX for coordinate. For contextmenu from touch, this is usually the touch point.
-            if (e.clientX > rect.left + rect.width / 2) {
-                e.preventDefault(); // Prevent context menu if on the right half on mobile
-            }
-        });
-        playerVideoWrap._contextMenuListenerAttached = true;
-    }
 }
 
 function showPositionRestoreHint(position) {
