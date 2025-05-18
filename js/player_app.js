@@ -715,12 +715,12 @@ function addDPlayerEventListeners() {
 
     if (dp) { // 确保 dp 实例已存在
         setupCustomPlayerGestures(dp); // 设置右键菜单阻止和长按加速
-      
+
         const playerVideoWrapForDoubleClick = document.querySelector('#dplayer .dplayer-video-wrap') || dp.element;
         if (playerVideoWrapForDoubleClick) {
-          setupDoubleClickToPlayPause(dp, playerVideoWrapForDoubleClick); // 设置双击播放/暂停
+            setupDoubleClickToPlayPause(dp, playerVideoWrapForDoubleClick); // 设置双击播放/暂停
         }
-      }
+    }
 
     dp.on('seeking', function () { if (debugMode) console.log("[PlayerApp] DPlayer event: seeking"); isUserSeeking = true; videoHasEnded = false; });
     dp.on('seeked', function () {
@@ -1017,164 +1017,151 @@ function showShortcutHint(text, direction) {
     shortcutHintTimeout = setTimeout(() => hintElement.classList.remove('show'), 1500);
 }
 
-// 在 js/player_app.js 文件中，可以放在 setupLongPressSpeedControl 函数的上方或下方
-
-/**
- * 设置双击播放/暂停功能
- * @param {object} dpInstance DPlayer 实例
- * @param {HTMLElement} videoWrapElement 视频的包装元素 (通常是 .dplayer-video-wrap)
- */
+//设置双击播放/暂停功能
 function setupDoubleClickToPlayPause(dpInstance, videoWrapElement) {
-        if (!dpInstance || !videoWrapElement) {
-            console.warn('[DoubleClick] DPlayer instance or video wrap element not provided.');
-            return;
-        }
-    
-        if (videoWrapElement._doubleTapListenerAttached) {
-            return; // 防止重复绑定监听器
-        }
-    
-        videoWrapElement.addEventListener('touchend', function(e) {
-            if (isScreenLocked) { // isScreenLocked 是您代码中已有的全局变量
-                return; // 屏幕锁定时，不响应双击
-            }
-    
-            // 选择器数组，用于判断触摸是否发生在DPlayer的控件上
-            const controlSelectors = [
-                '.dplayer-controller', // DPlayer 主控制条区域
-                '.dplayer-setting',    // 设置菜单
-                '.dplayer-comment',    // 弹幕相关（如果启用并可交互）
-                '.dplayer-notice',     // 播放器通知
-                '#episode-grid button',// 外部的选集按钮
-                // 可以根据需要添加其他自定义的、位于 videoWrapElement 内的交互控件选择器
-            ];
-    
-            let tappedOnControl = false;
-            for (const selector of controlSelectors) {
-                if (e.target.closest(selector)) {
-                    tappedOnControl = true;
-                    break;
-                }
-            }
-    
-            if (tappedOnControl) {
-                // 如果点击发生在控件上，则重置lastTapTimeForDoubleTap，避免影响下一次真正的视频区域点击
-                lastTapTimeForDoubleTap = 0; 
-                return; // 不执行双击播放/暂停逻辑
-            }
-    
-            const currentTime = new Date().getTime();
-            if ((currentTime - lastTapTimeForDoubleTap) < DOUBLE_TAP_INTERVAL) {
-                // 检测到双击
-                if (dpInstance && typeof dpInstance.toggle === 'function') {
-                    dpInstance.toggle(); // 切换播放/暂停状态
-                }
-                lastTapTimeForDoubleTap = 0; // 重置时间戳，防止连续三次点击被误判
-            } else {
-                // 单击 (或者是双击的第一次点击)
-                lastTapTimeForDoubleTap = currentTime;
-            }
-            // DPlayer 自己的单击事件会处理UI显隐，我们这里不需要额外操作
-            // 也不要在这里调用 e.preventDefault() 或 e.stopPropagation()，除非有非常明确的理由
-        }, { passive: true }); // 使用 passive: true 明确表示我们不阻止默认的单击行为
-    
-        videoWrapElement._doubleTapListenerAttached = true; // 添加标记，表示已绑定
+    if (!dpInstance || !videoWrapElement) {
+        console.warn('[DoubleClick] DPlayer instance or video wrap element not provided.');
+        return;
     }
 
-// 在 player_app.js 中
-// 替换您现有的 setupLongPressSpeedControl 函数，并整合菜单阻止逻辑
+    if (videoWrapElement._doubleTapListenerAttached) {
+        return; // 防止重复绑定监听器
+    }
+
+    videoWrapElement.addEventListener('touchend', function (e) {
+        if (isScreenLocked) { // isScreenLocked 是您代码中已有的全局变量
+            return; // 屏幕锁定时，不响应双击
+        }
+
+        // 选择器数组，用于判断触摸是否发生在DPlayer的控件上
+        const controlSelectors = [
+            '.dplayer-controller', // DPlayer 主控制条区域
+            '.dplayer-setting',    // 设置菜单
+            '.dplayer-comment',    // 弹幕相关（如果启用并可交互）
+            '.dplayer-notice',     // 播放器通知
+            '#episode-grid button',// 外部的选集按钮
+            // 可以根据需要添加其他自定义的、位于 videoWrapElement 内的交互控件选择器
+        ];
+
+        let tappedOnControl = false;
+        for (const selector of controlSelectors) {
+            if (e.target.closest(selector)) {
+                tappedOnControl = true;
+                break;
+            }
+        }
+
+        if (tappedOnControl) {
+            // 如果点击发生在控件上，则重置lastTapTimeForDoubleTap，避免影响下一次真正的视频区域点击
+            lastTapTimeForDoubleTap = 0;
+            return; // 不执行双击播放/暂停逻辑
+        }
+
+        const currentTime = new Date().getTime();
+        if ((currentTime - lastTapTimeForDoubleTap) < DOUBLE_TAP_INTERVAL) {
+            // 检测到双击
+            if (dpInstance && typeof dpInstance.toggle === 'function') {
+                dpInstance.toggle(); // 切换播放/暂停状态
+            }
+            lastTapTimeForDoubleTap = 0; // 重置时间戳，防止连续三次点击被误判
+        } else {
+            // 单击 (或者是双击的第一次点击)
+            lastTapTimeForDoubleTap = currentTime;
+        }
+        // DPlayer 自己的单击事件会处理UI显隐，我们这里不需要额外操作
+        // 也不要在这里调用 e.preventDefault() 或 e.stopPropagation()，除非有非常明确的理由
+    }, { passive: true }); // 使用 passive: true 明确表示我们不阻止默认的单击行为
+
+    videoWrapElement._doubleTapListenerAttached = true; // 添加标记，表示已绑定
+}
+
 // 双击功能 setupDoubleClickToPlayPause 保持独立，但会与此函数协调
-
 function setupCustomPlayerGestures(dpInstance) {
-        if (!dpInstance || !dpInstance.element) {
-            console.warn('[CustomGestures] DPlayer instance or main element not available.');
-            return;
-        }
-        const playerElement = dpInstance.element; // DPlayer的主容器元素
-        const videoWrapElement = playerElement.querySelector('.dplayer-video-wrap') || playerElement; // 手势主要作用区域
-    
-        // --- 1. 上下文菜单阻止 (借鉴上游) ---
-        if (!playerElement._customContextMenuHandlerAttached) {
-            playerElement.oncontextmenu = function(e) { // 直接赋值 oncontextmenu
-                if (isMobile()) { // isMobile() 是您 player_app.js 中已有的函数
-                    // console.log('[ContextMenu] Preventing browser context menu on mobile.');
-                    e.preventDefault(); // W3C标准方式
-                    return false;       // 确保在所有浏览器中都有效
-                }
-                // 在桌面设备上，允许DPlayer自己的右键菜单（如果在DPlayer选项中配置了）或浏览器默认菜单
-                return true; 
-            };
-            playerElement._customContextMenuHandlerAttached = true;
-        }
-    
-        // --- 2. 长按右侧加速 ---
-        if (!videoWrapElement._longPressSpeedListenerAttached) {
-            let longPressTimer = null;
-            let originalSpeed = 1.0;
-            let isActuallyLongPressing = false; // 标记是否长按生效
-    
-            videoWrapElement.addEventListener('touchstart', function(e) {
-                if (isScreenLocked || (dpInstance.video && dpInstance.video.paused)) {
-                    isActuallyLongPressing = false;
-                    if(longPressTimer) clearTimeout(longPressTimer);
-                    longPressTimer = null;
-                    return;
-                }
-    
-                const touchX = e.touches[0].clientX;
-                const rect = videoWrapElement.getBoundingClientRect();
-    
-                if (touchX > rect.left + rect.width / 2) { // 仅右半边触发长按加速
-                    originalSpeed = dpInstance.video.playbackRate;
-                    isActuallyLongPressing = false; 
-    
-                    if (longPressTimer) clearTimeout(longPressTimer);
-                    longPressTimer = setTimeout(() => {
-                        if (isScreenLocked || !dpInstance.video || dpInstance.video.paused) {
-                            isActuallyLongPressing = false; return;
-                        }
-                        dpInstance.speed(2.0); // 假设DPlayer有 speed 方法，否则用 dpInstance.video.playbackRate
-                        isActuallyLongPressing = true;
-                        if (typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
-                        // 注意：上游在此处调用了 e.preventDefault()。主要作用是阻止长按后的 click 事件。
-                        // 如果希望保留此行为，则 touchstart 的 passive 需为 false。
-                        // 但由于我们已有 oncontextmenu 阻止菜单，且单击UI切换很重要，
-                        // 这里可以暂时不加，观察长按结束后是否会误触单击行为。
-                    }, 300); // 您代码中常用的300ms延迟
-                } else { // 左半边触摸
-                    if (longPressTimer) clearTimeout(longPressTimer);
-                    longPressTimer = null;
-                    isActuallyLongPressing = false;
-                }
-            // ★ 关键：touchstart 使用 passive: true，不阻止DPlayer的默认单击UI切换
-            }, { passive: true }); 
-    
-            const endOrCancelLongPress = function(e) {
-                if (longPressTimer) clearTimeout(longPressTimer);
-                longPressTimer = null;
-    
-                if (isActuallyLongPressing) {
-                    if (dpInstance.video) {
-                        dpInstance.speed(originalSpeed); // 或 dpInstance.video.playbackRate
-                    }
-                    if (typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
-                    // 如果长按后松开会触发UI显隐或播放/暂停，并且不希望这样：
-                    // 在此调用 e.preventDefault(); 但 touchend 也需要 { passive: false }
-                    // e.preventDefault(); // 阻止长按后的单击（如果需要）
-                }
-                isActuallyLongPressing = false;
-            };
-    
-            videoWrapElement.addEventListener('touchend', endOrCancelLongPress /*, { passive: true } 可根据是否在内部调用preventDefault决定 */);
-            videoWrapElement.addEventListener('touchcancel', endOrCancelLongPress);
-            
-            videoWrapElement._longPressSpeedListenerAttached = true;
-        }
-    
-        // 3. 双击播放/暂停功能 (您已有的 setupDoubleClickToPlayPause 函数)
-        // 确保它也被调用，并且作用于 videoWrapElement
-        // setupDoubleClickToPlayPause(dpInstance, videoWrapElement); // 在此函数末尾或外部统一调用
+    if (!dpInstance || !dpInstance.element) {
+        console.warn('[CustomGestures] DPlayer instance or main element not available.');
+        return;
     }
+    const playerElement = dpInstance.element; // DPlayer的主容器元素
+    const videoWrapElement = playerElement.querySelector('.dplayer-video-wrap') || playerElement; // 手势主要作用区域
+
+    // --- 1. 上下文菜单阻止 (借鉴上游) ---
+    if (!playerElement._customContextMenuHandlerAttached) {
+        playerElement.oncontextmenu = function (e) { // 直接赋值 oncontextmenu
+            if (isMobile()) { // isMobile() 是您 player_app.js 中已有的函数
+                // console.log('[ContextMenu] Preventing browser context menu on mobile.');
+                e.preventDefault(); // W3C标准方式
+                return false;       // 确保在所有浏览器中都有效
+            }
+            // 在桌面设备上，允许DPlayer自己的右键菜单（如果在DPlayer选项中配置了）或浏览器默认菜单
+            return true;
+        };
+        playerElement._customContextMenuHandlerAttached = true;
+    }
+
+    // --- 2. 长按右侧加速 ---
+    if (!videoWrapElement._longPressSpeedListenerAttached) {
+        let longPressTimer = null;
+        let originalSpeed = 1.0;
+        let isActuallyLongPressing = false; // 标记是否长按生效
+
+        videoWrapElement.addEventListener('touchstart', function (e) {
+            if (isScreenLocked || (dpInstance.video && dpInstance.video.paused)) {
+                isActuallyLongPressing = false;
+                if (longPressTimer) clearTimeout(longPressTimer);
+                longPressTimer = null;
+                return;
+            }
+
+            const touchX = e.touches[0].clientX;
+            const rect = videoWrapElement.getBoundingClientRect();
+
+            if (touchX > rect.left + rect.width / 2) { // 仅右半边触发长按加速
+                originalSpeed = dpInstance.video.playbackRate;
+                isActuallyLongPressing = false;
+
+                if (longPressTimer) clearTimeout(longPressTimer);
+                longPressTimer = setTimeout(() => {
+                    if (isScreenLocked || !dpInstance.video || dpInstance.video.paused) {
+                        isActuallyLongPressing = false; return;
+                    }
+                    dpInstance.speed(2.0); // 假设DPlayer有 speed 方法，否则用 dpInstance.video.playbackRate
+                    isActuallyLongPressing = true;
+                    if (typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
+                }, 300); // 您代码中常用的300ms延迟
+            } else { // 左半边触摸
+                if (longPressTimer) clearTimeout(longPressTimer);
+                longPressTimer = null;
+                isActuallyLongPressing = false;
+            }
+            // ★ 关键：touchstart 使用 passive: true，不阻止DPlayer的默认单击UI切换
+        }, { passive: true });
+
+        const endOrCancelLongPress = function (e) {
+            if (longPressTimer) clearTimeout(longPressTimer);
+            longPressTimer = null;
+
+            if (isActuallyLongPressing) {
+                if (dpInstance.video) {
+                    dpInstance.speed(originalSpeed); // 或 dpInstance.video.playbackRate
+                }
+                if (typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
+                // 如果长按后松开会触发UI显隐或播放/暂停，并且不希望这样：
+                // 在此调用 e.preventDefault(); 但 touchend 也需要 { passive: false }
+                // e.preventDefault(); // 阻止长按后的单击（如果需要）
+            }
+            isActuallyLongPressing = false;
+        };
+
+        videoWrapElement.addEventListener('touchend', endOrCancelLongPress /*, { passive: true } 可根据是否在内部调用preventDefault决定 */);
+        videoWrapElement.addEventListener('touchcancel', endOrCancelLongPress);
+
+        videoWrapElement._longPressSpeedListenerAttached = true;
+    }
+
+    // 3. 双击播放/暂停功能 (您已有的 setupDoubleClickToPlayPause 函数)
+    // 确保它也被调用，并且作用于 videoWrapElement
+    setupDoubleClickToPlayPause(dpInstance, videoWrapElement); // 在此函数末尾或外部统一调用
+}
 
 function showPositionRestoreHint(position) {
     if (typeof showMessage !== 'function' || !position || position < 10) return;
