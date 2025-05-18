@@ -23,6 +23,18 @@ function SQuery(selector, callback, timeout = 5000, interval = 100) {
     check();
 }
 
+// 检查 localStorage 可用性，iOS/私密模式等特殊环境下友好提示
+function testLocalStorageAvailable() {
+    try {
+        localStorage.setItem('__ls_test__', '1');
+        localStorage.removeItem('__ls_test__');
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+
 // 递归禁止contextmenu，防止安卓右半边长按出现系统菜单
 function disableContextMenuDeep(element) {
     if (!element) return;
@@ -203,6 +215,9 @@ document.addEventListener('passwordVerified', () => {
 });
 
 function initializePageContent() {
+    if (!testLocalStorageAvailable()) {
+        showMessage('当前浏览器本地存储不可用，播放进度记忆将失效', 'warning');
+    }
     //  console.log('[PlayerApp Debug] initializePageContent starting...');
     const urlParams = new URLSearchParams(window.location.search);
     let episodeUrlForPlayer = urlParams.get('url'); // 先用 let，后续可能修改
@@ -772,7 +787,8 @@ function addDPlayerEventListeners() {
         saveVideoSpecificProgress();
         // saveCurrentProgress(); // 可选：如果也想在暂停时更新观看历史列表
     });
-
+    dp.on('seeking', saveVideoSpecificProgress); // 兼容iOS
+    dp.on('seeked', saveVideoSpecificProgress); // 兼容iOS
 
     dp.on('ended', function () {
         videoHasEnded = true;
@@ -1443,7 +1459,7 @@ function startProgressSaveInterval() {
     progressSaveInterval = setInterval(() => {
         saveCurrentProgress(); // 这个是保存到“观看历史列表”的
         saveVideoSpecificProgress(); // 新增调用，保存特定视频的集数进度
-    }, 30000); // Save every 30 seconds
+    }, 8000); // Save every 8 seconds，iOS 建议
 }
 
 function saveToHistory() { // This is more like an "initial save" or "episode change save"
