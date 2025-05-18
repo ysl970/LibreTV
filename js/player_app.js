@@ -666,32 +666,21 @@ function addDPlayerEventListeners() {
                 return;
             }
 
-            if (dp.video.paused) { // 只在视频确实处于暂停状态时才尝试播放
-                const playFunction = dp.play; // 将 dp.play 赋值给一个局部变量，以锁定检查时的引用
-
-                if (typeof playFunction === 'function') { // 再次（在延迟后）检查 playFunction 是否为函数
-                    const dplayerAutoplayOption = dp.options && dp.options.autoplay; // 获取 DPlayer 构造函数中的 autoplay 设置
-                    // autoplayEnabled 是我们在 player_app.js 中定义的用于控制自动播放下一集的开关状态
-                    const customAutoplayEnabled = typeof autoplayEnabled !== 'undefined' ? autoplayEnabled : true;
-
-                    if (dplayerAutoplayOption || customAutoplayEnabled) {
-                        console.log(`[PlayerApp][loadedmetadata][timeout] 视频已暂停。尝试调用 dp.play()。DPlayer 内置 autoplay: ${dplayerAutoplayOption}, 自定义 autoplayEnabled: ${customAutoplayEnabled}`);
-                        // 使用 .call(dp) 来确保 playFunction 的 'this' 上下文是 dp 实例，虽然直接调用通常也没问题
-                        playFunction.call(dp).catch(e => {
-                            console.warn("[PlayerApp][loadedmetadata][timeout] dp.play() (通过延迟调用) 被浏览器阻止或发生错误。用户可能需要手动点击播放按钮。", e);
-                        });
-                    } else {
-                        // console.log("[PlayerApp][loadedmetadata][timeout] 视频已暂停，但所有自动播放选项均已禁用。");
-                    }
-                } else {
-                    // 如果到这里 dp.play 仍然不是函数，说明 DPlayer 实例确实存在更深层次的问题
-                    console.error("[PlayerApp][loadedmetadata][timeout] 严重错误：dp.play (在延迟后检查) 仍然不是一个函数！DPlayer 实例状态:", dp);
-                }
-            } else {
+                        if (dp.video.paused && typeof dp.play === 'function') {
+                                const dplayerAutoplayOption = dp.options && dp.options.autoplay;
+                                const customAutoplayEnabled = (typeof autoplayEnabled !== 'undefined') ? autoplayEnabled : true;
+                                if (dplayerAutoplayOption || customAutoplayEnabled) {
+                                    console.log(`[PlayerApp][loadedmetadata][timeout] 视频已暂停。尝试调用 dp.play()。`);
+                                    dp.play().catch(e => {
+                                        console.warn("[PlayerApp][loadedmetadata][timeout] dp.play() 被浏览器阻止或发生错误，用户可能需要手动点击播放按钮。", e);
+                                    });
+                                }
+                            } else if (dp.video.paused) {
+                                console.error("[PlayerApp][loadedmetadata][timeout] dp.play 不是函数，无法自动播放。");
+                            } else {
                 // console.log("[PlayerApp][loadedmetadata][timeout] 视频已在播放中或不处于可检查暂停的状态。");
             }
         }, 100); // 延迟 100 毫秒执行。如果问题依旧，可以尝试略微增加这个延迟时间，例如 200 或 300 毫秒。
-        // ---- 修改核心结束 ----
     });
 
     dp.on('error', function (e) {
