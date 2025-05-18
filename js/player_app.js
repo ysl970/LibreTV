@@ -23,7 +23,7 @@ function SQuery(selector, callback, timeout = 5000, interval = 100) {
     check();
 }
 // --- 模块内变量 ---
-let isNavigatingToEpisode = false;   // 正在换集时置 true，避免误保存
+let isNavigatingToEpisode = false;   // 正在换集时置 true，避免误保存
 let currentVideoTitle = '';
 let currentEpisodeIndex = 0;
 let currentEpisodes = [];
@@ -39,6 +39,9 @@ let progressSaveInterval = null;
 let isScreenLocked = false;
 let nextSeekPosition = 0; // Stores the position to seek to for the next episode
 let _tempUrlForCustomHls = ''; // Temporary holder for the URL if DPlayer options are stale in customType
+let lastTapTimeForDoubleTap = 0;
+
+const DOUBLE_TAP_INTERVAL = 300; // 双击的最大时间间隔 (毫秒)
 
 const REMEMBER_EPISODE_PROGRESS_ENABLED_KEY = 'playerRememberEpisodeProgressEnabled'; // 开关状态的键名
 const VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY = 'videoSpecificEpisodeProgresses'; // 各视频各集进度的键名
@@ -52,7 +55,7 @@ const AD_START_PATTERNS = [
 const AD_END_PATTERNS = [
     /#EXT-X-DATERANGE:.*CLASS="content"/i,
     /#EXT-X-SCTE35-IN/i,
-    /#EXT-X-DISCONTINUITY/i,   // 保险：有些源用 DISCONTINUITY 结束广告
+    /#EXT-X-DISCONTINUITY/i,   // 保险：有些源用 DISCONTINUITY 结束广告
 ];
 
 // ==== 全局开关：是否去广告（缺省 true，可被 config.js 覆盖） ====
@@ -161,14 +164,14 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener('passwordVerified', () => {
     const loadingEl = document.getElementById('loading');
     if (loadingEl) {
-        loadingEl.style.display = 'flex';              // 原来的
+        loadingEl.style.display = 'flex';              // 原来的
         document.documentElement.classList.add('show-loading'); // ← 新增
     }
     initializePageContent();
 });
 
 function initializePageContent() {
-    //  console.log('[PlayerApp Debug] initializePageContent starting...');
+    //  console.log('[PlayerApp Debug] initializePageContent starting...');
     const urlParams = new URLSearchParams(window.location.search);
     let episodeUrlForPlayer = urlParams.get('url'); // 先用 let，后续可能修改
     let title = urlParams.get('title');
@@ -178,7 +181,7 @@ function initializePageContent() {
             let prev, cur = str;
             do { prev = cur; cur = decodeURIComponent(cur); } while (cur !== prev);
             return cur;
-        } catch { return str; }   // 遇到非法编码就放弃
+        } catch { return str; }   // 遇到非法编码就放弃
     }
     title = title ? fullyDecode(title) : '';
     const sourceCodeFromUrl = urlParams.get('source_code'); // 重命名以区分
@@ -204,17 +207,17 @@ function initializePageContent() {
         if (episodesListParam) {
             try {
                 currentEpisodes = JSON.parse(decodeURIComponent(episodesListParam));
-                //  console.log("[PlayerApp] Episodes loaded from URL parameter.");
+                //  console.log("[PlayerApp] Episodes loaded from URL parameter.");
             } catch (e) {
                 console.warn("[PlayerApp] Failed to parse episodes from URL, falling back to localStorage.", e);
                 currentEpisodes = episodesSource ? JSON.parse(episodesSource) : [];
             }
         } else if (episodesSource) {
             currentEpisodes = JSON.parse(episodesSource);
-            //  console.log("[PlayerApp] Episodes loaded from localStorage.");
+            //  console.log("[PlayerApp] Episodes loaded from localStorage.");
         } else {
             currentEpisodes = [];
-            //  console.log("[PlayerApp] No episode data found in URL or localStorage.");
+            //  console.log("[PlayerApp] No episode data found in URL or localStorage.");
         }
         window.currentEpisodes = currentEpisodes; // Expose globally
 
@@ -271,7 +274,7 @@ function initializePageContent() {
 
         if (savedProgressData) {
             // ① 决定“要不要提示进度”
-            const resumeIndex = indexForPlayer;   // ← 统一使用这个
+            const resumeIndex = indexForPlayer;   // ← 统一使用这个
             const positionToResume =
                 savedProgressData[resumeIndex.toString()]
                     ? parseInt(savedProgressData[resumeIndex.toString()])
@@ -382,7 +385,7 @@ function initializePageContent() {
     // Use requestAnimationFrame for initial render to ensure DOM is ready
     requestAnimationFrame(() => {
         renderEpisodes();
-        //   console.log('[PlayerApp] renderEpisodes called via requestAnimationFrame in initializePageContent');
+        //   console.log('[PlayerApp] renderEpisodes called via requestAnimationFrame in initializePageContent');
     });
     updateButtonStates();
     updateOrderButton();
@@ -520,9 +523,9 @@ function initPlayer(videoUrl, sourceCode) {
                             video.removeChild(video.firstChild);
                         }
                         // Setting src to empty or calling load() can help reset the media element's internal state.
-                        // This is important to prevent the browser from holding onto the previous stream.
+                        _tempUrlForCustomHls         // This is important to prevent the browser from holding onto the previous stream.
                         video.src = ""; // Setting to empty can sometimes help clear buffers
-                        video.load();   // This tells the browser to discard the current media resource state.
+                        video.load();   // This tells the browser to discard the current media resource state.
 
                         // 3. Create and configure the new HLS instance
                         console.log("[CustomHLS] Creating new HLS.js instance.");
@@ -586,6 +589,7 @@ function initPlayer(videoUrl, sourceCode) {
 function addDPlayerEventListeners() {
     if (!dp) return;
     const debugMode = window.PLAYER_CONFIG && window.PLAYER_CONFIG.debugMode;
+    const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap'); // 获取 videoWrap
 
     dp.on('fullscreen', () => {
         if (debugMode) console.log("[PlayerApp] DPlayer event: fullscreen");
@@ -659,38 +663,44 @@ function addDPlayerEventListeners() {
 
         // ---- 修改核心：延迟并更安全地调用 dp.play() ----
         setTimeout(() => {
-            // 在 setTimeout 的回调函数执行时，再次检查 dp 和 dp.video 的有效性，
-            // 因为在延迟期间，它们的状态理论上仍有可能发生变化（尽管概率较小）。
             if (!dp || !dp.video) {
                 console.warn("[PlayerApp][loadedmetadata][timeout] dp 或 dp.video 在 setTimeout 回调执行时已不再有效。无法尝试播放。");
                 return;
             }
 
-            if (dp.video.paused) { // 只在视频确实处于暂停状态时才尝试播放
-                const playFunction = dp.play; // 将 dp.play 赋值给一个局部变量，以锁定检查时的引用
+            if (dp.video.paused) {
+                const playFunction = dp.play;
 
-                if (typeof playFunction === 'function') { // 再次（在延迟后）检查 playFunction 是否为函数
-                    const dplayerAutoplayOption = dp.options && dp.options.autoplay; // 获取 DPlayer 构造函数中的 autoplay 设置
-                    // autoplayEnabled 是我们在 player_app.js 中定义的用于控制自动播放下一集的开关状态
+                if (typeof playFunction === 'function') {
+                    const dplayerAutoplayOption = dp.options && dp.options.autoplay;
                     const customAutoplayEnabled = typeof autoplayEnabled !== 'undefined' ? autoplayEnabled : true;
 
                     if (dplayerAutoplayOption || customAutoplayEnabled) {
                         console.log(`[PlayerApp][loadedmetadata][timeout] 视频已暂停。尝试调用 dp.play()。DPlayer 内置 autoplay: ${dplayerAutoplayOption}, 自定义 autoplayEnabled: ${customAutoplayEnabled}`);
-                        // 使用 .call(dp) 来确保 playFunction 的 'this' 上下文是 dp 实例，虽然直接调用通常也没问题
-                        playFunction.call(dp).catch(e => {
-                            console.warn("[PlayerApp][loadedmetadata][timeout] dp.play() (通过延迟调用) 被浏览器阻止或发生错误。用户可能需要手动点击播放按钮。", e);
-                        });
+                        try {
+                            const playPromise = playFunction.call(dp);
+                            if (playPromise && typeof playPromise.catch === 'function') {
+                                playPromise.catch(e => {
+                                    console.warn("[PlayerApp][loadedmetadata][timeout] dp.play() Promise 被浏览器阻止或发生错误。用户可能需要手动点击播放按钮。", e);
+                                });
+                            } else if (playPromise === undefined) {
+                                console.log("[PlayerApp][loadedmetadata][timeout] dp.play() returned undefined. Play might have been attempted or prevented without a promise.");
+                                // Autoplay might be blocked by the browser, and DPlayer's play() might return undefined in such cases
+                                // without throwing a catchable promise error. User might need to interact.
+                            }
+                        } catch (syncError) {
+                            console.warn("[PlayerApp][loadedmetadata][timeout]调用 dp.play() 时发生同步错误。", syncError);
+                        }
                     } else {
                         // console.log("[PlayerApp][loadedmetadata][timeout] 视频已暂停，但所有自动播放选项均已禁用。");
                     }
                 } else {
-                    // 如果到这里 dp.play 仍然不是函数，说明 DPlayer 实例确实存在更深层次的问题
                     console.error("[PlayerApp][loadedmetadata][timeout] 严重错误：dp.play (在延迟后检查) 仍然不是一个函数！DPlayer 实例状态:", dp);
                 }
             } else {
                 // console.log("[PlayerApp][loadedmetadata][timeout] 视频已在播放中或不处于可检查暂停的状态。");
             }
-        }, 100); // 延迟 100 毫秒执行。如果问题依旧，可以尝试略微增加这个延迟时间，例如 200 或 300 毫秒。
+        }, 100);
         // ---- 修改核心结束 ----
     });
 
@@ -704,6 +714,10 @@ function addDPlayerEventListeners() {
     });
 
     setupLongPressSpeedControl();
+    // 新增：调用双击处理函数
+    if (playerVideoWrap) {
+        setupDoubleClickToPlayPause(dp, playerVideoWrap);
+    }
 
     dp.on('seeking', function () { if (debugMode) console.log("[PlayerApp] DPlayer event: seeking"); isUserSeeking = true; videoHasEnded = false; });
     dp.on('seeked', function () {
@@ -729,13 +743,13 @@ function addDPlayerEventListeners() {
         videoHasEnded = true;
         saveCurrentProgress(); // Ensure final progress is saved
         clearVideoProgress(); // Clear progress for *this specific video*
-        if (!autoplayEnabled) return;       // 用户关掉了自动连播
-        const nextIdx = currentEpisodeIndex + 1;   // 始终 +1（上一条回复已统一）
+        if (!autoplayEnabled) return;       // 用户关掉了自动连播
+        const nextIdx = currentEpisodeIndex + 1;   // 始终 +1（上一条回复已统一）
         if (nextIdx < currentEpisodes.length) {
             setTimeout(() => {
                 // 再确认一下确实播完 & 没有人在拖动
                 if (videoHasEnded && !isUserSeeking) playEpisode(nextIdx);
-            }, 1000);                       // 1 s 延迟，防误触
+            }, 1000);                       // 1 s 延迟，防误触
         } else {
             if (debugMode) console.log('[PlayerApp] 已到最后一集，自动连播停止');
         }
@@ -815,12 +829,13 @@ function setupPlayerControls() {
             if (videoUrlRetry) {
                 const errorEl = document.getElementById('error'); if (errorEl) errorEl.style.display = 'none';
                 const loadingEl = document.getElementById('loading'); if (loadingEl) loadingEl.style.display = 'flex';
+                _tempUrlForCustomHls = videoUrlRetry;
                 if (dp && dp.video) {
-                    //  console.log("[PlayerApp] Retrying: Switching video.");
+                    //  console.log("[PlayerApp] Retrying: Switching video.");
                     dp.switchVideo({ url: videoUrlRetry, type: 'hls' });
                     dp.play();
                 } else {
-                    //    console.log("[PlayerApp] Retrying: Re-initializing player.");
+                    //    console.log("[PlayerApp] Retrying: Re-initializing player.");
                     initPlayer(videoUrlRetry, sourceCodeRetry);
                 }
             } else {
@@ -844,7 +859,7 @@ function setupPlayerControls() {
 }
 
 function saveVideoSpecificProgress() {
-    if (isNavigatingToEpisode) return;   // ← 跳过 beforeunload 那次调用
+    if (isNavigatingToEpisode) return;   // ← 跳过 beforeunload 那次调用
     const toggle = document.getElementById('remember-episode-progress-toggle');
     if (!toggle || !toggle.checked) { // 如果开关未勾选，则不保存
         return;
@@ -999,45 +1014,147 @@ function showShortcutHint(text, direction) {
     shortcutHintTimeout = setTimeout(() => hintElement.classList.remove('show'), 1500);
 }
 
+// 在 js/player_app.js 文件中，可以放在 setupLongPressSpeedControl 函数的上方或下方
+
+/**
+ * 设置双击播放/暂停功能
+ * @param {object} dpInstance DPlayer 实例
+ * @param {HTMLElement} videoWrapElement 视频的包装元素 (通常是 .dplayer-video-wrap)
+ */
+function setupDoubleClickToPlayPause(dpInstance, videoWrapElement) {
+    if (!dpInstance || !videoWrapElement) {
+        console.warn('[DoubleClick] DPlayer instance or video wrap element not provided.');
+        return;
+    }
+
+    if (videoWrapElement._doubleTapListenerAttached) {
+        return; // 防止重复绑定监听器
+    }
+
+    videoWrapElement.addEventListener('touchend', function (e) {
+        if (isScreenLocked) { // isScreenLocked 是您代码中已有的全局变量
+            return; // 屏幕锁定时，不响应双击
+        }
+
+        // 选择器数组，用于判断触摸是否发生在DPlayer的控件上
+        const controlSelectors = [
+            '.dplayer-controller', // DPlayer 主控制条区域
+            '.dplayer-setting',    // 设置菜单
+            '.dplayer-comment',    // 弹幕相关（如果启用并可交互）
+            '.dplayer-notice',     // 播放器通知
+            '#episode-grid button',// 外部的选集按钮
+            // 可以根据需要添加其他自定义的、位于 videoWrapElement 内的交互控件选择器
+        ];
+
+        let tappedOnControl = false;
+        for (const selector of controlSelectors) {
+            if (e.target.closest(selector)) {
+                tappedOnControl = true;
+                break;
+            }
+        }
+
+        if (tappedOnControl) {
+            // 如果点击发生在控件上，则重置lastTapTimeForDoubleTap，避免影响下一次真正的视频区域点击
+            lastTapTimeForDoubleTap = 0;
+            return; // 不执行双击播放/暂停逻辑
+        }
+
+        const currentTime = new Date().getTime();
+        if ((currentTime - lastTapTimeForDoubleTap) < DOUBLE_TAP_INTERVAL) {
+            // 检测到双击
+            if (dpInstance && typeof dpInstance.toggle === 'function') {
+                dpInstance.toggle(); // 切换播放/暂停状态
+            }
+            lastTapTimeForDoubleTap = 0; // 重置时间戳，防止连续三次点击被误判
+        } else {
+            // 单击 (或者是双击的第一次点击)
+            lastTapTimeForDoubleTap = currentTime;
+        }
+        // DPlayer 自己的单击事件会处理UI显隐，我们这里不需要额外操作
+        // 也不要在这里调用 e.preventDefault() 或 e.stopPropagation()，除非有非常明确的理由
+    }, { passive: true }); // 使用 passive: true 明确表示我们不阻止默认的单击行为
+
+    videoWrapElement._doubleTapListenerAttached = true; // 添加标记，表示已绑定
+}
+
 function setupLongPressSpeedControl() {
     if (!dp) return;
     const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
-    if (!playerVideoWrap) { console.warn('DPlayer video wrap for long press not found.'); return; }
+    if (!playerVideoWrap) {
+        console.warn('DPlayer video wrap for long press not found.');
+        return;
+    }
 
     let longPressTimer = null;
     let originalSpeed = 1.0;
-    let speedChangedByLongPress = false;
+    let speedChangedByLongPress = false; // Flag to track if speed was changed by our long press
 
+    // TOUCHSTART: Handles setting up the long press for speed change
     playerVideoWrap.addEventListener('touchstart', function (e) {
-        if (isMobile()) {
-            e.preventDefault(); // 阻止默认行为，禁止右键菜单
-        }
-        if (isScreenLocked || dp.video.paused) return; // Ignore if screen locked or paused
+        if (isScreenLocked) return;
+
         const touchX = e.touches[0].clientX;
         const rect = playerVideoWrap.getBoundingClientRect();
-        // Only trigger if touch is on the right half of the player
-        if (touchX > rect.left + rect.width / 2) {
-            originalSpeed = dp.video.playbackRate;
-            longPressTimer = setTimeout(() => {
-                if (isScreenLocked || dp.video.paused) return; // Double check
-                dp.speed(2.0);
-                speedChangedByLongPress = true;
-                if (typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
-            }, 300); // 300ms delay for long press
-        }
-    }, { passive: false }); // 设置为 false 以确保 preventDefault 生效
 
+        // Only set up long press if touch starts on the right half
+        if (touchX > rect.left + rect.width / 2) {
+            // DO NOT call e.preventDefault() here.
+            // This allows DPlayer to handle short taps normally for UI toggle.
+            // Context menu will be handled by the 'contextmenu' event listener.
+
+            originalSpeed = dp.video.playbackRate;
+            if (longPressTimer) clearTimeout(longPressTimer);
+
+            speedChangedByLongPress = false; // Reset before setting timer
+
+            longPressTimer = setTimeout(() => {
+                if (isScreenLocked || !dp || !dp.video || dp.video.paused) {
+                    speedChangedByLongPress = false; // Ensure flag is false if bailing
+                    return;
+                }
+                dp.speed(2.0);
+                speedChangedByLongPress = true; // Set flag only if speed actually changes
+                if (typeof showMessage === 'function') showMessage('播放速度: 2.0x', 'info', 1000);
+            }, 300);
+        } else {
+            // Touch started on the left half, clear any pending long press timer from a previous touch
+            if (longPressTimer) clearTimeout(longPressTimer);
+            speedChangedByLongPress = false;
+        }
+    }, { passive: true }); // IMPORTANT: Use passive: true if not calling preventDefault
+
+    // TOUCHEND / TOUCHCANCEL: Handles reverting speed if long press occurred
     const endLongPress = function () {
         if (longPressTimer) clearTimeout(longPressTimer);
         longPressTimer = null;
+
         if (speedChangedByLongPress) {
-            dp.speed(originalSpeed);
-            speedChangedByLongPress = false;
+            if (dp && dp.video) {
+                dp.speed(originalSpeed);
+            }
             if (typeof showMessage === 'function') showMessage(`播放速度: ${originalSpeed.toFixed(1)}x`, 'info', 1000);
         }
+        speedChangedByLongPress = false; // Reset flag on touch end/cancel
     };
+
     playerVideoWrap.addEventListener('touchend', endLongPress);
     playerVideoWrap.addEventListener('touchcancel', endLongPress);
+
+    // CONTEXTMENU: Handles preventing the context menu on mobile for the right half
+    // Add this listener only once
+    if (!playerVideoWrap._contextMenuListenerAttached) {
+        playerVideoWrap.addEventListener('contextmenu', function (e) {
+            if (!isMobile()) return; // Only act on mobile
+
+            const rect = playerVideoWrap.getBoundingClientRect();
+            // Use event's clientX for coordinate. For contextmenu from touch, this is usually the touch point.
+            if (e.clientX > rect.left + rect.width / 2) {
+                e.preventDefault(); // Prevent context menu if on the right half on mobile
+            }
+        });
+        playerVideoWrap._contextMenuListenerAttached = true;
+    }
 }
 
 function showPositionRestoreHint(position) {
@@ -1125,7 +1242,7 @@ function renderEpisodes() {
     }
 
     const order = [...Array(currentEpisodes.length).keys()];
-    if (episodesReversed) order.reverse();          // 倒序显示
+    if (episodesReversed) order.reverse();          // 倒序显示
 
     order.forEach(idx => {
         const btn = document.createElement('button');
@@ -1134,7 +1251,7 @@ function renderEpisodes() {
             ? 'p-2 rounded episode-active'
             : 'p-2 rounded bg-[#222] hover:bg-[#333] text-gray-300';
         btn.textContent = idx + 1;
-        btn.dataset.index = idx;                  // 关键：把真实下标写到 data 上
+        btn.dataset.index = idx;                  // 关键：把真实下标写到 data 上
         grid.appendChild(btn);
     });
 
@@ -1211,7 +1328,7 @@ function toggleEpisodeOrder() {
     episodesReversed = !episodesReversed;
     localStorage.setItem('episodesReversed', episodesReversed.toString());
     updateOrderButton(); // 更新排序按钮的视觉状态
-    renderEpisodes();    // 重新渲染集数列表以反映新的排序
+    renderEpisodes();    // 重新渲染集数列表以反映新的排序
 }
 
 function updateOrderButton() {
@@ -1219,13 +1336,13 @@ function updateOrderButton() {
     if (!icon) return;
     // 清空原 path 后填充新图标
     icon.innerHTML = episodesReversed
-        ? '<polyline points="18 15 12 9 6 15"></polyline>'  // ⬆️  倒序
-        : '<polyline points="6 9 12 15 18 9"></polyline>';  // ⬇️  正序
+        ? '<polyline points="18 15 12 9 6 15"></polyline>'  // ⬆️  倒序
+        : '<polyline points="6 9 12 15 18 9"></polyline>';  // ⬇️  正序
 }
 
 function playPreviousEpisode() {
     if (!currentEpisodes.length) return;
-    const prevIdx = currentEpisodeIndex - 1;          // 无论正序 / 倒序都减 1
+    const prevIdx = currentEpisodeIndex - 1;          // 无论正序 / 倒序都减 1
     if (prevIdx >= 0) {
         playEpisode(prevIdx);
     } else showMessage('已经是第一集了', 'info');
@@ -1234,7 +1351,7 @@ window.playPreviousEpisode = playPreviousEpisode;
 
 function playNextEpisode() {
     if (!currentEpisodes.length) return;
-    const nextIdx = currentEpisodeIndex + 1;          // 始终加 1
+    const nextIdx = currentEpisodeIndex + 1;          // 始终加 1
     if (nextIdx < currentEpisodes.length) {
         playEpisode(nextIdx);
     } else showMessage('已经是最后一集了', 'info');
@@ -1450,4 +1567,4 @@ function playEpisode(index) { // index is the target new episode's 0-based index
         newUrlForBrowser.toString()
     );
 }
-window.playEpisode = playEpisode;   // 保持全局可调用
+window.playEpisode = playEpisode;   // 保持全局可调用
