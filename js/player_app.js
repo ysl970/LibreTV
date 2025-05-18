@@ -1079,78 +1079,86 @@ function setupDoubleClickToPlayPause(dpInstance, videoWrapElement) {
 function setupLongPressSpeedControl() {
     if (!dp) return;
 
-    const playerVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
-    if (!playerVideoWrap) {
-        console.warn('DPlayer video wrap not found.');
+    const playerVideoWrapElement = document.querySelector('#dplayer .dplayer-video-wrap'); // Renamed for clarity in this scope
+    if (!playerVideoWrapElement) {
+        console.warn('DPlayer video wrap not found for long press setup.');
         return;
     }
 
     // 全局捕获 contextmenu 事件，确保右半区拦截
     if (!setupLongPressSpeedControl._docCtxGuard) {
         const ctxPreventer = (e) => {
-            if (!isMobile()) {
-                console.log('Not a mobile device, skipping contextmenu prevention.');
-                return;
-            }
+            // Get a fresh reference to playerVideoWrap inside the event handler,
+            // as the one in the closure might be stale or null if setup was problematic.
+            const currentVideoWrap = document.querySelector('#dplayer .dplayer-video-wrap');
+            if (!currentVideoWrap) return; // If player element not found at event time, do nothing
 
-            // 锁屏时任何位置都拦
+            if (!isMobile()) return; // Only apply on mobile devices
+
+            // Handle screen lock: if screen is locked, prevent context menu *if it's on the player*
             if (isScreenLocked) {
-                e.preventDefault();
-                console.log('Screen is locked, preventing contextmenu.');
+                if (currentVideoWrap.contains(e.target) || e.target === currentVideoWrap) {
+                    e.preventDefault();
+                }
+                return; // No further processing for right-half logic if screen is locked
+            }
+
+            // Check if the event target is within the player's video wrap.
+            // If the contextmenu originated outside the currentVideoWrap, don't interfere.
+            if (!currentVideoWrap.contains(e.target) && e.target !== currentVideoWrap) {
                 return;
             }
 
-            const rect = playerVideoWrap.getBoundingClientRect();
-            // 使用坐标判断事件是否在播放器的右半区
+            const rect = currentVideoWrap.getBoundingClientRect();
+
+            // Defensive check: ensure the actual event coordinates are within the player's bounds.
+            // This is mostly for precision if e.target is an unexpected child element.
             if (
                 e.clientX < rect.left || e.clientX > rect.right ||
                 e.clientY < rect.top || e.clientY > rect.bottom
             ) {
-                console.log('Click outside player area, skipping contextmenu prevention.');
-                return;
+                return; // Interaction point is outside the visual rectangle of the player wrap
             }
 
+            // If the event is within the player and in its right half, prevent the context menu.
             if (e.clientX > rect.left + rect.width / 2) {
                 e.preventDefault();
-                console.log('Click in right half of player, preventing contextmenu.');
             }
         };
         document.addEventListener('contextmenu', ctxPreventer, { capture: true });
-        setupLongPressSpeedControl._docCtxGuard = true;
+        setupLongPressSpeedControl._docCtxGuard = true; // Mark that the global listener is attached
     }
 
-    /* ---------- 2. iOS touch - callout 兜底 ---------- */
+    /* ---------- 2. iOS touch-callout 兜底 (unchanged) ---------- */
     if (!document.getElementById('dp-touch-callout-fix')) {
         const st = document.createElement('style');
         st.id = 'dp-touch-callout-fix';
         st.textContent = `
-            #dplayer .dplayer-video-wrap video {
-                -webkit-touch-callout: none;
-                touch-callout: none;
-            }`;
+                #dplayer .dplayer-video-wrap video {
+                    -webkit-touch-callout: none;
+                    touch-callout: none;
+                }`;
         document.head.appendChild(st);
     }
 
-    /* ---------- 3. 原有长按加速逻辑（区分短按 / 长按） ---------- */
+    /* ---------- 3. 原有长按加速逻辑（区分短按 / 长按） (unchanged, relies on playerVideoWrapElement) ---------- */
     let longPressTimer = null,
         originalSpeed = 1,
         speedChangedByLongPress = false,
         isLongPress = false;
 
-    playerVideoWrap.addEventListener('touchstart', (e) => {
+    playerVideoWrapElement.addEventListener('touchstart', (e) => { // Use playerVideoWrapElement from the outer scope
         if (isScreenLocked) return;
 
         const { clientX } = e.touches[0];
-        const rect = playerVideoWrap.getBoundingClientRect();
+        const rect = playerVideoWrapElement.getBoundingClientRect(); // Use playerVideoWrapElement
         const inRightHalf = clientX > rect.left + rect.width / 2;
 
         if (!inRightHalf) {
-            clearTimeout(longPressTimer);
-            speedChangedByLongPress = false;
+            clearTimeout(longPressTimer); speedChangedByLongPress = false;
             return;
         }
 
-        // 右半区：设置长按计时器，<300 ms 视为“短按”→ 交给 DPlayer 自己处理
         originalSpeed = dp.video.playbackRate;
         clearTimeout(longPressTimer);
         speedChangedByLongPress = false;
@@ -1159,7 +1167,7 @@ function setupLongPressSpeedControl() {
         const startEvent = e;
         longPressTimer = setTimeout(() => {
             isLongPress = true;
-            startEvent.preventDefault();
+            startEvent.preventDefault(); // This is critical for some mobile browsers if contextmenu event is too late or unpreventable
 
             if (isScreenLocked || dp.video.paused) return;
             dp.speed(2.0);
@@ -1177,10 +1185,9 @@ function setupLongPressSpeedControl() {
         isLongPress = false;
         speedChangedByLongPress = false;
     };
-    playerVideoWrap.addEventListener('touchend', endLongPress);
-    playerVideoWrap.addEventListener('touchcancel', endLongPress);
+    playerVideoWrapElement.addEventListener('touchend', endLongPress); // Use playerVideoWrapElement
+    playerVideoWrapElement.addEventListener('touchcancel', endLongPress); // Use playerVideoWrapElement
 }
-
 
 function showPositionRestoreHint(position) {
     if (typeof showMessage !== 'function' || !position || position < 10) return;
