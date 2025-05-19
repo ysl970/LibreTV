@@ -377,7 +377,6 @@ function initializePageContent() {
                 && savedProgressData.lastPlayedEpisodeIndex < currentEpisodes.length) {
                 indexForPlayer = savedProgressData.lastPlayedEpisodeIndex;
             }
-
             if (positionToResume > 5 && currentEpisodes[resumeIndex]) {
                 showProgressRestoreModal({
                     title: "继续播放？",
@@ -386,6 +385,7 @@ function initializePageContent() {
                     cancelText: "从头播放"
                 }).then(wantsToResume => {
                     if (wantsToResume) {
+                        // 设置进度参数，更新url
                         episodeUrlForPlayer = currentEpisodes[resumeIndex];
                         indexForPlayer = resumeIndex;
 
@@ -403,7 +403,6 @@ function initializePageContent() {
                     } else {
                         episodeUrlForPlayer = currentEpisodes[indexForPlayer];
                         // indexForPlayer 保持不变
-
                         const newUrl = new URL(window.location.href);
                         newUrl.searchParams.set('url', episodeUrlForPlayer);
                         newUrl.searchParams.set('index', indexForPlayer.toString());
@@ -416,9 +415,11 @@ function initializePageContent() {
                             window.showToast('已从头开始播放', 'info');
                         }
                     }
-                    // 如果后续流程还依赖这些变量，请将后续代码挪到这里面
+                    // ★ 弹窗回调里，直接重新初始化后续逻辑！！！
+                    // 标准处理是“递归”自己，再次跑init流程
+                    initializePageContent();
                 });
-                // 这里要return或者用await等，否则下面的代码会提前执行
+                // return; // 保留
                 return;
             } else { // 没有有效进度，或进度太短，播放用户从首页选择的
                 episodeUrlForPlayer = currentEpisodes[indexForPlayer] || urlParams.get('url');
