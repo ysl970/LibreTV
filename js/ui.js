@@ -366,25 +366,28 @@ function renderSearchHistory() {
 
     // 渲染每个标签，自带删除x按钮
     history.forEach(item => {
+        // 外部包裹，让标签和x对齐
         const tagWrap = document.createElement('div');
         tagWrap.className = 'inline-flex items-center mb-2 mr-2';
 
+        // 核心：只用你自己的search-tag class!
         const tag = document.createElement('button');
-        tag.className = 'search-tag px-4 py-1 rounded border text-white border-blue-400 bg-transparent flex items-center gap-1 hover:bg-blue-900 transition-colors';
+        tag.className = 'search-tag';
         tag.textContent = item.text;
         if (item.timestamp) tag.title = `搜索于: ${new Date(item.timestamp).toLocaleString()}`;
 
         // 删除按钮
         const deleteBtn = document.createElement('span');
-        deleteBtn.className = 'ml-2 text-gray-400 hover:text-red-500 cursor-pointer select-none';
+        deleteBtn.className = 'ml-2 text-gray-400 hover:text-red-500 cursor-pointer select-none flex items-center';
         deleteBtn.setAttribute('role', 'button');
         deleteBtn.setAttribute('aria-label', '删除');
         deleteBtn.dataset.deletequery = item.text;
-        // svg x 图标
+        deleteBtn.style.fontSize = '1.15em';
+
         deleteBtn.innerHTML =
-          '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-          '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>' +
-          '</svg>';
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="pointer-events:none;">' +
+            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>' +
+            '</svg>';
 
         tagWrap.appendChild(tag);
         tagWrap.appendChild(deleteBtn);
@@ -394,6 +397,7 @@ function renderSearchHistory() {
     historyContainer.innerHTML = '';
     historyContainer.appendChild(frag);
 }
+
 
 /**
  * 删除单条搜索历史
