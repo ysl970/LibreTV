@@ -1,8 +1,7 @@
 只部署在cloudflare pages，方法见[上游](https://github.com/LibreSpark/LibreTV)
 
 - 同页播放
-- 绑定kv
-- 复制链接：首页全集，播放页当下
+- 绑定kv spacename：LIBRETV_PROXY_KV
 
 与[上游](https://github.com/LibreSpark/LibreTV)差异
 - 预加载集数开关
