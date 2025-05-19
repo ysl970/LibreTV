@@ -253,3 +253,118 @@ input:checked+.slider:before {
   display: none !important;
   /* 使用 !important 确保覆盖 Tailwind 的类 */
 }
+
+/* 优雅记住进度弹窗样式 - 放在 player_styles.css 最后 */
+#progress-restore-modal {
+  position: fixed;
+  z-index: 22002;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: none;
+  /* 默认隐藏 */
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 22, 34, 0.45);
+  /* 大屏淡黑蒙层 */
+  backdrop-filter: blur(3.5px);
+  transition: background 0.28s;
+}
+
+#progress-restore-modal.active {
+  display: flex;
+  animation: fadein-modal 0.25s;
+}
+
+@keyframes fadein-modal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.progress-restore-card {
+  background: rgba(34, 39, 51, 0.78);
+  border-radius: 16px;
+  box-shadow: 0 8px 40px 0 rgba(10, 18, 36, 0.25), 0 1.5px 6px 0 rgba(0, 204, 255, 0.08);
+  padding: 2rem 2.5rem 1.3rem 2.5rem;
+  min-width: 330px;
+  max-width: 92vw;
+  color: var(--text-color, #e6f2ff);
+  font-size: 1.07rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1.5px solid var(--primary-color, #00ccff);
+  /* 轻度毛玻璃 */
+  backdrop-filter: blur(7px) saturate(1.35);
+}
+
+.progress-modal-title {
+  font-size: 1.17rem;
+  font-weight: 700;
+  color: var(--primary-color, #00ccff);
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.progress-modal-content {
+  line-height: 1.8;
+  margin-bottom: 1.10rem;
+  text-shadow: 0 1.5px 12px rgba(0, 204, 255, 0.08);
+  text-align: center;
+  color: var(--text-color, #e6f2ff);
+}
+
+.progress-modal-actions {
+  display: flex;
+  gap: 1.2rem;
+  justify-content: center;
+  margin-top: 0.2rem;
+}
+
+.progress-modal-btn {
+  border: none;
+  font-size: 1.08rem;
+  padding: 0.48em 1.5em;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  outline: none;
+  transition: background 0.16s, color 0.13s;
+  box-shadow: 0 2px 7px -1.5px rgba(0, 0, 0, 0.11);
+}
+
+.progress-modal-btn.confirm {
+  background: linear-gradient(94deg, #00ccff 60%, #33d6ff 100%);
+  color: #fff;
+}
+
+.progress-modal-btn.confirm:hover {
+  background: #05e3e3;
+  color: #303343;
+}
+
+.progress-modal-btn.cancel {
+  background: rgba(200, 200, 200, 0.25);
+  color: #a1bada;
+}
+
+.progress-modal-btn.cancel:hover {
+  background: rgba(180, 180, 180, 0.13);
+  color: #73b1cb;
+}
+
+@media (max-width: 600px) {
+  .progress-restore-card {
+    padding: 1.25rem 0.6rem;
+    min-width: 0;
+    max-width: 98vw;
+    font-size: 0.98rem;
+  }
+}

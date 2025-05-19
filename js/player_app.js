@@ -66,6 +66,49 @@ function patchAndroidVideoHack() {
     }, 800); // 确保DPlayer结构已渲染
 }
 
+/**
+ * 展示自定义的“记住进度恢复”弹窗，并Promise化回调
+ * @param {Object} opts 配置对象：title,content,confirmText,cancelText
+ * @returns {Promise<boolean>} 用户点击确定:true / 取消:false
+ */
+function showProgressRestoreModal(opts) {
+    return new Promise(resolve => {
+        const modal = document.getElementById("progress-restore-modal");
+        const contentDiv = modal?.querySelector('.progress-modal-content');
+        const titleDiv = modal?.querySelector('.progress-modal-title');
+        const btnCancel = modal?.querySelector('#progress-restore-cancel');
+        const btnConfirm = modal?.querySelector('#progress-restore-confirm');
+        if (!modal || !contentDiv || !titleDiv || !btnCancel || !btnConfirm) return resolve(false);
+
+        titleDiv.textContent = opts.title || "继续播放？";
+        contentDiv.innerHTML = opts.content || "";
+        btnCancel.textContent = opts.cancelText || "取消";
+        btnConfirm.textContent = opts.confirmText || "确定";
+
+        function close(result) {
+            modal.classList.remove("active");
+            document.body.style.overflow = "";
+            // 解绑事件, 避免内存泄漏
+            btnCancel.onclick = btnConfirm.onclick = null;
+            document.removeEventListener("keydown", handler);
+            setTimeout(()=>resolve(result),180);
+        }
+
+        btnCancel.onclick = () => close(false);
+        btnConfirm.onclick = () => close(true);
+
+        function handler(e) {
+            if (e.key === "Escape") close(false);
+            if (e.key === "Enter") close(true);
+        }
+        setTimeout(()=>btnConfirm.focus(), 120); // 自动聚焦确定
+        document.addEventListener("keydown", handler);
+
+        modal.classList.add("active");
+        document.body.style.overflow = "hidden"; // 防止弹窗时页面滚动
+    });
+}
+
 // --- 模块内变量 ---
 let isNavigatingToEpisode = false;   // 正在换集时置 true，避免误保存
 let currentVideoTitle = '';
@@ -336,7 +379,7 @@ function initializePageContent() {
             }
 
             if (positionToResume > 5 && currentEpisodes[resumeIndex]) {
-                const wantsToResume = confirm(
+                const wantsToResume = showProgressRestoreModal(
                     `发现《${currentVideoTitle}》第 ${resumeIndex + 1} 集的播放记录，是否从 ${formatPlayerTime(positionToResume)} 继续播放？`
                 );
 
@@ -1554,14 +1597,21 @@ function playEpisode(index) { // index is the target new episode's 0-based index
                 ? parseInt(savedProgressDataForVideo[currentEpisodeIndex.toString()])
                 : 0;
 
-            if (positionToResume > 5) {
-                if (confirm(`《${currentVideoTitle}》第 ${currentEpisodeIndex + 1} 集有播放记录，是否从 ${formatPlayerTime(positionToResume)} 继续播放？`)) {
-                    nextSeekPosition = positionToResume;
-                    if (typeof showMessage === "function") showMessage(`将从 ${formatPlayerTime(nextSeekPosition)} 继续播放`, "info");
-                } else {
-                    if (typeof showMessage === "function") showMessage("已从头开始播放", "info");
-                }
-            }
+                if (positionToResume > 5 && currentEpisodes[resumeIndex]) {
+                    showProgressRestoreModal({
+                      title: "继续播放？", // 可改自定义
+                      content: `《${currentVideoTitle}》第 ${resumeIndex+1} 集有播放记录，<br>是否从 <span style="color:#00ccff">${formatPlayerTime(positionToResume)}</span> 继续播放？`,
+                      confirmText: "继续播放",
+                      cancelText: "从头播放"
+                    }).then(userConfirmed => {
+                      if (userConfirmed) {
+                        // 播放到上次进度
+                        // set position params, update url, etc.
+                      } else {
+                        // 从头播放
+                      }
+                    });
+                  }                  
         }
     }
 
