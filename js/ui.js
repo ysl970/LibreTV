@@ -313,7 +313,15 @@ function saveSearchHistory(query) {
  * @param {Event} e 事件对象
  */
 function handleSearchTagClick(e) {
-    // 标签点击（仅限“非X按钮”区域）
+    // 删除按钮点击
+    const delSpan = e.target.closest('span[data-deletequery]');
+    if (delSpan) {
+        deleteSingleSearchHistory(delSpan.dataset.deletequery);
+        e.stopPropagation();
+        return;
+    }
+
+    // 标签点击（只有非X按钮才允许搜索）
     const tagBtn = e.target.closest('.search-tag');
     if (tagBtn && !e.target.closest('span[data-deletequery]')) {
         const searchInput = getElement('searchInput');
@@ -322,13 +330,6 @@ function handleSearchTagClick(e) {
             if (typeof search === 'function') search();
         }
         return;
-    }
-
-    // 删除按钮点击
-    const delSpan = e.target.closest('span[data-deletequery]');
-    if (delSpan) {
-        deleteSingleSearchHistory(delSpan.dataset.deletequery);
-        e.stopPropagation();
     }
 }
 
@@ -357,34 +358,33 @@ function renderSearchHistory() {
     clearBtn.className = "text-gray-500 hover:text-white transition-colors";
     clearBtn.setAttribute('aria-label', "清除搜索历史");
     clearBtn.textContent = "清除搜索历史";
-    clearBtn.onclick = clearSearchHistory; // Directly assign the function reference
+    clearBtn.onclick = clearSearchHistory;
 
     header.appendChild(titleDiv);
     header.appendChild(clearBtn);
     frag.appendChild(header);
 
-    // 添加搜索标签及删除按钮
+    // 渲染每个标签，自带删除x按钮
     history.forEach(item => {
         const tagWrap = document.createElement('div');
         tagWrap.className = 'inline-flex items-center mb-2 mr-2';
 
         const tag = document.createElement('button');
-        tag.className = 'search-tag flex items-center gap-1 px-4 py-1 rounded border text-white border-blue-400 hover:bg-blue-900 transition-colors';
+        tag.className = 'search-tag px-4 py-1 rounded border text-white border-blue-400 bg-transparent flex items-center gap-1 hover:bg-blue-900 transition-colors';
         tag.textContent = item.text;
         if (item.timestamp) tag.title = `搜索于: ${new Date(item.timestamp).toLocaleString()}`;
 
         // 删除按钮
         const deleteBtn = document.createElement('span');
-        deleteBtn.className = 'ml-2 text-gray-400 hover:text-red-500 transition cursor-pointer select-none';
+        deleteBtn.className = 'ml-2 text-gray-400 hover:text-red-500 cursor-pointer select-none';
         deleteBtn.setAttribute('role', 'button');
         deleteBtn.setAttribute('aria-label', '删除');
-        deleteBtn.innerHTML =
-            '<svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>' +
-            '</svg>';
-
-        // 用属性存储要删的内容
         deleteBtn.dataset.deletequery = item.text;
+        // svg x 图标
+        deleteBtn.innerHTML =
+          '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+          '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>' +
+          '</svg>';
 
         tagWrap.appendChild(tag);
         tagWrap.appendChild(deleteBtn);
@@ -676,57 +676,6 @@ function loadViewingHistory() {
 }
 
 /**
- * 渲染搜索历史标签
- */
-function renderSearchHistory() {
-    const historyContainer = getElement('recentSearches');
-    if (!historyContainer) return;
-    const history = getSearchHistory();
-    if (!history.length) { historyContainer.innerHTML = ''; return; }
-
-    const frag = document.createDocumentFragment();
-
-    // 标题与清空按钮
-    const header = document.createElement('div');
-    header.className = "flex justify-between items-center w-full mb-2";
-
-    const titleDiv = document.createElement('div');
-    titleDiv.className = "text-gray-500";
-    titleDiv.textContent = "最近搜索:";
-
-    const clearBtn = document.createElement('button');
-    clearBtn.id = "clearHistoryBtn";
-    clearBtn.className = "text-gray-500 hover:text-white transition-colors";
-    clearBtn.setAttribute('aria-label', "清除搜索历史");
-    clearBtn.textContent = "清除搜索历史";
-
-    header.appendChild(titleDiv);
-    header.appendChild(clearBtn);
-    frag.appendChild(header);
-
-    // 添加标签
-    history.forEach(item => {
-        const tag = document.createElement('button');
-        tag.className = 'search-tag';
-        tag.textContent = item.text;
-        if (item.timestamp) tag.title = `搜索于: ${new Date(item.timestamp).toLocaleString()}`;
-        frag.appendChild(tag);
-    });
-
-    historyContainer.innerHTML = '';
-    historyContainer.appendChild(frag);
-
-    // 移除旧的事件监听器和添加新的事件委托的代码已移至attachEventListeners函数
-
-    // 为清空按钮添加事件 - 这个按钮每次渲染都是新创建的，所以需要在这里添加事件
-    const clearHistoryBtn = getElement('clearHistoryBtn');
-    if (clearHistoryBtn) {
-        clearHistoryBtn.removeEventListener('click', clearSearchHistory);
-        clearHistoryBtn.addEventListener('click', clearSearchHistory);
-    }
-}
-
-/**
  * 初始化事件监听器
  */
 function attachEventListeners() {
@@ -834,6 +783,7 @@ window.clearViewingHistory = clearViewingHistory;
 window.saveSearchHistory = saveSearchHistory;
 window.clearSearchHistory = clearSearchHistory;
 window.renderSearchHistory = renderSearchHistory;
+window.deleteSingleSearchHistory = deleteSingleSearchHistory;
 
 /**
  * 设置面板自动关闭功能
@@ -873,4 +823,3 @@ function setupPanelAutoClose() {
 document.addEventListener('DOMContentLoaded', function () {
     setupPanelAutoClose();
 });
-window.deleteSingleSearchHistory = deleteSingleSearchHistory;
