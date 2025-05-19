@@ -353,6 +353,8 @@ function initializePageContent() {
     // --- 新增：记住进度开关初始化及进度恢复逻辑 ---
     setupRememberEpisodeProgressToggle(); // 初始化开关状态和事件监听
 
+    // 新进度分支代码，直接替换你 initializePageContent 里判断播放进度和episodeUrlForPlayer、indexForPlayer的那大段 if/else！
+
     const positionFromUrl = urlParams.get('position');
     const rememberEpisodeProgressToggle = document.getElementById('remember-episode-progress-toggle');
     const shouldRestoreSpecificProgress = rememberEpisodeProgressToggle ? rememberEpisodeProgressToggle.checked : true;
@@ -361,11 +363,81 @@ function initializePageContent() {
         // ★1. 只要有position参数（即从历史进度跳转），强制用url和index
         episodeUrlForPlayer = urlParams.get('url');
         indexForPlayer = parseInt(urlParams.get('index') || '0', 10);
-        // 注意，如果你需要提醒“从XX继续”，可以在播放器加载后showPositionRestoreHint
+        // ---------- 下面是弹窗断点逻辑（你的原有弹窗代码完整贴入这里，结构无须再裁剪/再分支）----------
     } else if (shouldRestoreSpecificProgress && currentEpisodes.length > 0) {
-        // ★2. 没有position，才用本地storage断点+弹窗恢复逻辑（原有代码不变，直接移到这里即可）
-        // ...（复制你的本地弹窗断点代码，可以缩进）...
-        // --------这里省略，照你的原有写即可，不动
+        const sourceCodeFromUrl = urlParams.get('source_code');
+        const videoSpecificIdForRestore = `${currentVideoTitle}_${sourceCodeFromUrl}`;
+        let allSpecificProgresses = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || '{}');
+        const savedProgressData = allSpecificProgresses[videoSpecificIdForRestore];
+
+        if (savedProgressData) {
+            // ① 决定“要不要提示进度”
+            const resumeIndex = indexForPlayer; // ← 统一使用这个
+            const positionToResume =
+                savedProgressData[resumeIndex.toString()]
+                    ? parseInt(savedProgressData[resumeIndex.toString()])
+                    : 0;
+
+            // ② 如果 URL *没* 带 index（多半是直接点“继续播放”进入播放器），
+            if ((!urlParams.has('index') || urlParams.get('index') === null)
+                && typeof savedProgressData.lastPlayedEpisodeIndex === 'number'
+                && savedProgressData.lastPlayedEpisodeIndex >= 0
+                && savedProgressData.lastPlayedEpisodeIndex < currentEpisodes.length) {
+                indexForPlayer = savedProgressData.lastPlayedEpisodeIndex;
+            }
+
+            if (positionToResume > 5 && currentEpisodes[resumeIndex]) {
+                showProgressRestoreModal({
+                    title: "继续播放？",
+                    content: `发现《${currentVideoTitle}》第 ${resumeIndex + 1} 集的播放记录，<br>是否从 <span style="color:#00ccff">${formatPlayerTime(positionToResume)}</span> 继续播放？`,
+                    confirmText: "继续播放",
+                    cancelText: "从头播放"
+                }).then(wantsToResume => {
+                    if (wantsToResume) {
+                        episodeUrlForPlayer = currentEpisodes[resumeIndex];
+                        indexForPlayer = resumeIndex;
+
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.set('url', episodeUrlForPlayer);
+                        newUrl.searchParams.set('index', indexForPlayer.toString());
+                        newUrl.searchParams.set('position', positionToResume.toString());
+                        window.history.replaceState({}, '', newUrl.toString());
+
+                        if (typeof window.showMessage === 'function') {
+                            window.showMessage(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
+                        } else if (typeof window.showToast === 'function') {
+                            window.showToast(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
+                        }
+                    } else {
+                        episodeUrlForPlayer = currentEpisodes[indexForPlayer];
+                        // indexForPlayer 保持不变
+
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.set('url', episodeUrlForPlayer);
+                        newUrl.searchParams.set('index', indexForPlayer.toString());
+                        newUrl.searchParams.delete('position');
+                        window.history.replaceState({}, '', newUrl.toString());
+
+                        if (typeof window.showMessage === 'function') {
+                            window.showMessage('已从头开始播放', 'info');
+                        } else if (typeof window.showToast === 'function') {
+                            window.showToast('已从头开始播放', 'info');
+                        }
+                    }
+                    // ★ 弹窗回调里，直接重新初始化（再次走此流程就不会再弹窗）
+                    initializePageContent();
+                });
+                return; // 不再往下执行
+            } else {
+                // 没有有效进度，或进度太短，播放用户从首页选择的
+                episodeUrlForPlayer = currentEpisodes[indexForPlayer] || urlParams.get('url');
+            }
+        } else {
+            // 该视频没有任何保存的集数进度
+            episodeUrlForPlayer = currentEpisodes[indexForPlayer] || urlParams.get('url');
+        }
+        // ---------- 弹窗断点逻辑结束 ----------
+
     } else {
         episodeUrlForPlayer = currentEpisodes[indexForPlayer] || urlParams.get('url');
     }
