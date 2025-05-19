@@ -313,15 +313,25 @@ function saveSearchHistory(query) {
  * @param {Event} e 事件对象
  */
 function handleSearchTagClick(e) {
-    const tag = e.target.closest('.search-tag');
-    if (!tag) return;
+    // 标签点击（仅限“非X按钮”区域）
+    const tagBtn = e.target.closest('.search-tag');
+    if (tagBtn && !e.target.closest('span[data-deletequery]')) {
+        const searchInput = getElement('searchInput');
+        if (searchInput) {
+            searchInput.value = tagBtn.textContent.trim();
+            if (typeof search === 'function') search();
+        }
+        return;
+    }
 
-    const searchInput = getElement('searchInput');
-    if (searchInput) {
-        searchInput.value = tag.textContent;
-        if (typeof search === 'function') search();
+    // 删除按钮点击
+    const delSpan = e.target.closest('span[data-deletequery]');
+    if (delSpan) {
+        deleteSingleSearchHistory(delSpan.dataset.deletequery);
+        e.stopPropagation();
     }
 }
+
 
 /**
  * 渲染搜索历史标签
@@ -353,22 +363,52 @@ function renderSearchHistory() {
     header.appendChild(clearBtn);
     frag.appendChild(header);
 
-    // 添加标签
+    // 添加搜索标签及删除按钮
     history.forEach(item => {
+        const tagWrap = document.createElement('div');
+        tagWrap.className = 'inline-flex items-center mb-2 mr-2';
+
         const tag = document.createElement('button');
-        tag.className = 'search-tag';
+        tag.className = 'search-tag flex items-center gap-1 px-4 py-1 rounded border text-white border-blue-400 hover:bg-blue-900 transition-colors';
         tag.textContent = item.text;
         if (item.timestamp) tag.title = `搜索于: ${new Date(item.timestamp).toLocaleString()}`;
-        frag.appendChild(tag);
+
+        // 删除按钮
+        const deleteBtn = document.createElement('span');
+        deleteBtn.className = 'ml-2 text-gray-400 hover:text-red-500 transition cursor-pointer select-none';
+        deleteBtn.setAttribute('role', 'button');
+        deleteBtn.setAttribute('aria-label', '删除');
+        deleteBtn.innerHTML =
+            '<svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>' +
+            '</svg>';
+
+        // 用属性存储要删的内容
+        deleteBtn.dataset.deletequery = item.text;
+
+        tagWrap.appendChild(tag);
+        tagWrap.appendChild(deleteBtn);
+        frag.appendChild(tagWrap);
     });
 
     historyContainer.innerHTML = '';
     historyContainer.appendChild(frag);
+}
 
-    // Get the newly rendered button and attach event listener
-    const clearHistoryBtn = historyContainer.querySelector('#clearHistoryBtn');
-    if (clearHistoryBtn) {
-        clearHistoryBtn.addEventListener('click', clearSearchHistory);
+/**
+ * 删除单条搜索历史
+ * @param {string} query 要删除的标签内容
+ */
+function deleteSingleSearchHistory(query) {
+    try {
+        let history = getSearchHistory();
+        // 防XSS与历史一致
+        history = history.filter(item => item.text !== query);
+        localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+        renderSearchHistory(); // 重新渲染
+    } catch (e) {
+        console.error('删除单条搜索历史失败:', e);
+        showToast('删除单条搜索历史失败', 'error');
     }
 }
 
@@ -833,3 +873,4 @@ function setupPanelAutoClose() {
 document.addEventListener('DOMContentLoaded', function () {
     setupPanelAutoClose();
 });
+window.deleteSingleSearchHistory = deleteSingleSearchHistory;
