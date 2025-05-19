@@ -1548,8 +1548,7 @@ function getVideoId() {
  * @param {number} index 目标集数索引（0-based）
  */
 
-function playEpisode(index) { // index is the target new episode's 0-based index
-
+function playEpisode(index) {
     if (!dp) {
         if (typeof showError === 'function') showError("播放器遇到问题，无法切换。");
         return;
@@ -1558,39 +1557,31 @@ function playEpisode(index) { // index is the target new episode's 0-based index
         if (typeof showError === 'function') showError("无效的剧集选择。");
         return;
     }
-    // Prevent re-entry if already processing the switch to the same episode
     if (isNavigatingToEpisode && currentEpisodeIndex === index) {
         return;
     }
 
-    // 1. Save progress for the *current* (soon-to-be old) episode
     if (dp.video && dp.video.src && typeof currentEpisodeIndex === 'number' && currentEpisodes[currentEpisodeIndex] && dp.video.currentTime > 5) {
-        saveVideoSpecificProgress(); // Uses module-scoped currentEpisodeIndex, currentVideoTitle
-    } else {
+        saveVideoSpecificProgress();
     }
 
-    isNavigatingToEpisode = true; // Set flag: indicates an episode switch is in progress
+    isNavigatingToEpisode = true;
 
-    const oldEpisodeIndexForRevertOnError = currentEpisodeIndex; // For reverting state if needed
+    const oldEpisodeIndexForRevertOnError = currentEpisodeIndex;
+    const rememberEpisodeProgressToggle = document.getElementById('remember-episode-progress-toggle');
+    const shouldRestoreSpecificProgress = rememberEpisodeProgressToggle ? rememberEpisodeProgressToggle.checked : true;
 
-    // 2. Update current episode index to the new target
-    currentEpisodeIndex = index;
-    window.currentEpisodeIndex = index; // Update global reference if used elsewhere
-
-    const newEpisodeUrl = currentEpisodes[currentEpisodeIndex]; // Get URL for the new episode
+    const newEpisodeUrl = currentEpisodes[index];
     if (!newEpisodeUrl || typeof newEpisodeUrl !== 'string' || !newEpisodeUrl.trim()) {
-        currentEpisodeIndex = oldEpisodeIndexForRevertOnError; // Revert
+        currentEpisodeIndex = oldEpisodeIndexForRevertOnError;
         window.currentEpisodeIndex = oldEpisodeIndexForRevertOnError;
-        isNavigatingToEpisode = false; // Reset flag
+        isNavigatingToEpisode = false;
         if (typeof showError === 'function') showError("此剧集链接无效，无法播放。");
         return;
     }
 
-    // 3. Prepare for progress restoration for the NEW episode (if any)
-    nextSeekPosition = 0; // Reset for this episode switch
-    const rememberEpisodeProgressToggle = document.getElementById('remember-episode-progress-toggle');
-    const shouldRestoreSpecificProgress = rememberEpisodeProgressToggle ? rememberEpisodeProgressToggle.checked : true;
-
+    // 进度恢复弹窗逻辑整合
+    nextSeekPosition = 0;
     if (shouldRestoreSpecificProgress) {
         const sourceCodeFromUrl = new URLSearchParams(window.location.search).get('source_code') || 'unknown_source';
         const videoSpecificIdForRestore = `${currentVideoTitle}_${sourceCodeFromUrl}`;
@@ -1598,10 +1589,10 @@ function playEpisode(index) { // index is the target new episode's 0-based index
         const savedProgressDataForVideo = allSpecificProgresses[videoSpecificIdForRestore];
 
         if (savedProgressDataForVideo) {
-            const positionToResume = savedProgressDataForVideo[currentEpisodeIndex.toString()] // Use NEW currentEpisodeIndex
-                ? parseInt(savedProgressDataForVideo[currentEpisodeIndex.toString()])
+            const positionToResume = savedProgressDataForVideo[index.toString()]
+                ? parseInt(savedProgressDataForVideo[index.toString()])
                 : 0;
-
+            // 判断是否弹窗
             if (positionToResume > 5 && currentEpisodes[index]) {
                 showProgressRestoreModal({
                     title: "继续播放？",
@@ -1612,28 +1603,35 @@ function playEpisode(index) { // index is the target new episode's 0-based index
                     if (wantsToResume) {
                         nextSeekPosition = positionToResume;
                     } else {
-                        nextSeekPosition = 0; // 或留空就是从头
+                        nextSeekPosition = 0;
                     }
-                    // 把实际切集的后续逻辑写到这里，比如：
-                    actuallySwitchEpisode();
+                    doEpisodeSwitch(index, newEpisodeUrl);
                 });
-                return; // 下面的代码不要提前执行，等待弹窗回调
+                return;
             }
-            actuallySwitchEpisode(); // 如果没弹窗直接切               
         }
     }
 
-    // 4. Update UI elements (titles, episode list highlights, buttons)
+    // 没有弹窗场景直接切换
+    doEpisodeSwitch(index, newEpisodeUrl);
+}
+
+// 提取实际切集逻辑为独立函数
+function doEpisodeSwitch(index, url) {
+    currentEpisodeIndex = index;
+    window.currentEpisodeIndex = index;
+    const newEpisodeUrl = url;
+
+    // 更新UI
     const siteName = (window.SITE_CONFIG && window.SITE_CONFIG.name) ? window.SITE_CONFIG.name : '播放器';
     document.title = `${currentVideoTitle} - 第 ${currentEpisodeIndex + 1} 集 - ${siteName}`;
     const videoTitleElement = document.getElementById('video-title');
     if (videoTitleElement) videoTitleElement.textContent = `${currentVideoTitle} (第 ${currentEpisodeIndex + 1} 集)`;
-
     if (typeof updateEpisodeInfo === 'function') updateEpisodeInfo();
-    if (typeof renderEpisodes === 'function') renderEpisodes(); // This will re-render buttons, new one highlighted
+    if (typeof renderEpisodes === 'function') renderEpisodes();
     if (typeof updateButtonStates === 'function') updateButtonStates();
 
-    // 5. Show loading indicator and hide any previous error messages
+    // Loading
     const loadingEl = document.getElementById('loading');
     if (loadingEl) {
         const loadingTextEl = loadingEl.querySelector('div:last-child');
@@ -1644,23 +1642,18 @@ function playEpisode(index) { // index is the target new episode's 0-based index
     const errorEl = document.getElementById('error');
     if (errorEl) errorEl.style.display = 'none';
 
-    // 6. Instruct DPlayer to switch video source
-    _tempUrlForCustomHls = newEpisodeUrl; // Pass URL to customType.hls via module scope as a fallback
-
+    // 切视频
+    _tempUrlForCustomHls = newEpisodeUrl;
     dp.video.pause();
-
-    dp.switchVideo({
-        url: newEpisodeUrl,
-        type: 'hls',
-    });
+    dp.switchVideo({ url: newEpisodeUrl, type: 'hls' });
     patchAndroidVideoHack();
-    videoHasEnded = false; // Reset for autoplay-next logic for the new episode
+    videoHasEnded = false;
 
-    // 7. Update browser URL using history.pushState (no page reload)
-    const newUrlForBrowser = new URL(window.location.href); // Base on current URL
+    // 更新url
+    const newUrlForBrowser = new URL(window.location.href);
     newUrlForBrowser.searchParams.set('url', newEpisodeUrl);
     newUrlForBrowser.searchParams.set('title', currentVideoTitle);
-    newUrlForBrowser.searchParams.set('index', currentEpisodeIndex.toString()); // currentEpisodeIndex is the new index
+    newUrlForBrowser.searchParams.set('index', currentEpisodeIndex.toString());
 
     const currentSourceCode = new URLSearchParams(window.location.search).get('source_code');
     if (currentSourceCode) newUrlForBrowser.searchParams.set('source_code', currentSourceCode);
@@ -1668,11 +1661,12 @@ function playEpisode(index) { // index is the target new episode's 0-based index
     const adFilteringStorageKey = (PLAYER_CONFIG && PLAYER_CONFIG.adFilteringStorage) ? PLAYER_CONFIG.adFilteringStorage : 'adFilteringEnabled';
     const adFilteringActive = (typeof getBoolConfig === 'function') ? getBoolConfig(adFilteringStorageKey, true) : true;
     newUrlForBrowser.searchParams.set('af', adFilteringActive ? '1' : '0');
-    newUrlForBrowser.searchParams.delete('position'); // New episodes start from beginning unless `nextSeekPosition` handles it
+    newUrlForBrowser.searchParams.delete('position');
     window.history.pushState(
         { path: newUrlForBrowser.toString(), episodeIndex: currentEpisodeIndex },
         '',
         newUrlForBrowser.toString()
     );
 }
-window.playEpisode = playEpisode;   // 保持全局可调用
+
+window.playEpisode = playEpisode;
