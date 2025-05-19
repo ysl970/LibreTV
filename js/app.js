@@ -728,8 +728,7 @@ function resetToHome() {
 
     /* ---- 视用户设置决定是否显示豆瓣区 ---- */
     if (doubanArea) {
-        // 如果用户关闭了豆瓣推荐开关则保持隐藏
-        const showDouban = getBoolConfig('doubanToggle', true);
+        const showDouban = getBoolConfig('doubanEnabled', false);
         doubanArea.classList.toggle('hidden', !showDouban);
     }
 
