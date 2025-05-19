@@ -91,7 +91,7 @@ function showProgressRestoreModal(opts) {
             // 解绑事件, 避免内存泄漏
             btnCancel.onclick = btnConfirm.onclick = null;
             document.removeEventListener("keydown", handler);
-            setTimeout(()=>resolve(result),180);
+            setTimeout(() => resolve(result), 180);
         }
 
         btnCancel.onclick = () => close(false);
@@ -101,7 +101,7 @@ function showProgressRestoreModal(opts) {
             if (e.key === "Escape") close(false);
             if (e.key === "Enter") close(true);
         }
-        setTimeout(()=>btnConfirm.focus(), 120); // 自动聚焦确定
+        setTimeout(() => btnConfirm.focus(), 120); // 自动聚焦确定
         document.addEventListener("keydown", handler);
 
         modal.classList.add("active");
@@ -379,42 +379,47 @@ function initializePageContent() {
             }
 
             if (positionToResume > 5 && currentEpisodes[resumeIndex]) {
-                const wantsToResume = showProgressRestoreModal(
-                    `发现《${currentVideoTitle}》第 ${resumeIndex + 1} 集的播放记录，是否从 ${formatPlayerTime(positionToResume)} 继续播放？`
-                );
+                showProgressRestoreModal({
+                    title: "继续播放？",
+                    content: `发现《${currentVideoTitle}》第 ${resumeIndex + 1} 集的播放记录，<br>是否从 <span style="color:#00ccff">${formatPlayerTime(positionToResume)}</span> 继续播放？`,
+                    confirmText: "继续播放",
+                    cancelText: "从头播放"
+                }).then(wantsToResume => {
+                    if (wantsToResume) {
+                        episodeUrlForPlayer = currentEpisodes[resumeIndex];
+                        indexForPlayer = resumeIndex;
 
-                if (wantsToResume) {
-                    episodeUrlForPlayer = currentEpisodes[resumeIndex];
-                    indexForPlayer = resumeIndex;
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.set('url', episodeUrlForPlayer);
+                        newUrl.searchParams.set('index', indexForPlayer.toString());
+                        newUrl.searchParams.set('position', positionToResume.toString());
+                        window.history.replaceState({}, '', newUrl.toString());
 
-                    const newUrl = new URL(window.location.href);
-                    newUrl.searchParams.set('url', episodeUrlForPlayer);
-                    newUrl.searchParams.set('index', indexForPlayer.toString());
-                    newUrl.searchParams.set('position', positionToResume.toString());
-                    window.history.replaceState({}, '', newUrl.toString());
+                        if (typeof window.showMessage === 'function') {
+                            window.showMessage(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
+                        } else if (typeof window.showToast === 'function') {
+                            window.showToast(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
+                        }
+                    } else {
+                        episodeUrlForPlayer = currentEpisodes[indexForPlayer];
+                        // indexForPlayer 保持不变
 
-                    if (typeof window.showMessage === 'function') {
-                        window.showMessage(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
-                    } else if (typeof window.showToast === 'function') {
-                        window.showToast(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.set('url', episodeUrlForPlayer);
+                        newUrl.searchParams.set('index', indexForPlayer.toString());
+                        newUrl.searchParams.delete('position');
+                        window.history.replaceState({}, '', newUrl.toString());
+
+                        if (typeof window.showMessage === 'function') {
+                            window.showMessage('已从头开始播放', 'info');
+                        } else if (typeof window.showToast === 'function') {
+                            window.showToast('已从头开始播放', 'info');
+                        }
                     }
-                } else {
-                    // 用户选择从头播放 (播放用户从首页点击的那一集，即原始的 indexForPlayer)
-                    episodeUrlForPlayer = currentEpisodes[indexForPlayer];
-                    // indexForPlayer 保持不变
-
-                    const newUrl = new URL(window.location.href);
-                    newUrl.searchParams.set('url', episodeUrlForPlayer);
-                    newUrl.searchParams.set('index', indexForPlayer.toString());
-                    newUrl.searchParams.delete('position');
-                    window.history.replaceState({}, '', newUrl.toString());
-
-                    if (typeof window.showMessage === 'function') {
-                        window.showMessage('已从头开始播放', 'info');
-                    } else if (typeof window.showToast === 'function') {
-                        window.showToast('已从头开始播放', 'info');
-                    }
-                }
+                    // 如果后续流程还依赖这些变量，请将后续代码挪到这里面
+                });
+                // 这里要return或者用await等，否则下面的代码会提前执行
+                return;
             } else { // 没有有效进度，或进度太短，播放用户从首页选择的
                 episodeUrlForPlayer = currentEpisodes[indexForPlayer] || urlParams.get('url');
             }
@@ -1597,21 +1602,24 @@ function playEpisode(index) { // index is the target new episode's 0-based index
                 ? parseInt(savedProgressDataForVideo[currentEpisodeIndex.toString()])
                 : 0;
 
-                if (positionToResume > 5 && currentEpisodes[resumeIndex]) {
-                    showProgressRestoreModal({
-                      title: "继续播放？", // 可改自定义
-                      content: `《${currentVideoTitle}》第 ${resumeIndex+1} 集有播放记录，<br>是否从 <span style="color:#00ccff">${formatPlayerTime(positionToResume)}</span> 继续播放？`,
-                      confirmText: "继续播放",
-                      cancelText: "从头播放"
-                    }).then(userConfirmed => {
-                      if (userConfirmed) {
-                        // 播放到上次进度
-                        // set position params, update url, etc.
-                      } else {
-                        // 从头播放
-                      }
-                    });
-                  }                  
+            if (positionToResume > 5 && currentEpisodes[index]) {
+                showProgressRestoreModal({
+                    title: "继续播放？",
+                    content: `《${currentVideoTitle}》第 ${index + 1} 集有播放记录，<br>是否从 <span style="color:#00ccff">${formatPlayerTime(positionToResume)}</span> 继续播放？`,
+                    confirmText: "继续播放",
+                    cancelText: "从头播放"
+                }).then(wantsToResume => {
+                    if (wantsToResume) {
+                        nextSeekPosition = positionToResume;
+                    } else {
+                        nextSeekPosition = 0; // 或留空就是从头
+                    }
+                    // 把实际切集的后续逻辑写到这里，比如：
+                    actuallySwitchEpisode();
+                });
+                return; // 下面的代码不要提前执行，等待弹窗回调
+            }
+            actuallySwitchEpisode(); // 如果没弹窗直接切               
         }
     }
 
