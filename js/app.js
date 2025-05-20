@@ -530,7 +530,7 @@ function renderSearchResults(results, doubanSearchedTitle = null) {
             const resultsWithSource = result.list.map(item => ({
                 ...item,
                 source_name: result.apiName || (typeof API_SITES !== 'undefined' && API_SITES[result.apiId]?.name) || '未知来源',
-                source_code: result.apiId.startsWith('custom_') ? 'custom' : result.apiId,
+                source_code: result.apiId,
                 api_url: result.apiId.startsWith('custom_') && typeof APISourceManager !== 'undefined' ?
                     APISourceManager.getCustomApiInfo(parseInt(result.apiId.replace('custom_', '')))?.url : ''
             }));
@@ -691,7 +691,7 @@ async function getVideoDetail(id, sourceCode, apiUrl = '') {
             firstEpisode,
             data.videoInfo?.title || '未知视频',
             0,
-            data.videoInfo?.source_name || '',
+            selectedApi.name || '',
             sourceCode
         );
     } catch (error) {
