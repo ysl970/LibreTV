@@ -326,9 +326,11 @@ async function handleApiRequest(url) {
                         year: videoDetail.vod_year,
                         area: videoDetail.vod_area,
                         director: videoDetail.vod_director,
-                        actor: videoDetail.vod_actor,
-                        remarks: videoDetail.vod_remarks,
-                        source_name: sourceCode === 'custom' ? '自定义源' : API_SITES[sourceCode].name,
+                        actor: videoDetail.vod_actor, // 
+                        remarks: videoDetail.vod_remarks, // 
+                        source_name: sourceCode.startsWith('custom_')
+                            ? '自定义源'
+                            : (API_SITES && API_SITES[sourceCode] ? API_SITES[sourceCode].name : '未知来源'),
                         source_code: sourceCode
                     }
                 });
