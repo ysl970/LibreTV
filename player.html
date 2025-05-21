@@ -310,20 +310,52 @@
     <!-- Replace player.js with ArtPlayer implementation -->
     <script>
         // Global variables
-        let art = null;
+        window.artPlayerInstance = null; // Store player instance globally for better access
         const rateKey = 'vodg-playback-rate';
         const cacheKey = 'vod-play-progress';
         let playbackTimeUpdated = Date.now();
         let videoId = null;
         let currentEpisode = null;
+        let isNavigating = false; // Track navigation state
+        
+        // Clean up player instance and resources
+        function destroyPlayer() {
+            try {
+                if (window.artPlayerInstance) {
+                    // Pause video and clean up
+                    window.artPlayerInstance.pause();
+                    
+                    // Remove all event listeners
+                    if (window.artPlayerInstance.events) {
+                        window.artPlayerInstance.events.destroy();
+                    }
+                    
+                    // Destroy the player
+                    window.artPlayerInstance.destroy(true);
+                    
+                    // Clean up HLS instance if it exists
+                    if (window.hlsInstance) {
+                        window.hlsInstance.destroy();
+                        window.hlsInstance = null;
+                    }
+                    
+                    window.artPlayerInstance = null;
+                }
+                
+                // Clear player container
+                const playerContainer = document.getElementById('player');
+                if (playerContainer) {
+                    playerContainer.innerHTML = '';
+                }
+            } catch (e) {
+                console.warn('Error cleaning up player:', e);
+            }
+        }
 
         // Configure player settings
         function initArtPlayer(videoUrl, videoTitle, posterUrl) {
-            // Clear previous player instance
-            if (art) {
-                art.destroy();
-                art = null;
-            }
+            // Clear previous player instance and event listeners
+            destroyPlayer();
 
             // Clear player container
             document.getElementById('player').innerHTML = '';
@@ -372,8 +404,14 @@
                 },
                 customType: {
                   customHls: function(video, url) {
+                    // Clean up previous HLS instance if exists
+                    if (window.hlsInstance) {
+                        window.hlsInstance.destroy();
+                        window.hlsInstance = null;
+                    }
+                    
                     if (Hls.isSupported()) {
-                      const hls = new Hls({
+                      window.hlsInstance = new Hls({
                         maxBufferLength: 60,
                         maxMaxBufferLength: 90,
                         maxBufferSize: 100 * 1000 * 1000,
@@ -393,11 +431,11 @@
                           switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
                               // HLS network error
-                              hls.startLoad();
+                              try { hls.startLoad(); } catch (e) { console.warn('HLS startLoad error:', e); }
                               break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
                               // HLS media error
-                              hls.recoverMediaError();
+                              try { hls.recoverMediaError(); } catch (e) { console.warn('HLS recoverMediaError error:', e); }
                               break;
                             default:
                               // HLS fatal error
@@ -661,27 +699,30 @@
     <script src="js/player.js"></script>
 
     <script>
-        // 创建全局环境变量对象
-        window.__ENV__ = window.__ENV__ || {};
-        
-        // 注入服务器端环境变量 (将由服务器端替换)
-        // PASSWORD 变量将在这里被服务器端注入
-        window.__ENV__.PASSWORD = "{{PASSWORD}}";        // 导航到首页
         function goHome(event) {
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
             }
-            // 清除任何可能影响导航的状态
-            if (window.playerAPI && window.playerAPI.destroy) {
-                try {
-                    window.playerAPI.destroy();
-                } catch (e) {
-                    console.warn('清理播放器时出错:', e);
-                }
+            
+            // Prevent multiple navigation attempts
+            if (isNavigating) return;
+            isNavigating = true;
+            
+            try {
+                // Clean up player and resources
+                destroyPlayer();
+                
+                // Clear any player-related timeouts/intervals
+                clearTimeout(window.playerCleanupTimer);
+                
+                // Navigate to home
+                window.location.href = '/';
+            } catch (e) {
+                console.error('Navigation error:', e);
+                // Force navigation even if cleanup fails
+                window.location.href = '/';
             }
-            // 直接导航到根路径
-            window.location.href = '/';
         }
 
         // 改进返回上一页功能
