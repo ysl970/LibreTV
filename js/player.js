@@ -859,10 +859,14 @@ function playEpisode(index) {
     // return; // 提前返回，不执行后续代码
     
     // 更新播放器
-    if (window.playerAPI && typeof window.playerAPI.switch === 'function') {
-        window.playerAPI.switch({
+    if (art && typeof art.switch === 'function') {
+        // 切换前主动暂停
+        if (art.video && !art.video.paused) art.pause();
+        art.switch({
             url: url,
-            title: currentVideoTitle
+            type: url.endsWith('.m3u8') ? 'customHls' : 'auto',
+            title: currentVideoTitle,
+            poster: '' // 如有封面可传
         });
     } else {
         initPlayer(url, sourceCode);
