@@ -345,7 +345,7 @@
                 posterScaling: 'contain',
                 volume: 0.8,
                 isLive: false,
-                muted: true, // Required for autoplay in most browsers
+                muted: false,
                 autoplay: true,
                 pip: true,
                 autoSize: true,
@@ -361,9 +361,13 @@
                 subtitleOffset: true,
                 miniProgressBar: true,
                 mutex: true,
+                // Add play promise handling
+                playPromise: true,
                 backdrop: true,
                 playsInline: true,
                 autoPlayback: true,
+                // Try to unmute after user interaction
+                tryToUnmute: true,
                 airplay: true,
                 theme: '#23ade5',
                 lang: navigator.language.toLowerCase(),
