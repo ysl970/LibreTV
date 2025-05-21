@@ -372,6 +372,34 @@ function initPlayer(videoUrl, sourceCode) {
     // 记录当前视频URL
     currentVideoUrl = videoUrl;
     
+    // Set up loadedmetadata event after dp is initialized
+    if (dp) {
+        dp.on('loadedmetadata', function() {
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+            videoHasEnded = false; // 视频加载时重置结束标志
+
+            // 优先使用URL传递的position参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const savedPosition = parseInt(urlParams.get('position') || '0');
+            
+            if (savedPosition > 10 && dp && dp.video && dp.video.duration > 0 && savedPosition < dp.video.duration - 2) {
+                // 如果URL中有有效的播放位置参数，直接使用它
+                if (typeof dp.seek === 'function') {
+                    dp.seek(savedPosition);
+                } else if (dp.video) {
+                    dp.video.currentTime = savedPosition;
+                }
+                showPositionRestoreHint(savedPosition);
+            } else if (dp.video && dp.video.duration > 0) {
+                // 否则尝试恢复本地保存的播放进度
+                restorePlaybackPosition();
+            }
+        });
+    }
+    
     // 使用ArtPlayer API加载视频
     if (window.playerAPI && typeof window.playerAPI.loadVideo === 'function') {
         // 准备视频数据
@@ -515,61 +543,13 @@ function restorePlaybackPosition() {
 }
     // Note: fullscreen_cancel is already handled in setupArtPlayerEvents
     
-    // Note: loadedmetadata event is handled in setupArtPlayerEvents as 'ready'
-    // This is retained for backward compatibility
-    dp.on('loadedmetadata', function() {
-        document.getElementById('loading').style.display = 'none';
-        videoHasEnded = false; // 视频加载时重置结束标志
-
-        // 优先使用URL传递的position参数
-        const urlParams = new URLSearchParams(window.location.search);
-        const savedPosition = parseInt(urlParams.get('position') || '0');
-        
-        if (savedPosition > 10 && dp && dp.video && dp.video.duration > 0 && savedPosition < dp.video.duration - 2) {
-            // 如果URL中有有效的播放位置参数，直接使用它
-            // Use currentTime instead of seek for ArtPlayer
-            if (typeof dp.seek === 'function') {
-                dp.seek(savedPosition);
-            } else if (dp.currentTime !== undefined) {
-                dp.currentTime = savedPosition;
-            }
-            showPositionRestoreHint(savedPosition);
-        } else {
-            // 否则尝试从本地存储恢复播放进度
-            try {
-                const progressKey = 'videoProgress_' + currentVideoUrl; // Use currentVideoUrl for unique key
-                const progressStr = localStorage.getItem(progressKey);
-                if (progressStr && dp && dp.video && dp.video.duration > 0) {
-                    const progress = JSON.parse(progressStr);
-                    if (
-                        progress &&
-                        typeof progress.position === 'number' &&
-                        progress.position > 10 &&
-                        progress.position < dp.video.duration - 2
-                    ) {
-                        // Use currentTime instead of seek for ArtPlayer
-                        if (typeof dp.seek === 'function') {
-                            dp.seek(progress.position);
-                        } else if (dp.currentTime !== undefined) {
-                            dp.currentTime = progress.position;
-                        }
-                        showPositionRestoreHint(progress.position);
-                    }
-                }
-            } catch (e) {
-                // ignore
-            }
-        }
-
-        // 视频加载成功后重新设置进度条点击监听
-        setupProgressBarPreciseClicks();
-        
-        // 视频加载成功后，在稍微延迟后将其添加到观看历史
-        setTimeout(saveToHistory, 3000);
-        
-        // 启动定期保存播放进度
-        startProgressSaveInterval();
-    });
+    // Simple implementation of findSourceInfoByCode
+    function findSourceInfoByCode(code) {
+        // This is a basic implementation - adjust as needed
+        return { name: code || '未知来源' };
+    }
+    
+    // Note: loadedmetadata event is now set up in initPlayer after dp initialization
 
     dp.on('error', function() {
         // 如果正在切换视频，忽略错误
