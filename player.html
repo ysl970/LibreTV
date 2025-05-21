@@ -572,7 +572,10 @@
             // Update playback progress
             art.on('video:timeupdate', () => {
                 try {
-                    updatePlayProgressRate(art.currentTime, art.duration);
+                    // Only update progress if we have a valid video ID and episode
+                    if (videoId && currentEpisode !== null && art.duration > 0) {
+                        updatePlayProgressRate(art.currentTime, art.duration);
+                    }
                 } catch (error) {
                     console.error('Error in video:timeupdate event:', error);
                 }
@@ -584,11 +587,16 @@
                 try {
                     if (!seeked && art.duration > 0) {
                         seeked = true;
-                        // Seek to saved position
-                        art.currentTime = getSeekTime(art.duration);
-                        // Set saved playback rate
-                        if (playbackRate > 0 && playbackRate < 5) {
-                            art.playbackRate = playbackRate;
+                        // Only try to seek if we have a valid video ID and episode
+                        if (videoId && currentEpisode !== null) {
+                            const seekTime = getSeekTime(art.duration);
+                            if (seekTime > 0 && seekTime < art.duration - 10) {
+                                art.currentTime = seekTime;
+                            }
+                            // Set saved playback rate
+                            if (playbackRate > 0 && playbackRate < 5) {
+                                art.playbackRate = playbackRate;
+                            }
                         }
                     }
                 } catch (error) {
@@ -638,20 +646,27 @@
 
         // Progress caching functions
         function getPlayCache() {
+            if (!videoId || currentEpisode === null) return {};
+            
             let cache = localStorage.getItem(cacheKey);
-            if (cache && typeof cache == 'string') {
+            if (cache && typeof cache === 'string') {
                 try {
                     cache = JSON.parse(cache);
-                } catch {
+                    if (!cache || typeof cache !== 'object') {
+                        cache = {};
+                    }
+                } catch (e) {
+                    console.warn('Error parsing play cache:', e);
                     cache = {};
                 }
             } else {
                 cache = {};
             }
-            if (!cache[videoId] || typeof cache[videoId] != 'object') {
+            
+            if (!cache[videoId] || typeof cache[videoId] !== 'object') {
                 cache[videoId] = {};
             }
-            if (!cache[videoId][currentEpisode] || typeof cache[videoId][currentEpisode] != 'object') {
+            if (!cache[videoId][currentEpisode] || typeof cache[videoId][currentEpisode] !== 'object') {
                 cache[videoId][currentEpisode] = {};
             }
             return cache;
