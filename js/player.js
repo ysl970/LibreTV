@@ -400,9 +400,16 @@ function initPlayer(videoUrl, sourceCode) {
     const setupPlayerCallbacks = function() {
         // 设置loadedmetadata事件
         dp.on('loadedmetadata', function() {
-            const loadingElement = document.getElementById('loading');
-            if (loadingElement) {
-                loadingElement.style.display = 'none';
+            // 隐藏所有加载指示器
+            const loadingElements = document.querySelectorAll('#loading, .player-loading-container');
+            loadingElements.forEach(el => {
+                if (el) el.style.display = 'none';
+            });
+            
+            // 隐藏播放器占位符
+            const playerPlaceholder = document.querySelector('.player-placeholder');
+            if (playerPlaceholder) {
+                playerPlaceholder.style.display = 'none';
             }
             videoHasEnded = false; // 视频加载时重置结束标志
 
@@ -539,6 +546,13 @@ function setupArtPlayerEvents() {
         }
         
         console.error('播放器错误:', error);
+        
+        // 隐藏所有加载指示器
+        const loadingElements = document.querySelectorAll('#loading, .player-loading-container');
+        loadingElements.forEach(el => {
+            if (el) el.style.display = 'none';
+        });
+        
         showError('视频播放失败: ' + (error.message || '未知错误'));
     });
     
