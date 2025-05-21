@@ -702,7 +702,6 @@ function restorePlaybackPosition() {
             }
         });
     })();
-}
 
 // 自定义M3U8 Loader用于过滤广告
 // Only define if Hls is available
