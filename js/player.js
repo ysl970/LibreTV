@@ -900,7 +900,9 @@ function playEpisode(index) {
                 dp.video.pause();
                 // 移除视频源
                 if (dp.video.src) {
-                    URL.revokeObjectURL(dp.video.src);
+                    if (dp.video.src.startsWith('blob:')) {
+                        URL.revokeObjectURL(dp.video.src);
+                    }
                 }
                 // 清除视频源
                 dp.video.src = '';
@@ -909,12 +911,20 @@ function playEpisode(index) {
             
             // 清理HLS实例
             if (currentHls) {
-                currentHls.destroy();
+                try {
+                    currentHls.destroy();
+                } catch (e) {
+                    console.warn('清理HLS实例时出错:', e);
+                }
                 currentHls = null;
             }
             
-            // 移除所有事件监听器
-            dp.off();
+            // 不要移除所有事件监听器，因为我们需要保留一些基本的播放器功能
+            // 只移除特定的事件监听器
+            const eventsToRemove = ['loadedmetadata', 'error', 'play', 'pause', 'ended', 'timeupdate', 'seeking', 'seeked'];
+            eventsToRemove.forEach(event => {
+                dp.off(event);
+            });
         } catch (e) {
             console.error('清理播放器时出错:', e);
         }
