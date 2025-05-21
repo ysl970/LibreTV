@@ -889,6 +889,9 @@ function playEpisode(index) {
             media.muted = true;
             media.src = '';
             media.load();
+            if (media.parentNode) {
+                media.parentNode.removeChild(media);
+            }
         } catch (e) {}
     });
     // 彻底清空播放器容器，防止残留 video 元素
@@ -896,179 +899,66 @@ function playEpisode(index) {
     if (playerContainer) {
         playerContainer.innerHTML = '';
     }
-    
-    // 确保index在有效范围内
-    if (index < 0 || index >= currentEpisodes.length) {
-        console.error(`无效的剧集索引: ${index}, 当前剧集数量: ${currentEpisodes.length}`);
-        showToast(`无效的剧集索引: ${index + 1}，当前剧集总数: ${currentEpisodes.length}`);
-        return;
-    }
-    
-    // 保存当前播放进度（如果正在播放）
-    if (dp && dp.video && !dp.video.paused && !videoHasEnded) {
-        saveCurrentProgress();
-    }
-    
-    // 清除进度保存计时器
-    if (progressSaveInterval) {
-        clearInterval(progressSaveInterval);
-        progressSaveInterval = null;
-    }
-    
-    // 获取 sourceCode
-    const urlParams2 = new URLSearchParams(window.location.search);
-    const sourceCode = urlParams2.get('source_code');
-    
-    // 准备切换剧集的URL
-    const url = currentEpisodes[index];
-    const currentUrl = new URL(window.location.href);
-    const urlParams = currentUrl.searchParams;
-    
-    // 构建新的URL参数
-    const newUrl = new URL(window.location.origin + window.location.pathname);
-    // 保留所有原始参数
-    for(const [key, value] of urlParams.entries()) {
-        newUrl.searchParams.set(key, value);
-    }
-    
-    // 更新需要变更的参数
-    newUrl.searchParams.set('index', index);
-    newUrl.searchParams.set('url', url);
-    // 确保不会从记录的位置开始播放
-    newUrl.searchParams.delete('position');
-    
-    // 显示加载指示器，然后重新加载页面
-    const loadingElement = document.getElementById('loading');
-    if (loadingElement) {
-        loadingElement.style.display = 'flex';
-        loadingElement.innerHTML = `
-            <div class="loading-spinner"></div>
-            <div>正在加载集数 ${index+1}...</div>
-        `;
-    }
-    
-    // 使用页面重载方式切换剧集，这将完全清理所有资源
-    // console.log(`切换到剧集 ${index+1}，完全重载页面...`);
-    // setTimeout(() => {
-    //     window.location.href = newUrl.toString();
-    // }, 100); // 短暂停以显示加载指示器
-    
-    // return; // 提前返回，不执行后续代码
-    
-    // 更新播放器
-    if (dp) {
-        try {
-            // 检测是否为Safari浏览器或iOS设备
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            
-            if (isSafari || isIOS) {
-                // Safari或iOS设备：完全重新初始化播放器
-                console.log('检测到Safari或iOS设备，重新初始化播放器');
-
-                // 标记正在切换视频，避免错误处理
-                window.isSwitchingVideo = true;
-                
-                // 如果存在旧的播放器实例，先销毁它
-                if (dp && dp.destroy) {
-                    try {
-                        dp.destroy();
-                    } catch (e) {
-                        console.warn('销毁旧播放器实例出错:', e);
-                    }
-                }
-                // 彻底移除所有 video/audio 元素，防止残留声音
-                document.querySelectorAll('video, audio').forEach(media => {
-                    try {
-                        media.pause();
-                        media.muted = true;
-                        media.src = '';
-                        media.load();
-                    } catch (e) {}
-                });
-                // 彻底清空播放器容器，防止残留 video 元素
-                const playerContainer = document.getElementById('player');
-                if (playerContainer) {
-                    playerContainer.innerHTML = '';
-                }
-                
-                // 重新初始化播放器
-                initPlayer(url, sourceCode);
-
-                // 延迟重置标记
-                setTimeout(() => {
-                    window.isSwitchingVideo = false;
-                }, 1000);
-            } else {
-                // 对于ArtPlayer，我们需要销毁当前实例并创建一个新的
-                if (dp && typeof dp.destroy === 'function') {
-                    try {
-                        dp.destroy(true); // true 表示完全销毁
-                    } catch (e) {
-                        console.warn('销毁旧播放器实例出错:', e);
-                    }
-                }
-                // 彻底移除所有 video/audio 元素，防止残留声音
-                document.querySelectorAll('video, audio').forEach(media => {
-                    try {
-                        media.pause();
-                        media.muted = true;
-                        media.src = '';
-                        media.load();
-                    } catch (e) {}
-                });
-                // 彻底清空播放器容器，防止残留 video 元素
-                const playerContainer = document.getElementById('player');
-                if (playerContainer) {
-                    playerContainer.innerHTML = '';
-                }
-                
-                // 重新初始化播放器
-                initPlayer(url, sourceCode);
-            }
-            
-            // 确保播放开始
-            if (dp) {
-                const playPromise = dp.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.warn('播放失败，尝试重新初始化:', error);
-                        // 如果切换视频失败，重新初始化播放器
-                        initPlayer(url, sourceCode);
-                    });
-                }
-            }
-        } catch (e) {
-            console.error('切换视频出错，尝试重新初始化:', e);
-            // 如果出错，重新初始化播放器
-            initPlayer(url, sourceCode);
+    // Aggressively delay before creating new player
+    setTimeout(() => {
+        // 确保index在有效范围内
+        if (index < 0 || index >= currentEpisodes.length) {
+            console.error(`无效的剧集索引: ${index}, 当前剧集数量: ${currentEpisodes.length}`);
+            showToast(`无效的剧集索引: ${index + 1}，当前剧集总数: ${currentEpisodes.length}`);
+            return;
         }
-    } else {
+        // 保存当前播放进度（如果正在播放）
+        if (dp && dp.video && !dp.video.paused && !videoHasEnded) {
+            saveCurrentProgress();
+        }
+        // 清除进度保存计时器
+        if (progressSaveInterval) {
+            clearInterval(progressSaveInterval);
+            progressSaveInterval = null;
+        }
+        // 获取 sourceCode
+        const urlParams2 = new URLSearchParams(window.location.search);
+        const sourceCode = urlParams2.get('source_code');
+        // 准备切换剧集的URL
+        const url = currentEpisodes[index];
+        const currentUrl = new URL(window.location.href);
+        const urlParams = currentUrl.searchParams;
+        // 构建新的URL参数
+        const newUrl = new URL(window.location.origin + window.location.pathname);
+        for(const [key, value] of urlParams.entries()) {
+            newUrl.searchParams.set(key, value);
+        }
+        newUrl.searchParams.set('index', index);
+        newUrl.searchParams.set('url', url);
+        newUrl.searchParams.delete('position');
+        // 显示加载指示器
+        const loadingElement = document.getElementById('loading');
+        if (loadingElement) {
+            loadingElement.style.display = 'flex';
+            loadingElement.innerHTML = `
+                <div class="loading-spinner"></div>
+                <div>正在加载集数 ${index+1}...</div>
+            `;
+        }
+        // 更新全局索引
+        currentEpisodeIndex = index;
+        // 更新URL参数（不刷新页面）
+        window.history.replaceState({}, '', newUrl.toString());
+        // 更新页面标题
+        document.title = currentVideoTitle + ' - LibreTV播放器';
+        document.getElementById('videoTitle').textContent = currentVideoTitle;
+        // 更新UI
+        updateEpisodeInfo();
+        updateButtonStates();
+        renderEpisodes();
+        // 重置用户点击位置记录
+        userClickedPosition = null;
+        // 三秒后保存到历史记录
+        setTimeout(() => saveToHistory(), 3000);
+        // 重新初始化播放器
         initPlayer(url, sourceCode);
-    }
-    
-    // 更新全局索引
-    currentEpisodeIndex = index;
-    // 如果有每集标题，可以在这里更新 currentVideoTitle
-    // currentVideoTitle = ... // 若有 per-episode title，可在此赋值
-
-    // 更新URL参数（不刷新页面）
-    window.history.replaceState({}, '', newUrl.toString());
-
-    // 更新页面标题
-    document.title = currentVideoTitle + ' - LibreTV播放器';
-    document.getElementById('videoTitle').textContent = currentVideoTitle;
-
-    // 更新UI
-    updateEpisodeInfo();
-    updateButtonStates();
-    renderEpisodes();
-
-    // 重置用户点击位置记录
-    userClickedPosition = null;
-    
-    // 三秒后保存到历史记录
-    setTimeout(() => saveToHistory(), 3000);
+    }, 100);
+    return;
 }
 
 // 播放上一集
