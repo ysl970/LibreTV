@@ -955,6 +955,15 @@ function playEpisode(index) {
                         console.warn('销毁旧播放器实例出错:', e);
                     }
                 }
+                // 彻底移除所有 video/audio 元素，防止残留声音
+                document.querySelectorAll('video, audio').forEach(media => {
+                    try {
+                        media.pause();
+                        media.muted = true;
+                        media.src = '';
+                        media.load();
+                    } catch (e) {}
+                });
                 
                 // 重新初始化播放器
                 initPlayer(url, sourceCode);
@@ -972,6 +981,15 @@ function playEpisode(index) {
                         console.warn('销毁旧播放器实例出错:', e);
                     }
                 }
+                // 彻底移除所有 video/audio 元素，防止残留声音
+                document.querySelectorAll('video, audio').forEach(media => {
+                    try {
+                        media.pause();
+                        media.muted = true;
+                        media.src = '';
+                        media.load();
+                    } catch (e) {}
+                });
                 
                 // 重新初始化播放器
                 initPlayer(url, sourceCode);
