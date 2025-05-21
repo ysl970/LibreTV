@@ -217,45 +217,48 @@ function initializePageContent() {
         localStorage.setItem('autoplayEnabled', autoplayEnabled);
     });
     
-    // 优先使用URL传递的集数信息，否则从localStorage获取
-    try {
-        if (episodesList) {
-            // 如果URL中有集数数据，优先使用它
-            currentEpisodes = JSON.parse(decodeURIComponent(episodesList));
-            console.log('从URL恢复集数信息:', currentEpisodes.length);
-        } else {
-            // 否则从localStorage获取
-            currentEpisodes = JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
-            console.log('从localStorage恢复集数信息:', currentEpisodes.length);
-        }
-        
-        // 检查集数索引是否有效，如果无效则调整为0
-        if (index < 0 || (currentEpisodes.length > 0 && index >= currentEpisodes.length)) {
-            console.warn(`无效的剧集索引 ${index}，调整为范围内的值`);
-            
-            // 如果索引太大，则使用最大有效索引
-            if (index >= currentEpisodes.length && currentEpisodes.length > 0) {
-                index = currentEpisodes.length - 1;
-            } else {
-                index = 0;
+    // 解析 episodes 参数，优先使用完整剧集列表
+    (function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let episodesParam = urlParams.get('episodes');
+        window.currentEpisodes = [];
+        if (episodesParam) {
+            try {
+                window.currentEpisodes = JSON.parse(decodeURIComponent(episodesParam));
+            } catch (e) {
+                console.error('Failed to parse episodes:', e);
+                // fallback: use single url
+                const url = urlParams.get('url');
+                if (url) window.currentEpisodes = [url];
             }
-            
-            // 更新URL以反映修正后的索引
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.set('index', index);
-            window.history.replaceState({}, '', newUrl);
+        } else {
+            // fallback: use single url
+            const url = urlParams.get('url');
+            if (url) window.currentEpisodes = [url];
+        }
+    })();
+
+    // 检查集数索引是否有效，如果无效则调整为0
+    if (index < 0 || (currentEpisodes.length > 0 && index >= currentEpisodes.length)) {
+        console.warn(`无效的剧集索引 ${index}，调整为范围内的值`);
+        
+        // 如果索引太大，则使用最大有效索引
+        if (index >= currentEpisodes.length && currentEpisodes.length > 0) {
+            index = currentEpisodes.length - 1;
+        } else {
+            index = 0;
         }
         
-        // 更新当前索引为验证过的值
-        currentEpisodeIndex = index;
-        
-        episodesReversed = localStorage.getItem('episodesReversed') === 'true';
-    } catch (e) {
-        console.error('获取集数信息失败:', e);
-        currentEpisodes = [];
-        currentEpisodeIndex = 0;
-        episodesReversed = false;
+        // 更新URL以反映修正后的索引
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('index', index);
+        window.history.replaceState({}, '', newUrl);
     }
+    
+    // 更新当前索引为验证过的值
+    currentEpisodeIndex = index;
+    
+    episodesReversed = localStorage.getItem('episodesReversed') === 'true';
 
     // 设置页面标题
     document.title = currentVideoTitle + ' - LibreTV播放器';
