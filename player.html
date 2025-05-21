@@ -18,6 +18,12 @@
     
     <!-- Add optimized player loading styles -->
     <style>
+      /* Critical header and navigation styles */
+      .player-header {
+        position: relative;
+        z-index: 9999 !important;
+      }
+      
       /* Critical loading styles to prevent FOUC */
       .player-placeholder {
         width: 100% !important;
@@ -125,12 +131,9 @@
     </script>
 </head>
 <body>
-    <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header {
-  position: relative;
-  z-index: 1000;
-}">
+    <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header">
         <div class="flex items-center min-w-0">
-            <a href="/" id="homeButton" class="flex items-center min-w-0 cursor-pointer">
+            <a href="/" id="homeButton" onclick="return directNavigateHome();" class="flex items-center min-w-0 cursor-pointer">
                 <svg class="w-8 h-8 mr-2 text-[#00ccff] logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
@@ -349,7 +352,7 @@
                 volume: 0.8,
                 isLive: false,
                 muted: false,
-                autoplay: false,
+                autoplay: true,
                 pip: true,
                 autoSize: true,
                 autoMini: true,
@@ -368,6 +371,7 @@
                 playsInline: true,
                 autoPlayback: false,
                 airplay: true,
+                hotkey: true,
                 theme: '#23ade5',
                 lang: navigator.language.toLowerCase(),
                 moreVideoAttr: {
@@ -670,6 +674,36 @@
         // 注入服务器端环境变量 (将由服务器端替换)
         // PASSWORD 变量将在这里被服务器端注入
         window.__ENV__.PASSWORD = "{{PASSWORD}}";
+        
+        // 直接导航到首页的备份方法，强制清理和导航
+        function directNavigateHome() {
+            console.log('Direct home navigation triggered');
+            try {
+                // 停止所有音频和视频
+                document.querySelectorAll('video, audio').forEach(media => {
+                    try {
+                        media.pause();
+                        media.muted = true;
+                        media.src = '';
+                    } catch (e) {}
+                });
+                
+                // 关闭播放器
+                if (window.dp && typeof window.dp.destroy === 'function') {
+                    try { window.dp.destroy(true); } catch(e) {}
+                }
+                
+                // 清除事件处理程序
+                window.onbeforeunload = null;
+                
+                // 立即导航
+                setTimeout(() => { window.location.replace('/'); }, 0);
+            } catch(e) {
+                // 如果出错，直接导航
+                window.location.href = '/';
+            }
+            return false; // 阻止默认点击事件
+        }
         
         // 页面加载完成后初始化事件监听
         document.addEventListener('DOMContentLoaded', function() {
