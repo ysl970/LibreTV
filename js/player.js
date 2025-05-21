@@ -374,6 +374,13 @@ function showShortcutHint(text, direction) {
 
 // 初始化播放器
 function initPlayer(videoUrl, sourceCode) {
+    // 立即移除所有加载指示器
+    document.querySelectorAll('.player-loading-container, .art-loading, #loading').forEach(el => {
+        if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+        }
+    });
+    
     if (!videoUrl) {
         showError('视频链接无效');
         return;
@@ -885,13 +892,41 @@ function playEpisode(index) {
         <div>正在加载视频...</div>
     `;
     
+    // 停止当前播放并清理资源
+    if (dp) {
+        try {
+            // 暂停播放
+            if (dp.video) {
+                dp.video.pause();
+                // 移除视频源
+                if (dp.video.src) {
+                    URL.revokeObjectURL(dp.video.src);
+                }
+                // 清除视频源
+                dp.video.src = '';
+                dp.video.load();
+            }
+            
+            // 清理HLS实例
+            if (currentHls) {
+                currentHls.destroy();
+                currentHls = null;
+            }
+            
+            // 移除所有事件监听器
+            dp.off();
+        } catch (e) {
+            console.error('清理播放器时出错:', e);
+        }
+    }
+    
     const url = currentEpisodes[index];
     // 更新全局URL记录
     currentVideoUrl = url;
     currentEpisodeIndex = index;
     videoHasEnded = false; // 重置视频结束标志
     
-    // 新增：清除之前的播放位置记录，确保切换选集后从头开始播放
+    // 清除之前的播放位置记录，确保切换选集后从头开始播放
     clearVideoProgress();
     
     // 获取当前URL的所有参数
