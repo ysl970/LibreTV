@@ -125,35 +125,9 @@
     </script>
 </head>
 <body>
-    <!-- Add this style to ensure the home button stays on top -->
-    <style>
-        #home-button {
-            position: relative;
-            z-index: 10001; /* Very high z-index to stay on top */
-            pointer-events: auto !important;
-            cursor: pointer;
-        }
-        #home-button * {
-            pointer-events: none; /* Allow clicks to pass through to the anchor */
-        }
-        /* Ensure the home button stays interactive */
-        #home-button:active {
-            transform: scale(0.95);
-        }
-        /* Add a visual feedback for click */
-        #home-button:focus {
-            outline: 2px solid #00ccff;
-            outline-offset: 2px;
-        }
-    </style>
-    
-    <!-- Add a hidden iframe for forced navigation -->
-    <iframe id="nav-helper" style="display:none"></iframe>
-    
     <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header">
         <div class="flex items-center min-w-0">
-            <!-- Direct home link that will always work -->
-            <a href="#" id="home-button" class="flex items-center min-w-0" onclick="forceGoHome(event); return false;">
+            <a href="#" onclick="goHome(event)" class="flex items-center min-w-0 cursor-pointer">
                 <svg class="w-8 h-8 mr-2 text-[#00ccff] logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
@@ -694,61 +668,20 @@
         // PASSWORD 变量将在这里被服务器端注入
         window.__ENV__.PASSWORD = "{{PASSWORD}}";        // 导航到首页
         function goHome(event) {
-            console.log('goHome function called');
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
             }
-            
-            // Destroy the player if it exists
-            if (window.dp && typeof window.dp.destroy === 'function') {
-                try {
-                    window.dp.destroy(true);
-                } catch (e) {
-                    console.warn('清理播放器时出错 (dp):', e);
-                }
-            }
-            
-            // Also try the playerAPI if it exists
+            // 清除任何可能影响导航的状态
             if (window.playerAPI && window.playerAPI.destroy) {
                 try {
                     window.playerAPI.destroy();
                 } catch (e) {
-                    console.warn('清理播放器时出错 (playerAPI):', e);
+                    console.warn('清理播放器时出错:', e);
                 }
             }
-            
-            // Force cleanup of any resources that might block navigation
-            try {
-                // Pause any potentially playing media
-                document.querySelectorAll('video, audio').forEach(media => {
-                    if (!media.paused) {
-                        media.pause();
-                    }
-                });
-                
-                // Remove any event listeners that might interfere
-                window.removeEventListener('beforeunload', null);
-            } catch (e) {
-                console.warn('Additional cleanup error:', e);
-            }
-            
-            // Direct navigation with timeout as fallback
-            try {
-                window.location.href = '/';
-                
-                // Fallback if direct navigation fails
-                setTimeout(() => {
-                    if (document.location.pathname.includes('player')) {
-                        console.log('Fallback navigation to home');
-                        document.location.replace('/');
-                    }
-                }, 200);
-            } catch (e) {
-                console.error('Navigation error:', e);
-                // Last resort
-                document.location.href = '/';
-            }
+            // 直接导航到根路径
+            window.location.href = '/';
         }
 
         // 改进返回上一页功能
@@ -824,218 +757,6 @@
                 window.location.href = '/';
             }
         }
-    // Simple, direct keyboard shortcut for home navigation (Alt+H)
-    document.addEventListener('DOMContentLoaded', function() {
-        // Add keyboard shortcut as a backup method
-        document.addEventListener('keydown', function(e) {
-            // Alt+H for Home
-            if (e.altKey && e.key === 'h') {
-                console.log('Home keyboard shortcut pressed');
-                goHome();
-            }
-        });
-    });
-    
-    // Simple, direct home navigation function
-    function goHome(event) {
-        if (event) {
-            event.preventDefault();
-            event.stopPropagation();
-        }
-        
-        console.log('Home navigation triggered - Starting cleanup');
-        
-        // 1. First, remove all event listeners that might interfere
-        const cleanEventListeners = () => {
-            try {
-                // Remove all event listeners from window
-                const newWindow = window.open('', '_blank');
-                newWindow.close();
-                
-                // Clone and replace the body to remove all event listeners
-                const body = document.body;
-                const newBody = body.cloneNode(true);
-                body.parentNode.replaceChild(newBody, body);
-            } catch(e) {
-                console.warn('Error cleaning event listeners:', e);
-            }
-        };
-        
-        // 2. Clean up media elements and players
-        const cleanupMedia = () => {
-            try {
-                // Handle video and audio elements
-                const mediaElements = document.querySelectorAll('video, audio');
-                mediaElements.forEach(media => {
-                    try {
-                        if (media && typeof media.pause === 'function' && !media.paused) {
-                            media.pause();
-                        }
-                        if (media && 'src' in media) media.src = '';
-                        if (media && 'srcObject' in media) media.srcObject = null;
-                        if (media && typeof media.load === 'function') media.load();
-                        if (media && media.parentNode) media.remove();
-                    } catch(e) {
-                        console.warn('Error cleaning media element:', e);
-                    }
-                });
-                
-                // Handle iframes separately
-                const iframes = document.querySelectorAll('iframe');
-                iframes.forEach(iframe => {
-                    try {
-                        // Stop any ongoing content
-                        if (iframe && iframe.contentWindow) {
-                            iframe.contentWindow.postMessage('', '*');
-                        }
-                        // Remove the iframe
-                        if (iframe && iframe.parentNode) {
-                            iframe.src = 'about:blank';
-                            setTimeout(() => iframe.parentNode.removeChild(iframe), 0);
-                        }
-                    } catch(e) {
-                        console.warn('Error cleaning iframe:', e);
-                    }
-                });
-                
-                // Clean up ArtPlayer instance
-                if (window.art && typeof window.art.destroy === 'function') {
-                    try {
-                        window.art.destroy(true);
-                        window.art = null;
-                    } catch(e) {
-                        console.warn('Error destroying ArtPlayer:', e);
-                    }
-                }
-                
-                // Clean up any other player instances
-                if (window.dp) {
-                    try {
-                        if (typeof window.dp.pause === 'function') window.dp.pause();
-                        if (typeof window.dp.destroy === 'function') window.dp.destroy();
-                        window.dp = null;
-                    } catch(e) {
-                        console.warn('Error destroying dp player:', e);
-                    }
-                }
-                
-                // Force garbage collection if available
-                if (window.gc) {
-                    try {
-                        window.gc();
-                    } catch(e) {
-                        console.warn('Garbage collection failed:', e);
-                    }
-                }
-            } catch(e) {
-                console.error('Error during media cleanup:', e);
-            }
-        };
-        
-        // 3. Execute cleanup
-        cleanEventListeners();
-        cleanupMedia();
-        
-        return true;
-    }
-    
-    // Force navigation to home page with multiple fallback methods
-    function forceGoHome(event) {
-        // Show loading state immediately
-        const loadingOverlay = document.createElement('div');
-        loadingOverlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 100000;
-            color: white;
-            font-size: 1.5rem;
-        `;
-        loadingOverlay.innerHTML = '正在返回首页...';
-        document.body.appendChild(loadingOverlay);
-        
-        // Disable all interactive elements
-        document.body.style.pointerEvents = 'none';
-        
-        // First try to clean up
-        const cleanupSuccess = goHome(event);
-        
-        // Navigation function with retry logic
-        const navigateHome = (attempt = 0) => {
-            const maxAttempts = 3;
-            const methods = [
-                () => window.location.replace('/'),
-                () => window.location.href = '/',
-                () => {
-                    const iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    document.body.appendChild(iframe);
-                    iframe.onload = () => window.location.href = '/';
-                    iframe.src = '/';
-                },
-                () => {
-                    window.stop();
-                    document.open();
-                    document.write(`
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta http-equiv="refresh" content="0;url=/">
-                            <title>Redirecting...</title>
-                        </head>
-                        <body>
-                            <p>If you are not redirected, <a href="/">click here</a>.</p>
-                        </body>
-                        </html>
-                    `);
-                    document.close();
-                }
-            ];
-            
-            try {
-                if (attempt < methods.length) {
-                    console.log(`Trying navigation method ${attempt + 1}`);
-                    methods[attempt]();
-                    
-                    // If we're still here after a short delay, try the next method
-                    setTimeout(() => {
-                        if (window.location.pathname !== '/') {
-                            navigateHome(attempt + 1);
-                        }
-                    }, 300);
-                } else {
-                    // Last resort: force a hard reload
-                    window.location.href = '/';
-                }
-            } catch(e) {
-                console.error(`Navigation method ${attempt + 1} failed:`, e);
-                if (attempt < methods.length - 1) {
-                    navigateHome(attempt + 1);
-                } else {
-                    window.location.href = '/';
-                }
-            }
-        };
-        
-        // Start navigation attempts
-        setTimeout(() => navigateHome(), 50);
-        
-        // Force navigation after a timeout as last resort
-        setTimeout(() => {
-            if (window.location.pathname !== '/') {
-                window.stop();
-                window.location.href = '/';
-            }
-        }, 2000);
-        
-        return false;
-    }
     </script>
 </body>
 </html>
