@@ -127,7 +127,7 @@
 <body>
     <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header">
         <div class="flex items-center min-w-0">
-            <a href="/" class="flex items-center min-w-0">
+            <a href="#" onclick="goHome(event)" class="flex items-center min-w-0 cursor-pointer">
                 <svg class="w-8 h-8 mr-2 text-[#00ccff] logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
@@ -666,57 +666,96 @@
         
         // 注入服务器端环境变量 (将由服务器端替换)
         // PASSWORD 变量将在这里被服务器端注入
-        window.__ENV__.PASSWORD = "{{PASSWORD}}";        // 改进返回上一页功能
-        function goBack(event) {
-            // 防止默认链接行为
-            if (event) event.preventDefault();
-            
-            // 1. 优先检查URL参数中的returnUrl
-            const urlParams = new URLSearchParams(window.location.search);
-            const returnUrl = urlParams.get('returnUrl');
-            
-            if (returnUrl) {
-                // 如果URL中有returnUrl参数，优先使用
-                window.location.href = decodeURIComponent(returnUrl);
-                return;
+        window.__ENV__.PASSWORD = "{{PASSWORD}}";        // 导航到首页
+        function goHome(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
             }
-            
-            // 2. 检查localStorage中保存的lastPageUrl
-            const lastPageUrl = localStorage.getItem('lastPageUrl');
-            if (lastPageUrl && lastPageUrl !== window.location.href) {
-                window.location.href = lastPageUrl;
-                return;
-            }
-            
-            // 3. 检查是否是从搜索页面进入的播放器
-            const referrer = document.referrer;
-            
-            // 检查 referrer 是否包含搜索参数
-            if (referrer && (referrer.includes('/s=') || referrer.includes('?s='))) {
-                // 如果是从搜索页面来的，返回到搜索页面
-                window.location.href = referrer;
-                return;
-            }
-            
-            // 4. 如果是在iframe中打开的，尝试关闭iframe
-            if (window.self !== window.top) {
+            // 清除任何可能影响导航的状态
+            if (window.playerAPI && window.playerAPI.destroy) {
                 try {
-                    // 尝试调用父窗口的关闭播放器函数
-                    window.parent.closeVideoPlayer && window.parent.closeVideoPlayer();
-                    return;
+                    window.playerAPI.destroy();
                 } catch (e) {
-                    console.error('调用父窗口closeVideoPlayer失败:', e);
+                    console.warn('清理播放器时出错:', e);
                 }
             }
-            
-            // 5. 无法确定上一页，则返回首页
-            if (!referrer || referrer === '') {
-                window.location.href = '/';
-                return;
+            // 直接导航到根路径
+            window.location.href = '/';
+        }
+
+        // 改进返回上一页功能
+        function goBack(event) {
+            // 防止默认链接行为
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
             }
             
-            // 6. 以上都不满足，使用默认行为：返回上一页
-            window.history.back();
+            // 1. 优先检查URL参数中的returnUrl
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const returnUrl = urlParams.get('returnUrl');
+                
+                if (returnUrl) {
+                    // 如果URL中有returnUrl参数，优先使用
+                    window.location.href = decodeURIComponent(returnUrl);
+                    return;
+                }
+                
+                // 2. 检查localStorage中保存的lastPageUrl
+                const lastPageUrl = localStorage.getItem('lastPageUrl');
+                if (lastPageUrl && lastPageUrl !== window.location.href) {
+                    window.location.href = lastPageUrl;
+                    return;
+                }
+                
+                // 3. 检查是否是从搜索页面进入的播放器
+                const referrer = document.referrer;
+                
+                // 检查 referrer 是否包含搜索参数
+                if (referrer && (referrer.includes('/s=') || referrer.includes('?s='))) {
+                    // 如果是从搜索页面来的，返回到搜索页面
+                    window.location.href = referrer;
+                    return;
+                }
+                
+                // 4. 如果是在iframe中打开的，尝试关闭iframe
+                if (window.self !== window.top) {
+                    try {
+                        // 尝试调用父窗口的关闭播放器函数
+                        window.parent.closeVideoPlayer && window.parent.closeVideoPlayer();
+                        return;
+                    } catch (e) {
+                        console.error('调用父窗口closeVideoPlayer失败:', e);
+                    }
+                }
+                
+                // 5. 尝试使用history.back()，如果失败则回退到首页
+                try {
+                    const historyLength = window.history.length;
+                    if (historyLength > 1) {
+                        window.history.back();
+                        // 设置超时，如果3秒后仍然在当前页面，则跳转到首页
+                        setTimeout(() => {
+                            if (window.location.href === window.location.href) {
+                                window.location.href = '/';
+                            }
+                        }, 3000);
+                        return;
+                    }
+                } catch (e) {
+                    console.error('使用history.back()失败:', e);
+                }
+                
+                // 6. 以上都不满足，导航到首页
+                window.location.href = '/';
+                
+            } catch (e) {
+                console.error('处理返回操作时出错:', e);
+                // 出现错误时直接导航到首页
+                window.location.href = '/';
+            }
         }
     </script>
 </body>
