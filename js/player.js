@@ -708,28 +708,27 @@ function restorePlaybackPosition() {
 // Only define if Hls is available
 if (typeof Hls !== 'undefined' && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
     class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
-    constructor(config) {
-        super(config);
-        const load = this.load.bind(this);
-        this.load = function(context, config, callbacks) {
-            // 拦截manifest和level请求
-            if (context.type === 'manifest' || context.type === 'level') {
-                const onSuccess = callbacks.onSuccess;
-                callbacks.onSuccess = function(response, stats, context) {
-                    // 如果是m3u8文件，处理内容以移除广告分段
-                    if (response.data && typeof response.data === 'string') {
-                        // 过滤掉广告段 - 实现更精确的广告过滤逻辑
-                        response.data = filterAdsFromM3U8(response.data, true);
-                    }
-                    return onSuccess(response, stats, context);
-                };
-            }
-            // 执行原始load方法
-            load(context, config, callbacks);
-        };
+        constructor(config) {
+            super(config);
+            const load = this.load.bind(this);
+            this.load = function(context, config, callbacks) {
+                // 拦截manifest和level请求
+                if (context.type === 'manifest' || context.type === 'level') {
+                    const onSuccess = callbacks.onSuccess;
+                    callbacks.onSuccess = function(response, stats, context) {
+                        // 如果是m3u8文件，处理内容以移除广告分段
+                        if (response.data && typeof response.data === 'string') {
+                            // 过滤掉广告段 - 实现更精确的广告过滤逻辑
+                            response.data = filterAdsFromM3U8(response.data, true);
+                        }
+                        return onSuccess(response, stats, context);
+                    };
+                }
+                // 执行原始load方法
+                load(context, config, callbacks);
+            };
+        }
     }
-}
-
 }
 
 // 过滤可疑的广告内容
