@@ -677,25 +677,29 @@
             document.body.addEventListener('click', function(event) {
                 const homeButton = event.target.closest('#homeButton');
                 if (homeButton) {
-    console.log('Home button clicked');
+                    console.log('Home button clicked');
                     event.preventDefault();
                     event.stopPropagation();
-                    
-                    // 清除任何可能影响导航的状态
-                    if (window.playerAPI && window.playerAPI.destroy) {
-                        try {
+
+                    let navigated = false;
+                    try {
+                        if (window.playerAPI && window.playerAPI.destroy) {
                             window.playerAPI.destroy();
-                            // 给销毁操作一点时间完成
                             setTimeout(() => {
-                                window.location.href = '/';
+                                if (!navigated) {
+                                    window.location.href = '/';
+                                    navigated = true;
+                                }
                             }, 100);
                             return;
-                        } catch (e) {
-                            console.warn('清理播放器时出错:', e);
                         }
+                    } catch (e) {
+                        console.warn('Cleanup error:', e);
                     }
-                    // 直接导航到根路径
-                    window.location.href = '/';
+                    // Fallback: always navigate home
+                    if (!navigated) {
+                        window.location.href = '/';
+                    }
                 }
             });
         });
