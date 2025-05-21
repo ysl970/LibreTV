@@ -321,31 +321,60 @@
         // Clean up player instance and resources
         function destroyPlayer() {
             try {
-                if (window.artPlayerInstance) {
-                    // Pause video and clean up
-                    window.artPlayerInstance.pause();
-                    
-                    // Remove all event listeners
-                    if (window.artPlayerInstance.events) {
-                        window.artPlayerInstance.events.destroy();
-                    }
-                    
-                    // Destroy the player
-                    window.artPlayerInstance.destroy(true);
-                    
-                    // Clean up HLS instance if it exists
-                    if (window.hlsInstance) {
+                // Clean up HLS instance first if it exists
+                if (window.hlsInstance) {
+                    try {
                         window.hlsInstance.destroy();
-                        window.hlsInstance = null;
+                    } catch (e) {
+                        console.warn('Error destroying HLS instance:', e);
                     }
-                    
-                    window.artPlayerInstance = null;
+                    window.hlsInstance = null;
                 }
-                
-                // Clear player container
-                const playerContainer = document.getElementById('player');
-                if (playerContainer) {
-                    playerContainer.innerHTML = '';
+
+                // Then clean up ArtPlayer instance
+                if (window.artPlayerInstance) {
+                    try {
+                        // Pause video first
+                        if (window.artPlayerInstance.pause) {
+                            window.artPlayerInstance.pause();
+                        }
+                        
+                        // Remove all event listeners
+                        if (window.artPlayerInstance.events) {
+                            try {
+                                window.artPlayerInstance.events.destroy();
+                            } catch (e) {
+                                console.warn('Error destroying player events:', e);
+                            }
+                        }
+                        
+                        // Destroy the player
+                        if (window.artPlayerInstance.destroy) {
+                            window.artPlayerInstance.destroy(true);
+                        }
+                        
+                        // Clear the player container
+                        const playerContainer = document.getElementById('player');
+                        if (playerContainer) {
+                            playerContainer.innerHTML = '';
+                            // Recreate the player container element to ensure clean state
+                            const newPlayer = document.createElement('div');
+                            newPlayer.id = 'player';
+                            newPlayer.className = 'player-placeholder';
+                            newPlayer.style.width = '100%';
+                            newPlayer.style.height = 'auto';
+                            newPlayer.style.aspectRatio = '16/9';
+                            newPlayer.style.backgroundColor = '#1f2937';
+                            newPlayer.style.position = 'relative';
+                            newPlayer.style.display = 'block';
+                            
+                            if (playerContainer.parentNode) {
+                                playerContainer.parentNode.replaceChild(newPlayer, playerContainer);
+                            }
+                        }
+                    } finally {
+                        window.artPlayerInstance = null;
+                    }
                 }
             } catch (e) {
                 console.warn('Error cleaning up player:', e);
@@ -357,9 +386,31 @@
             // Clear previous player instance and event listeners
             destroyPlayer();
 
-            // Clear player container
-            document.getElementById('player').innerHTML = '';
-
+            // Ensure player container exists and is properly prepared
+            let playerContainer = document.getElementById('player');
+            if (!playerContainer) {
+                // If player container doesn't exist, create it
+                playerContainer = document.createElement('div');
+                playerContainer.id = 'player';
+                playerContainer.className = 'player-placeholder';
+                playerContainer.style.width = '100%';
+                playerContainer.style.height = 'auto';
+                playerContainer.style.aspectRatio = '16/9';
+                playerContainer.style.backgroundColor = '#1f2937';
+                playerContainer.style.position = 'relative';
+                playerContainer.style.display = 'block';
+                
+                const container = document.querySelector('.player-container');
+                if (container) {
+                    container.appendChild(playerContainer);
+                } else {
+                    throw new Error('Player container not found');
+                }
+            } else {
+                // Clear existing content
+                playerContainer.innerHTML = '';
+            }
+            
             // Get stored playback rate
             const storedRate = parseFloat(localStorage.getItem(rateKey) || '1');
             const playbackRate = (storedRate > 0 && storedRate < 5) ? storedRate : 1;
@@ -368,7 +419,7 @@
             const type = videoUrl.endsWith('.m3u8') ? 'customHls' : 'auto';
 
             // Create new ArtPlayer instance
-            art = new Artplayer({
+            window.artPlayerInstance = new Artplayer({
                 container: '#player',
                 url: videoUrl,
                 type: type,
@@ -570,9 +621,9 @@
                 }
             });
 
-            // Set window.art as a global reference
-            window.art = art;
-            return art;
+            // Set window.art as a global reference for compatibility
+            window.art = window.artPlayerInstance;
+            return window.artPlayerInstance;
         }
 
         // Show error message
@@ -662,9 +713,15 @@
                 // Set global variables
                 videoId = data.videoId;
                 currentEpisode = data.currentEpisode;
-                const videoTitle = data.title || document.getElementById('videoTitle').textContent;
-                document.getElementById('videoTitle').textContent = videoTitle;
-                // Update loading title
+                
+                // Update video title
+                const titleElement = document.getElementById('videoTitle');
+                const videoTitle = data.title || (titleElement ? titleElement.textContent : 'Video Player');
+                if (titleElement) {
+                    titleElement.textContent = videoTitle;
+                }
+                
+                // Update loading title if exists
                 const loadingTitle = document.getElementById('loading-title');
                 if (loadingTitle) {
                     loadingTitle.textContent = videoTitle;
@@ -672,16 +729,26 @@
 
                 // Process video URL (handle m3u8 if needed)
                 let videoUrl = data.url;
-                if (videoUrl.endsWith('.m3u8')) {
-                    videoUrl = await loadM3u8Url(videoUrl);
+                if (videoUrl && videoUrl.endsWith && videoUrl.endsWith('.m3u8')) {
+                    try {
+                        videoUrl = await loadM3u8Url(videoUrl);
+                    } catch (e) {
+                        console.error('Error loading M3U8 URL:', e);
+                        throw new Error('加载视频流失败: ' + (e.message || '未知错误'));
+                    }
                 }
 
+                // Hide error message if exists
+                const errorElement = document.getElementById('error');
+                if (errorElement) {
+                    errorElement.style.display = 'none';
+                }
+                
                 // Initialize player
-                document.getElementById('error').style.display = 'none';
-                return initArtPlayer(videoUrl, videoTitle, data.poster || '');
+                return await initArtPlayer(videoUrl, videoTitle, data.poster || '');
             } catch (error) {
                 console.error('Error loading video:', error);
-                showError('视频加载失败: ' + error.message);
+                showError('视频加载失败: ' + (error.message || '未知错误'));
                 return null;
             }
         }
