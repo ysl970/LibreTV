@@ -27,8 +27,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 设置默认API选择（如果是第一次加载）
     if (!localStorage.getItem('hasInitializedDefaults')) {
-        // 仅选择黑木耳源和豆瓣资源
-        selectedAPIs = ["heimuer", "dbzy"];
+        // 根据 API_SITES 和 HIDE_BUILTIN_ADULT_APIS 初始化 selectedAPIs
+        selectedAPIs = []; // Initialize as empty
+        for (const apiKey in API_SITES) {
+            if (API_SITES.hasOwnProperty(apiKey)) {
+                const api = API_SITES[apiKey];
+                if (HIDE_BUILTIN_ADULT_APIS && api.adult) {
+                    // If HIDE_BUILTIN_ADULT_APIS is true, skip adult APIs
+                    continue;
+                }
+                selectedAPIs.push(apiKey);
+            }
+        }
         localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
         
         // 默认选中过滤开关
