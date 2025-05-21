@@ -119,65 +119,9 @@
       }
     </style>
     
-    <!-- Early player loader script -->
+    <!-- Loading indicator has been removed as requested -->
     <script>
-      // Ensure basic loading animation is shown immediately
-      window.addEventListener('DOMContentLoaded', function() {
-        const playerPlaceholder = document.querySelector('#playerContainer .relative');
-        if (!playerPlaceholder) return;
-        
-        // Check if enhanced loading is already created
-        if (playerPlaceholder.querySelector('.player-loading-container')) return;
-        
-        // Get video information
-        const videoTitle = document.querySelector('#videoTitle')?.textContent || '视频加载中';
-        
-        // Add spinner animation style if needed
-        if (!document.getElementById('spinner-animation-style')) {
-          const style = document.createElement('style');
-          style.id = 'spinner-animation-style';
-          style.textContent = `
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `;
-          document.head.appendChild(style);
-        }
-        
-        // Create enhanced loading UI
-        const loadingContainer = document.createElement('div');
-        loadingContainer.className = 'player-loading-container';
-        loadingContainer.style.width = '100%';
-        loadingContainer.style.height = '0';
-        loadingContainer.style.paddingBottom = '56.25%';
-        loadingContainer.style.position = 'relative';
-        loadingContainer.style.backgroundColor = '#1f2937';
-        loadingContainer.style.borderRadius = '8px';
-        loadingContainer.style.overflow = 'hidden';
-        loadingContainer.style.display = 'block';
-        
-        // Set loading container content with inline styles
-        loadingContainer.innerHTML = `
-          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: rgba(17, 24, 39, 0.7); z-index: 10;">
-            <div role="progressbar" aria-label="加载中" style="width: 48px; height: 48px; border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.1); border-top-color: #f97316; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
-            <div style="font-size: 16px; font-weight: 500; color: #f9fafb; margin-bottom: 8px; text-align: center; font-family: system-ui, -apple-system, sans-serif; line-height: 1.4; display: block; width: auto; max-width: 80%; opacity: 1; visibility: visible;">${videoTitle}</div>
-            <div style="font-size: 14px; color: #e5e7eb; text-align: center; max-width: 80%; line-height: 1.4;">正在加载播放器，请稍候...</div>
-          </div>
-        `;
-        
-        // Replace loading with the new enhanced loading UI
-        const oldLoading = document.querySelector('#loading');
-        if (oldLoading) {
-          oldLoading.style.display = 'none';
-        }
-        
-        // Add loading container to the placeholder
-        const playerElement = document.querySelector('#player');
-        if (playerElement) {
-          playerElement.parentNode.insertBefore(loadingContainer, playerElement.nextSibling);
-        }
-      });
+      // Loading indicator initialization removed
     </script>
 </head>
 <body>
