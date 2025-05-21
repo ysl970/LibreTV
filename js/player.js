@@ -875,6 +875,28 @@ function renderEpisodes() {
 
 // 播放指定集数
 function playEpisode(index) {
+    // 彻底销毁 ArtPlayer 实例，防止残留声音
+    if (window.art && typeof window.art.destroy === 'function') {
+        try {
+            window.art.destroy(true);
+        } catch (e) {}
+        window.art = null;
+    }
+    // 彻底移除所有 video/audio 元素，防止残留声音
+    document.querySelectorAll('video, audio').forEach(media => {
+        try {
+            media.pause();
+            media.muted = true;
+            media.src = '';
+            media.load();
+        } catch (e) {}
+    });
+    // 彻底清空播放器容器，防止残留 video 元素
+    const playerContainer = document.getElementById('player');
+    if (playerContainer) {
+        playerContainer.innerHTML = '';
+    }
+    
     // 确保index在有效范围内
     if (index < 0 || index >= currentEpisodes.length) {
         console.error(`无效的剧集索引: ${index}, 当前剧集数量: ${currentEpisodes.length}`);
