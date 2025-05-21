@@ -840,49 +840,9 @@ function playEpisode(index) {
     // 确保不会从记录的位置开始播放
     newUrl.searchParams.delete('position');
     
-    // 显示加载指示器，然后重新加载页面
-    const loadingElement = document.getElementById('loading');
-    if (loadingElement) {
-        loadingElement.style.display = 'flex';
-        loadingElement.innerHTML = `
-            <div class="loading-spinner"></div>
-            <div>正在加载集数 ${index+1}...</div>
-        `;
-    }
-    
     // 使用页面重载方式切换剧集，这将完全清理所有资源
-    // console.log(`切换到剧集 ${index+1}，完全重载页面...`);
-    // setTimeout(() => {
-    //     window.location.href = newUrl.toString();
-    // }, 100); // 短暂停以显示加载指示器
-    
-    // return; // 提前返回，不执行后续代码
-    
-    // 更新播放器
-    initPlayer(url, sourceCode);
-    
-    // 更新全局索引
-    currentEpisodeIndex = index;
-    // 如果有每集标题，可以在这里更新 currentVideoTitle
-    // currentVideoTitle = ... // 若有 per-episode title，可在此赋值
-
-    // 更新URL参数（不刷新页面）
-    window.history.replaceState({}, '', newUrl.toString());
-
-    // 更新页面标题
-    document.title = currentVideoTitle + ' - LibreTV播放器';
-    document.getElementById('videoTitle').textContent = currentVideoTitle;
-
-    // 更新UI
-    updateEpisodeInfo();
-    updateButtonStates();
-    renderEpisodes();
-
-    // 重置用户点击位置记录
-    userClickedPosition = null;
-    
-    // 三秒后保存到历史记录
-    setTimeout(() => saveToHistory(), 3000);
+    window.location.href = newUrl.toString();
+    return;
 }
 
 // 播放上一集
