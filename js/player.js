@@ -739,8 +739,9 @@ function findSourceInfoByCode(code) {
             return;
         }
         
-        if (document.getElementById('loading').style.display !== 'none') {
-            document.getElementById('loading').innerHTML = `
+        const loadingElement = document.getElementById('loading');
+        if (loadingElement && loadingElement.style.display !== 'none') {
+            loadingElement.innerHTML = `
                 <div class="loading-spinner"></div>
                 <div>视频加载时间较长，请耐心等待...</div>
                 <div style="font-size: 12px; color: #aaa; margin-top: 10px;">如长时间无响应，请尝试其他视频源</div>
@@ -1011,17 +1012,17 @@ function playEpisode(index) {
                     window.isSwitchingVideo = false;
                 }, 1000);
             } else {
-                // 其他浏览器使用正常的switchVideo方法
-                if (dp.video) {
-                    // 更新source元素
-                    const sources = dp.video.querySelectorAll('source');
-                    sources.forEach(source => source.src = url);
+                // 对于ArtPlayer，我们需要销毁当前实例并创建一个新的
+                if (dp && typeof dp.destroy === 'function') {
+                    try {
+                        dp.destroy(true); // true 表示完全销毁
+                    } catch (e) {
+                        console.warn('销毁旧播放器实例出错:', e);
+                    }
                 }
                 
-                dp.switchVideo({
-                    url: url,
-                    type: 'hls'
-                });
+                // 重新初始化播放器
+                initPlayer(url, sourceCode);
             }
             
             // 确保播放开始
