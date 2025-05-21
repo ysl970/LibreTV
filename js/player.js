@@ -860,9 +860,10 @@ function renderEpisodes() {
         // 根据倒序状态计算真实的剧集索引
         const realIndex = episodesReversed ? currentEpisodes.length - 1 - index : index;
         const isActive = realIndex === currentEpisodeIndex;
+        
         html += `
             <button id="episode-${realIndex}" 
-                    onclick="playEpisodeByUrl('${episode.replace(/'/g, "\\'")}')" 
+                    onclick="playEpisode(${realIndex})" 
                     class="px-4 py-2 ${isActive ? 'episode-active' : '!bg-[#222] hover:!bg-[#333] hover:!shadow-none'} !border ${isActive ? '!border-blue-500' : '!border-[#333]'} rounded-lg transition-colors text-center episode-btn">
                 第${realIndex + 1}集
             </button>
@@ -872,22 +873,31 @@ function renderEpisodes() {
     episodesList.innerHTML = html;
 }
 
-function playEpisodeByUrl(url) {
-    const index = currentEpisodes.indexOf(url);
-    if (index !== -1) {
-        playEpisode(index);
-    }
-}
-
 // 播放指定集数
 function playEpisode(index) {
-    // 更新全局索引和标题
-    currentEpisodeIndex = index;
-    // currentVideoTitle = ... // 若有 per-episode title，可在此赋值
+    // 确保index在有效范围内
+    if (index < 0 || index >= currentEpisodes.length) {
+        console.error(`无效的剧集索引: ${index}, 当前剧集数量: ${currentEpisodes.length}`);
+        showToast(`无效的剧集索引: ${index + 1}，当前剧集总数: ${currentEpisodes.length}`);
+        return;
+    }
+    // 保存当前播放进度（如果正在播放）
+    if (dp && dp.video && !dp.video.paused && !videoHasEnded) {
+        saveCurrentProgress();
+    }
+    // 清除进度保存计时器
+    if (progressSaveInterval) {
+        clearInterval(progressSaveInterval);
+        progressSaveInterval = null;
+    }
+    // 获取 sourceCode
+    const urlParams2 = new URLSearchParams(window.location.search);
+    const sourceCode = urlParams2.get('source_code');
+    // 准备切换剧集的URL
     const url = currentEpisodes[index];
-    // 更新URL参数（不刷新页面）
     const currentUrl = new URL(window.location.href);
     const urlParams = currentUrl.searchParams;
+    // 构建新的URL参数
     const newUrl = new URL(window.location.origin + window.location.pathname);
     for(const [key, value] of urlParams.entries()) {
         newUrl.searchParams.set(key, value);
@@ -895,6 +905,18 @@ function playEpisode(index) {
     newUrl.searchParams.set('index', index);
     newUrl.searchParams.set('url', url);
     newUrl.searchParams.delete('position');
+    // 显示加载指示器
+    const loadingElement = document.getElementById('loading');
+    if (loadingElement) {
+        loadingElement.style.display = 'flex';
+        loadingElement.innerHTML = `
+            <div class="loading-spinner"></div>
+            <div>正在加载集数 ${index+1}...</div>
+        `;
+    }
+    // 更新全局索引
+    currentEpisodeIndex = index;
+    // 更新URL参数（不刷新页面）
     window.history.replaceState({}, '', newUrl.toString());
     // 更新页面标题
     document.title = currentVideoTitle + ' - LibreTV播放器';
@@ -903,19 +925,16 @@ function playEpisode(index) {
     updateEpisodeInfo();
     updateButtonStates();
     renderEpisodes();
+    // 重置用户点击位置记录
     userClickedPosition = null;
-    // 切换视频源
-    if (window.art) {
-        window.art.url = url;
-        window.art.title = currentVideoTitle;
-        // 保存历史（延迟2秒，确保播放器已切换）
-        setTimeout(() => saveToHistory(), 2000);
+    // 三秒后保存到历史记录
+    setTimeout(() => saveToHistory(), 3000);
+    // 切换视频源而不销毁播放器
+    if (window.art && typeof window.art.switchUrl === 'function') {
+        window.art.switchUrl(url);
     } else {
-        // 首次播放或播放器未初始化
-        const urlParams2 = new URLSearchParams(window.location.search);
-        const sourceCode = urlParams2.get('source_code');
+        // 如果播放器不存在，则初始化
         initPlayer(url, sourceCode);
-        setTimeout(() => saveToHistory(), 2000);
     }
 }
 
