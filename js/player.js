@@ -922,12 +922,12 @@ function playEpisode(index) {
     }
     
     // 使用页面重载方式切换剧集，这将完全清理所有资源
-    console.log(`切换到剧集 ${index+1}，完全重载页面...`);
-    setTimeout(() => {
-        window.location.href = newUrl.toString();
-    }, 100); // 短暂停以显示加载指示器
+    // console.log(`切换到剧集 ${index+1}，完全重载页面...`);
+    // setTimeout(() => {
+    //     window.location.href = newUrl.toString();
+    // }, 100); // 短暂停以显示加载指示器
     
-    return; // 提前返回，不执行后续代码
+    // return; // 提前返回，不执行后续代码
     
     // 更新播放器
     if (dp) {
