@@ -133,7 +133,7 @@
 <body>
     <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header">
         <div class="flex items-center min-w-0">
-            <a href="index.html" id="homeButton" class="flex items-center min-w-0 cursor-pointer" onclick="window.onbeforeunload = null;">
+            <a href="/" id="homeButton" class="flex items-center min-w-0 cursor-pointer">
                 <svg class="w-8 h-8 mr-2 text-[#00ccff] logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
@@ -719,28 +719,18 @@
             document.body.addEventListener('click', function(event) {
                 const homeButton = event.target.closest('#homeButton');
                 if (homeButton) {
-                    console.log('Home button clicked');
                     event.preventDefault();
                     event.stopPropagation();
-
-                    let navigated = false;
                     try {
                         if (window.playerAPI && window.playerAPI.destroy) {
                             window.playerAPI.destroy();
-                            setTimeout(() => {
-                                if (!navigated) {
-                                    window.location.href = '/';
-                                    navigated = true;
-                                }
-                            }, 100);
-                            return;
                         }
-                    } catch (e) {
-                        console.warn('Cleanup error:', e);
-                    }
-                    // Fallback: always navigate home
-                    if (!navigated) {
+                    } catch (e) {}
+                    // 无论如何都跳转首页
+                    try {
                         window.location.href = '/';
+                    } catch (e) {
+                        window.location.href = 'index.html';
                     }
                 }
             });
