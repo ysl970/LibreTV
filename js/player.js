@@ -348,53 +348,6 @@ function showShortcutHint(text, direction) {
     }, 2000);
 }
 
-// 根据源代码查找视频源信息
-function findSourceInfoByCode(sourceCode) {
-    // 定义视频源列表
-    const sources = [
-        { code: 'iqy', name: '爱奇艺' },
-        { code: 'tx', name: '腾讯视频' },
-        { code: 'mg', name: '芒果TV' },
-        { code: 'yk', name: '优酷' },
-        { code: 'bjh', name: '百家号' },
-        { code: 'dy', name: '抖音' },
-        { code: 'hz', name: '虎牙' },
-        { code: 'blbl', name: '哔哩哔哩' },
-        { code: 'wzbs', name: '王者直播' },
-        { code: 'jy', name: '斗鱼' }
-    ];
-    
-    if (!sourceCode) return null;
-    
-    return sources.find(source => source.code === sourceCode) || { code: sourceCode, name: '未知来源' };
-}
-
-// 获取视频的唯一ID
-function getVideoId() {
-    // 尝试从当前页面URL中提取唯一标识
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get('id');
-    
-    if (id) return id;
-    
-    // 如果没有ID，使用当前视频URL的摘要作为标识
-    if (currentVideoUrl) {
-        // 生成视频URL的简化标识
-        try {
-            // 使用URL的最后一部分作为标识
-            const urlParts = currentVideoUrl.split('/');
-            const lastPart = urlParts[urlParts.length - 1].split('?')[0];
-            
-            if (lastPart) return 'video_' + lastPart.replace(/\W/g, '_');
-        } catch (e) {
-            console.error('无法生成唯一视频ID:', e);
-        }
-    }
-    
-    // 如果没有更好的标识，使用当前时间戳
-    return 'video_' + Date.now();
-}
-
 // 初始化播放器
 function initPlayer(videoUrl, sourceCode) {
     if (!videoUrl) {
@@ -560,39 +513,64 @@ function restorePlaybackPosition() {
         }
     }
 }
+    // Note: fullscreen_cancel is already handled in setupArtPlayerEvents
+    
+    // Note: loadedmetadata event is handled in setupArtPlayerEvents as 'ready'
+    // This is retained for backward compatibility
+    dp.on('loadedmetadata', function() {
+        document.getElementById('loading').style.display = 'none';
+        videoHasEnded = false; // 视频加载时重置结束标志
 
-// 显示恢复播放位置提示
-function showPositionRestoreHint(position) {
-    if (!dp) return;
-    
-    // 格式化时间
-    const formatTime = seconds => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = Math.floor(seconds % 60);
-        return `${h > 0 ? h + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    };
-    
-    // 显示提示
-    showToast(`已恢复到 ${formatTime(position)} 处继续播放`);
-}
-
-// 设置快进快退的快捷键
-function setupPlayerShortcuts() {
-    if (!dp) return;
-    
-    // 添加鼠标双击事件全屏
-    dp.video.addEventListener('dblclick', function() {
-        if (typeof dp.fullscreen === 'function') {
-            dp.fullscreen.toggle();
+        // 优先使用URL传递的position参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const savedPosition = parseInt(urlParams.get('position') || '0');
+        
+        if (savedPosition > 10 && dp && dp.video && dp.video.duration > 0 && savedPosition < dp.video.duration - 2) {
+            // 如果URL中有有效的播放位置参数，直接使用它
+            // Use currentTime instead of seek for ArtPlayer
+            if (typeof dp.seek === 'function') {
+                dp.seek(savedPosition);
+            } else if (dp.currentTime !== undefined) {
+                dp.currentTime = savedPosition;
+            }
+            showPositionRestoreHint(savedPosition);
+        } else {
+            // 否则尝试从本地存储恢复播放进度
+            try {
+                const progressKey = 'videoProgress_' + currentVideoUrl; // Use currentVideoUrl for unique key
+                const progressStr = localStorage.getItem(progressKey);
+                if (progressStr && dp && dp.video && dp.video.duration > 0) {
+                    const progress = JSON.parse(progressStr);
+                    if (
+                        progress &&
+                        typeof progress.position === 'number' &&
+                        progress.position > 10 &&
+                        progress.position < dp.video.duration - 2
+                    ) {
+                        // Use currentTime instead of seek for ArtPlayer
+                        if (typeof dp.seek === 'function') {
+                            dp.seek(progress.position);
+                        } else if (dp.currentTime !== undefined) {
+                            dp.currentTime = progress.position;
+                        }
+                        showPositionRestoreHint(progress.position);
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
         }
-    });
-}
 
-// 重写播放器错误处理函数
-function handlePlayerError() {
-    if (!dp) return;
-    
+        // 视频加载成功后重新设置进度条点击监听
+        setupProgressBarPreciseClicks();
+        
+        // 视频加载成功后，在稍微延迟后将其添加到观看历史
+        setTimeout(saveToHistory, 3000);
+        
+        // 启动定期保存播放进度
+        startProgressSaveInterval();
+    });
+
     dp.on('error', function() {
         // 如果正在切换视频，忽略错误
         if (window.isSwitchingVideo) {
@@ -607,13 +585,8 @@ function handlePlayerError() {
         }
         showError('视频播放失败，请检查视频源或网络连接');
     });
-}
 
-// 添加移动端长按两倍速播放功能和监听器
-function setupPlayerEventListeners() {
-    if (!dp) return;
-    
-    // 设置长按两倍速功能
+    // 添加移动端长按两倍速播放功能
     setupLongPressSpeedControl();
     
     // 添加seeking和seeked事件监听器，以检测用户是否在拖动进度条
@@ -1439,7 +1412,15 @@ function clearVideoProgress() {
     }
 }
 
-// 注意: 已在文件前部定义 getVideoId 函数
+// 获取视频唯一标识
+function getVideoId() {
+    // 使用视频标题和集数索引作为唯一标识
+    // If currentVideoUrl is available and more unique, prefer it. Otherwise, fallback.
+    if (currentVideoUrl) {
+         return `${encodeURIComponent(currentVideoUrl)}`;
+    }
+    return `${encodeURIComponent(currentVideoTitle)}_${currentEpisodeIndex}`;
+}
 
 let controlsLocked = false;
 function toggleControlsLock() {
@@ -1468,4 +1449,3 @@ function closeEmbeddedPlayer() {
     }
     return false;
 }
-// End of player.js
