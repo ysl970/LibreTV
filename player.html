@@ -324,14 +324,24 @@
 
         // Configure player settings
         function initArtPlayer(videoUrl, videoTitle, posterUrl) {
-            // Clear previous player instance
+            // 彻底清理 player 容器和所有 video 元素
+            const playerContainer = document.getElementById('player');
+            if (playerContainer) {
+                // 暂停并移除所有 video 元素
+                const videos = playerContainer.querySelectorAll('video');
+                videos.forEach(v => {
+                    try { v.pause(); } catch(e){}
+                    v.src = '';
+                    v.remove();
+                });
+                // 清空容器
+                playerContainer.innerHTML = '';
+            }
+            // 销毁旧实例
             if (art) {
-                art.destroy();
+                art.destroy(true);
                 art = null;
             }
-
-            // Clear player container
-            document.getElementById('player').innerHTML = '';
 
             // Get stored playback rate
             const storedRate = parseFloat(localStorage.getItem(rateKey) || '1');
