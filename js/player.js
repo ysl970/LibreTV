@@ -906,21 +906,51 @@ function playEpisode(index) {
     }
     
     // 停止当前播放并清理资源
-    if (window.dp && typeof window.dp.destroy === 'function') {
-        window.dp.destroy(true); // true = full cleanup
-        window.dp = null;
-        // 清空播放器容器，确保没有残留的 video 元素
-        const playerContainer = document.getElementById('player');
-        if (playerContainer) {
-            // Remove any lingering <video> elements
-            const videos = playerContainer.querySelectorAll('video');
-            videos.forEach(v => {
-                v.pause();
-                v.src = '';
-                v.load();
-                v.remove();
+    if (window.dp) {
+        try {
+            // 1. 先暂停视频并静音
+            if (window.dp.video) {
+                window.dp.video.pause();
+                window.dp.video.muted = true;
+                window.dp.video.src = '';
+                window.dp.video.load(); // 强制停止播放
+            }
+            
+            // 2. 销毁播放器
+            if (typeof window.dp.destroy === 'function') {
+                window.dp.destroy(true);
+            }
+            
+            // 3. 清理HLS实例
+            if (typeof window.currentHls?.destroy === 'function') {
+                window.currentHls.destroy();
+                window.currentHls = null;
+            }
+            
+            // 4. 强制移除所有video元素
+            const videoElements = document.querySelectorAll('video');
+            videoElements.forEach(video => {
+                video.pause();
+                video.muted = true;
+                video.src = '';
+                video.load();
+                video.remove();
             });
-            playerContainer.innerHTML = '';
+            
+            // 5. 清空播放器容器
+            const playerContainer = document.getElementById('player');
+            if (playerContainer) {
+                playerContainer.innerHTML = '';
+            }
+            
+            // 6. 移除可能的事件监听器
+            window.removeEventListener('beforeunload', cleanupBeforeUnload);
+            window.removeEventListener('unload', cleanupBeforeUnload);
+            
+            // 7. 清空播放器引用
+            window.dp = null;
+        } catch (e) {
+            console.error('清理播放器时出错:', e);
         }
     }
     
