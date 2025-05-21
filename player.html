@@ -127,12 +127,13 @@
 <body>
     <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header">
         <div class="flex items-center min-w-0">
-            <div id="home-button" class="flex items-center min-w-0 cursor-pointer">
+            <!-- Direct home link that forces navigation via replace() method -->
+            <a href="/" onclick="event.preventDefault(); window.location.replace('/');" id="home-button" class="flex items-center min-w-0 cursor-pointer">
                 <svg class="w-8 h-8 mr-2 text-[#00ccff] logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
                 <h1 class="text-xl font-bold gradient-text logo-text">LibreTV</h1>
-            </div>
+            </a>
         </div>
         <h2 id="videoTitle" class="text-xl font-semibold flex-1 text-center overflow-x-auto whitespace-nowrap truncate custom-title-scroll"></h2>
         <a href="#" id="goBack" onclick="goBack(event)" class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors flex items-center min-w-0 home-btn">
@@ -346,7 +347,7 @@
                 volume: 0.8,
                 isLive: false,
                 muted: false,
-                autoplay: true,
+                autoplay: false,
                 pip: true,
                 autoSize: true,
                 autoMini: true,
@@ -798,112 +799,39 @@
                 window.location.href = '/';
             }
         }
-    // Implement a robust approach for navigation that works in all conditions
+    // Simple, direct keyboard shortcut for home navigation (Alt+H)
     document.addEventListener('DOMContentLoaded', function() {
-        // Get the home button
-        const homeButton = document.getElementById('home-button');
-        if (homeButton) {
-            console.log('Found home button, attaching event listeners');
-            
-            // Use multiple methods to ensure the click works
-            homeButton.addEventListener('click', forceHomeNavigation);
-            homeButton.addEventListener('mousedown', forceHomeNavigation);
-            
-            // Also create a keyboard shortcut for home navigation
-            document.addEventListener('keydown', function(e) {
-                // Alt+H for Home
-                if (e.altKey && e.key === 'h') {
-                    console.log('Home keyboard shortcut pressed');
-                    forceHomeNavigation();
-                }
-            });
-            
-            console.log('All home navigation event listeners attached');
-        }
-        
-        // Also attach event to the home button text for redundancy
-        const homeText = document.querySelector('.logo-text');
-        if (homeText) {
-            homeText.addEventListener('click', forceHomeNavigation);
-        }
+        // Add keyboard shortcut as a backup method
+        document.addEventListener('keydown', function(e) {
+            // Alt+H for Home
+            if (e.altKey && e.key === 'h') {
+                console.log('Home keyboard shortcut pressed');
+                goHome();
+            }
+        });
     });
     
-    // Force navigation to home page with multiple fallbacks
-    function forceHomeNavigation(e) {
-        if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
+    // Simple, direct home navigation function
+    function goHome() {
+        console.log('Home navigation triggered');
         
-        console.log('Force home navigation triggered');
-        
-        // Create temporary overlay to prevent any further interactions
-        const overlay = document.createElement('div');
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.backgroundColor = 'rgba(0,0,0,0.5)';
-        overlay.style.zIndex = '9999';
-        overlay.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:white;font-size:24px;">Navigating to home...</div>';
-        document.body.appendChild(overlay);
-        
-        // Multiple approaches to navigate home
+        // Try to clean up the player first to prevent memory leaks
         try {
-            // Clean up all media elements
-            document.querySelectorAll('video, audio').forEach(el => {
-                try { el.pause(); } catch(e) {}
-                try { el.remove(); } catch(e) {}
-            });
-            
-            // Clean up any player API
             if (window.dp) {
-                try { window.dp.pause(); } catch(e) {}
-                try { window.dp.destroy(); } catch(e) {}
+                if (typeof window.dp.pause === 'function') window.dp.pause();
+                if (typeof window.dp.destroy === 'function') window.dp.destroy();
                 window.dp = null;
             }
-            
-            // Try multiple navigation methods
-            // Method 1: Direct location change
-            window.location.href = '/';
-            
-            // Method 2: Use timeout fallback
-            setTimeout(function() {
-                document.location.replace('/');
-            }, 100);
-            
-            // Method 3: Force reload navigation
-            setTimeout(function() {
-                window.location = '/';
-            }, 200);
-            
-            // Method 4: Create an iframe and force navigation
-            setTimeout(function() {
-                try {
-                    const iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.src = '/';
-                    iframe.onload = function() {
-                        window.location.replace('/');
-                    };
-                    document.body.appendChild(iframe);
-                } catch(e) {
-                    console.error('Iframe navigation failed:', e);
-                }
-            }, 300);
-            
-            // Final fallback
-            setTimeout(function() {
-                window.open('/', '_self');
-            }, 500);
-            
-        } catch(e) {
-            console.error('All navigation attempts failed:', e);
-            alert('Navigation failed. Please try refreshing the page.');
-        }
+        } catch(e) { console.warn('Player cleanup failed:', e); }
         
-        return false;
+        // Direct, foolproof navigation - simply replace the current location
+        try {
+            // This is the most reliable method and should work in all browsers
+            window.location.replace('/');
+        } catch(e) {
+            console.error('Primary navigation failed, using fallback:', e);
+            window.location.href = '/';
+        }
     }
     </script>
 </body>
