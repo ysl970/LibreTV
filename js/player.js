@@ -90,6 +90,30 @@ window.addEventListener('load', function() {
 // 全局变量
 let currentVideoTitle = '';
 let currentEpisodeIndex = 0;
+
+// 自定义M3U8 Loader用于过滤广告
+class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
+    constructor(config) {
+        super(config);
+        const load = this.load.bind(this);
+        this.load = function(context, config, callbacks) {
+            // 拦截manifest和level请求
+            if (context.type === 'manifest' || context.type === 'level') {
+                const onSuccess = callbacks.onSuccess;
+                callbacks.onSuccess = function(response, stats, context) {
+                    // 如果是m3u8文件，处理内容以移除广告分段
+                    if (response.data && typeof response.data === 'string') {
+                        // 过滤掉广告段 - 实现更精确的广告过滤逻辑
+                        response.data = filterAdsFromM3U8(response.data, true);
+                    }
+                    return onSuccess(response, stats, context);
+                };
+            }
+            // 执行原始load方法
+            load(context, config, callbacks);
+        };
+    }
+}
 let currentEpisodes = [];
 let episodesReversed = false;
 let dp = null;
@@ -427,8 +451,12 @@ function initPlayer(videoUrl, sourceCode) {
 
     // 配置HLS.js以使用自定义加载器（如果可用）
     if (typeof Hls !== 'undefined' && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
-        // 如果Hls可用，确保使用我们的自定义加载器
-        Hls.DefaultConfig.loader = CustomHlsJsLoader;
+        try {
+            // 如果Hls可用，确保使用我们的自定义加载器
+            Hls.DefaultConfig.loader = CustomHlsJsLoader;
+        } catch (e) {
+            console.error('Failed to set custom HLS loader:', e);
+        }
     }
 
     // 使用ArtPlayer API加载视频
@@ -589,91 +617,96 @@ function findSourceInfoByCode(code) {
     return { name: code || '未知来源' };
 }
 
-    // 添加移动端长按两倍速播放功能
-    setupLongPressSpeedControl();
-    
     // 添加seeking和seeked事件监听器，以检测用户是否在拖动进度条
-    dp.on('seeking', function() {
-        isUserSeeking = true;
-        videoHasEnded = false; // 重置视频结束标志
-        
-        // 如果是用户通过点击进度条设置的位置，确保准确跳转
-        if (userClickedPosition !== null && dp.video) {
-            // 确保用户的点击位置被正确应用，避免自动跳至视频末尾
-            const clickedTime = userClickedPosition;
+    if (dp) {
+        dp.on('seeking', function() {
+            isUserSeeking = true;
+            videoHasEnded = false; // 重置视频结束标志
             
-            // 防止跳转到视频结尾
-            if (Math.abs(dp.video.duration - clickedTime) < 0.5) {
-                // 如果点击的位置非常接近结尾，稍微减少一点时间
-                dp.video.currentTime = Math.max(0, clickedTime - 0.5);
-            } else {
-                dp.video.currentTime = clickedTime;
-            }
-            
-            // 清除记录的位置
-            setTimeout(() => {
-                userClickedPosition = null;
-            }, 200);
-        }
-    });
-    
-    // 改进seeked事件处理
-    dp.on('seeked', function() {
-        // 如果视频跳转到了非常接近结尾的位置(小于0.3秒)，且不是自然播放到此处
-        if (dp.video && dp.video.duration > 0) {
-            const timeFromEnd = dp.video.duration - dp.video.currentTime;
-            if (timeFromEnd < 0.3 && isUserSeeking) {
-                // 将播放时间往回移动一点点，避免触发结束事件
-                dp.video.currentTime = Math.max(0, dp.video.currentTime - 1);
-            }
-        }
-        
-        // 延迟重置seeking标志，以便于区分自然播放结束和用户拖拽
-        setTimeout(() => {
-            isUserSeeking = false;
-        }, 200);
-    });
-    
-    // 修改视频结束事件监听器，添加额外检查
-    dp.on('ended', function() {
-        videoHasEnded = true; // 标记视频已自然结束
-        
-        // 视频已播放完，清除播放进度记录
-        clearVideoProgress();
-        
-        // 如果启用了自动连播，并且有下一集可播放，则自动播放下一集
-        if (autoplayEnabled && currentEpisodeIndex < currentEpisodes.length - 1) {
-            console.log('视频播放结束，自动播放下一集');
-            // 稍长延迟以确保所有事件处理完成
-            setTimeout(() => {
-                // 确认不是因为用户拖拽导致的假结束事件
-                if (videoHasEnded && !isUserSeeking) {
-                    playNextEpisode();
-                    videoHasEnded = false; // 重置标志
+            // 如果是用户通过点击进度条设置的位置，确保准确跳转
+            if (userClickedPosition !== null && dp.video) {
+                // 确保用户的点击位置被正确应用，避免自动跳至视频末尾
+                const clickedTime = userClickedPosition;
+                
+                // 防止跳转到视频结尾
+                if (Math.abs(dp.video.duration - clickedTime) < 0.5) {
+                    // 如果点击的位置非常接近结尾，稍微减少一点时间
+                    dp.video.currentTime = Math.max(0, clickedTime - 0.5);
+                } else {
+                    dp.video.currentTime = clickedTime;
                 }
-            }, 1000);
-        } else {
-            console.log('视频播放结束，无下一集或未启用自动连播');
-        }
-    });
+                
+                // 清除记录的位置
+                setTimeout(() => {
+                    userClickedPosition = null;
+                }, 200);
+            }
+        });
+        
+        // 改进seeked事件处理
+        dp.on('seeked', function() {
+            // 如果视频跳转到了非常接近结尾的位置(小于0.3秒)，且不是自然播放到此处
+            if (dp.video && dp.video.duration > 0) {
+                const timeFromEnd = dp.video.duration - dp.video.currentTime;
+                if (timeFromEnd < 0.3 && isUserSeeking) {
+                    // 将播放时间往回移动一点点，避免触发结束事件
+                    dp.video.currentTime = Math.max(0, dp.video.currentTime - 1);
+                }
+            }
+            
+            // 延迟重置seeking标志，以便于区分自然播放结束和用户拖拽
+            setTimeout(() => {
+                isUserSeeking = false;
+            }, 200);
+        });
+        
+        // 修改视频结束事件监听器，添加额外检查
+        dp.on('ended', function() {
+            videoHasEnded = true; // 标记视频已自然结束
+            
+            // 视频已播放完，清除播放进度记录
+            clearVideoProgress();
+            
+            // 如果启用了自动连播，并且有下一集可播放，则自动播放下一集
+            if (autoplayEnabled && currentEpisodeIndex < currentEpisodes.length - 1) {
+                console.log('视频播放结束，自动播放下一集');
+                // 稍长延迟以确保所有事件处理完成
+                setTimeout(() => {
+                    // 确认不是因为用户拖拽导致的假结束事件
+                    if (videoHasEnded && !isUserSeeking) {
+                        playNextEpisode();
+                        videoHasEnded = false; // 重置标志
+                    }
+                }, 1000);
+            } else {
+                console.log('视频播放结束，无下一集或未启用自动连播');
+            }
+        });
+    }
     
     // 添加事件监听以检测近视频末尾的点击拖动
-    dp.on('timeupdate', function() {
-        if (dp.video && dp.duration > 0) {
-            // 如果视频接近结尾但不是自然播放到结尾，重置自然结束标志
-            if (isUserSeeking && dp.video.currentTime > dp.video.duration * 0.95) {
-                videoHasEnded = false;
+    if (dp) {
+        dp.on('timeupdate', function() {
+            if (dp.video && dp.duration > 0) {
+                // 如果视频接近结尾但不是自然播放到结尾，重置自然结束标志
+                if (isUserSeeking && dp.video.currentTime > dp.video.duration * 0.95) {
+                    videoHasEnded = false;
+                }
             }
-        }
-    });
-
-    // 添加双击全屏支持
-    dp.on('playing', () => {
-        // 绑定双击事件到视频容器
-        dp.video.addEventListener('dblclick', () => {
-            dp.fullScreen.toggle();
         });
-    });
+
+        // 添加双击全屏支持
+        dp.on('playing', () => {
+            // 绑定双击事件到视频容器
+            if (dp.video) {
+                dp.video.addEventListener('dblclick', () => {
+                    if (dp.fullScreen && typeof dp.fullScreen.toggle === 'function') {
+                        dp.fullScreen.toggle();
+                    }
+                });
+            }
+        });
+    }
 
     // 10秒后如果仍在加载，但不立即显示错误
     setTimeout(function() {
@@ -706,32 +739,7 @@ function findSourceInfoByCode(code) {
         });
     })();
 
-// 自定义M3U8 Loader用于过滤广告
-// Only define if Hls is available
-if (typeof Hls !== 'undefined' && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
-    class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
-        constructor(config) {
-            super(config);
-            const load = this.load.bind(this);
-            this.load = function(context, config, callbacks) {
-                // 拦截manifest和level请求
-                if (context.type === 'manifest' || context.type === 'level') {
-                    const onSuccess = callbacks.onSuccess;
-                    callbacks.onSuccess = function(response, stats, context) {
-                        // 如果是m3u8文件，处理内容以移除广告分段
-                        if (response.data && typeof response.data === 'string') {
-                            // 过滤掉广告段 - 实现更精确的广告过滤逻辑
-                            response.data = filterAdsFromM3U8(response.data, true);
-                        }
-                        return onSuccess(response, stats, context);
-                    };
-                }
-                // 执行原始load方法
-                load(context, config, callbacks);
-            };
-        }
-    }
-}
+
 
 // 过滤可疑的广告内容
 function filterAdsFromM3U8(m3u8Content, strictMode = false) {
