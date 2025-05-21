@@ -906,46 +906,13 @@ function playEpisode(index) {
     }
     
     // 停止当前播放并清理资源
-    if (dp) {
-        try {
-            // 暂停播放
-            if (dp.video) {
-                dp.video.pause();
-                // 移除视频源
-                if (dp.video.src) {
-                    if (typeof dp.video.src === 'string' && dp.video.src.startsWith('blob:')) {
-                        URL.revokeObjectURL(dp.video.src);
-                    }
-                }
-                // 清除视频源
-                dp.video.src = '';
-                dp.video.load();
-            }
-            
-            // 清理HLS实例
-            if (currentHls) {
-                try {
-                    currentHls.destroy();
-                } catch (e) {
-                    console.warn('清理HLS实例时出错:', e);
-                }
-                currentHls = null;
-            }
-            
-            // 不要移除所有事件监听器，因为我们需要保留一些基本的播放器功能
-            // 只移除特定的事件监听器
-            if (dp.off) {
-                const eventsToRemove = ['loadedmetadata', 'error', 'play', 'pause', 'ended', 'timeupdate', 'seeking', 'seeked'];
-                eventsToRemove.forEach(event => {
-                    try {
-                        dp.off(event);
-                    } catch (e) {
-                        console.warn(`移除事件监听器 ${event} 时出错:`, e);
-                    }
-                });
-            }
-        } catch (e) {
-            console.error('清理播放器时出错:', e);
+    if (window.dp && typeof window.dp.destroy === 'function') {
+        window.dp.destroy(true); // true = full cleanup
+        window.dp = null;
+        // 清空播放器容器，确保没有残留的 video 元素
+        const playerContainer = document.getElementById('player');
+        if (playerContainer) {
+            playerContainer.innerHTML = '';
         }
     }
     
