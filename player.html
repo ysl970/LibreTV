@@ -124,6 +124,18 @@
           opacity: 1 !important;
         }
       }
+
+      .player-header-fixed {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        z-index: 2147483647 !important;
+        pointer-events: auto !important;
+        background: #111;
+      }
+      #homeButton { pointer-events: auto !important; }
+      body { padding-top: 72px; }
     </style>
     
     <!-- Loading indicator has been removed as requested -->
@@ -135,7 +147,7 @@
     <meta http-equiv="Expires" content="0">
 </head>
 <body>
-    <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header">
+    <header class="player-header-fixed p-4 flex items-center border-b border-[#333] gap-2">
         <div class="flex items-center min-w-0">
             <button id="homeButton" type="button" class="flex items-center min-w-0 cursor-pointer" style="background:none;border:none;padding:0;">
                 <svg class="w-8 h-8 mr-2 text-[#00ccff] logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
