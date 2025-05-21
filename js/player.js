@@ -400,6 +400,32 @@ function initPlayer(videoUrl, sourceCode) {
         });
     }
     
+    // Set up error handler
+    if (dp) {
+        dp.on('error', function() {
+            // 如果正在切换视频，忽略错误
+            if (window.isSwitchingVideo) {
+                console.log('正在切换视频，忽略错误');
+                return;
+            }
+            
+            // 检查视频是否已经在播放
+            if (dp.video && dp.video.currentTime > 1) {
+                console.log('发生错误，但视频已在播放中，忽略');
+                return;
+            }
+
+            // 显示错误信息
+            showError('视频加载失败，请尝试其他源或刷新页面');
+            
+            // 隐藏加载指示器
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+        });
+    }
+
     // 使用ArtPlayer API加载视频
     if (window.playerAPI && typeof window.playerAPI.loadVideo === 'function') {
         // 准备视频数据
@@ -543,28 +569,11 @@ function restorePlaybackPosition() {
 }
     // Note: fullscreen_cancel is already handled in setupArtPlayerEvents
     
-    // Simple implementation of findSourceInfoByCode
-    function findSourceInfoByCode(code) {
-        // This is a basic implementation - adjust as needed
-        return { name: code || '未知来源' };
-    }
-    
-    // Note: loadedmetadata event is now set up in initPlayer after dp initialization
-
-    dp.on('error', function() {
-        // 如果正在切换视频，忽略错误
-        if (window.isSwitchingVideo) {
-            console.log('正在切换视频，忽略错误');
-            return;
-        }
-        
-        // 检查视频是否已经在播放
-        if (dp.video && dp.video.currentTime > 1) {
-            console.log('发生错误，但视频已在播放中，忽略');
-            return;
-        }
-        showError('视频播放失败，请检查视频源或网络连接');
-    });
+// Simple implementation of findSourceInfoByCode
+function findSourceInfoByCode(code) {
+    // This is a basic implementation - adjust as needed
+    return { name: code || '未知来源' };
+}
 
     // 添加移动端长按两倍速播放功能
     setupLongPressSpeedControl();
