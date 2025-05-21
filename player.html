@@ -834,5 +834,54 @@
         }
     }
     </script>
+    <!-- Fixed position home button that always works -->
+    <div id="fixed-home-button" style="position: fixed; top: 10px; left: 10px; z-index: 99999; background-color: rgba(0,0,0,0.5); padding: 8px; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.3);" onclick="window.location.href='/'">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        </svg>
+    </div>
+
+    <script>
+    // Emergency home navigation
+    // Ensure this runs even if other scripts fail
+    (function() {
+        // Add a global emergency escape
+        window.addEventListener('keydown', function(e) {
+            // Ctrl+Alt+Home shortcut for emergency escape
+            if (e.ctrlKey && e.altKey && e.key === 'Home') {
+                window.location.href = '/'; 
+            }
+        });
+        
+        // Force the home button to work
+        function ensureHomeButtonWorks() {
+            // Add click handling directly to home button
+            const homeBtn = document.getElementById('home-button');
+            if (homeBtn) {
+                // Replace any existing handlers
+                homeBtn.onclick = function(e) {
+                    if (e) e.preventDefault();
+                    window.location.href = '/';
+                    return false;
+                };
+            }
+            
+            // Ensure the fixed button is visible and working
+            const fixedBtn = document.getElementById('fixed-home-button');
+            if (fixedBtn) {
+                fixedBtn.style.display = 'block';
+                fixedBtn.onclick = function() {
+                    window.location.href = '/';
+                };
+            }
+        }
+        
+        // Run immediately
+        ensureHomeButtonWorks();
+        
+        // Also run periodically to make sure home button always works
+        setInterval(ensureHomeButtonWorks, 2000);
+    })();
+    </script>
 </body>
 </html>
