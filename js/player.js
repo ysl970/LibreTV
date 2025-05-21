@@ -908,17 +908,46 @@ function playEpisode(index) {
     // 停止当前播放并清理资源
     if (window.dp) {
         try {
-            // 1. 先暂停视频并静音
+            // 0. 立即静音所有音频上下文
+            if (window.AudioContext || window.webkitAudioContext) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const audioContext = new AudioContext();
+                if (audioContext.state === 'running') {
+                    audioContext.suspend().catch(console.error);
+                }
+            }
+
+            // 1. 强制停止所有媒体元素
+            document.querySelectorAll('video, audio').forEach(media => {
+                try {
+                    media.pause();
+                    media.muted = true;
+                    media.volume = 0;
+                    media.removeAttribute('src');
+                    media.load();
+                    media.remove();
+                } catch (e) {
+                    console.warn('Error stopping media element:', e);
+                }
+            });
+            
+            // 2. 处理播放器实例
             if (window.dp.video) {
-                window.dp.video.pause();
-                window.dp.video.muted = true;
-                window.dp.video.src = '';
-                window.dp.video.load(); // 强制停止播放
+                const video = window.dp.video;
+                video.pause();
+                video.muted = true;
+                video.volume = 0;
+                video.removeAttribute('src');
+                video.load();
             }
             
-            // 2. 销毁播放器
+            // 3. 销毁播放器
             if (typeof window.dp.destroy === 'function') {
-                window.dp.destroy(true);
+                try {
+                    window.dp.destroy(true);
+                } catch (e) {
+                    console.warn('Error destroying player:', e);
+                }
             }
             
             // 3. 清理HLS实例
