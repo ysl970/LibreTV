@@ -350,212 +350,173 @@ function showShortcutHint(text, direction) {
 
 // 初始化播放器
 function initPlayer(videoUrl, sourceCode) {
-    if (!videoUrl) return;
-
-    // 配置HLS.js选项
-    const hlsConfig = {
-        debug: false,
-        loader: adFilteringEnabled ? CustomHlsJsLoader : Hls.DefaultConfig.loader,
-        enableWorker: true,
-        lowLatencyMode: false,
-        backBufferLength: 90,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        maxBufferSize: 30 * 1000 * 1000,
-        maxBufferHole: 0.5,
-        fragLoadingMaxRetry: 6,
-        fragLoadingMaxRetryTimeout: 64000,
-        fragLoadingRetryDelay: 1000,
-        manifestLoadingMaxRetry: 3,
-        manifestLoadingRetryDelay: 1000,
-        levelLoadingMaxRetry: 4,
-        levelLoadingRetryDelay: 1000,
-        startLevel: -1,
-        abrEwmaDefaultEstimate: 500000,
-        abrBandWidthFactor: 0.95,
-        abrBandWidthUpFactor: 0.7,
-        abrMaxWithRealBitrate: true,
-        stretchShortVideoTrack: true,
-        appendErrorMaxRetry: 5,  // 增加尝试次数
-        liveSyncDurationCount: 3,
-        liveDurationInfinity: false
-    };
-    
-    // 创建DPlayer实例
-    dp = new DPlayer({
-        container: document.getElementById('player'),
-        autoplay: true,
-        theme: '#00ccff',
-        preload: 'auto',
-        loop: false,
-        lang: 'zh-cn',
-        hotkey: true,        // 启用键盘控制，包括空格暂停/播放、方向键控制进度和音量
-        mutex: true,
-        volume: 0.7,
-        screenshot: true,                // 启用截图功能
-        preventClickToggle: false,       // 允许点击视频切换播放/暂停
-        airplay: true,                   // 在Safari中启用AirPlay功能
-        chromecast: true,                // 启用Chromecast投屏功能
-        contextmenu: [                   // 自定义右键菜单
-            {
-                text: '关于 LibreTV',
-                link: 'https://github.com/LibreSpark/LibreTV'
-            },
-            {
-                text: '问题反馈',
-                click: (player) => {
-                    window.open('https://github.com/LibreSpark/LibreTV/issues', '_blank');
-                }
-            }
-        ],
-        video: {
-            url: videoUrl,
-            type: 'hls',
-            pic: 'image/nomedia.png', // 设置视频封面图
-            customType: {
-                hls: function(video, player) {
-                    // 清理之前的HLS实例
-                    if (currentHls && currentHls.destroy) {
-                        try {
-                            currentHls.destroy();
-                        } catch (e) {
-                            console.warn('销毁旧HLS实例出错:', e);
-                        }
-                    }
-                    
-                    // 创建新的HLS实例
-                    const hls = new Hls(hlsConfig);
-                    currentHls = hls;
-                    
-                    // 跟踪是否已经显示错误
-                    let errorDisplayed = false;
-                    // 跟踪是否有错误发生
-                    let errorCount = 0;
-                    // 跟踪视频是否开始播放
-                    let playbackStarted = false;
-                    // 跟踪视频是否出现bufferAppendError
-                    let bufferAppendErrorCount = 0;
-                    
-                    // 监听视频播放事件
-                    video.addEventListener('playing', function() {
-                        playbackStarted = true;
-                        document.getElementById('loading').style.display = 'none';
-                        document.getElementById('error').style.display = 'none';
-                    });
-                    
-                    // 监听视频进度事件
-                    video.addEventListener('timeupdate', function() {
-                        if (video.currentTime > 1) {
-                            // 视频进度超过1秒，隐藏错误（如果存在）
-                            document.getElementById('error').style.display = 'none';
-                        }
-                    });
-
-                    hls.loadSource(video.src);
-                    hls.attachMedia(video);
-                    
-                    // enable airplay, from https://github.com/video-dev/hls.js/issues/5989
-                    // 检查是否已存在source元素，如果存在则更新，不存在则创建
-                    let sourceElement = video.querySelector('source');
-                    if (sourceElement) {
-                        // 更新现有source元素的URL
-                        sourceElement.src = videoUrl;
-                    } else {
-                        // 创建新的source元素
-                        sourceElement = document.createElement('source');
-                        sourceElement.src = videoUrl;
-                        video.appendChild(sourceElement);
-                    }
-                    video.disableRemotePlayback = false;
-                    
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                        video.play().catch(e => {
-                            console.warn('自动播放被阻止:', e);
-                        });
-                    });
-                    
-                    hls.on(Hls.Events.ERROR, function(event, data) {
-                        console.log('HLS事件:', event, '数据:', data);
-                        
-                        // 增加错误计数
-                        errorCount++;
-                        
-                        // 处理bufferAppendError
-                        if (data.details === 'bufferAppendError') {
-                            bufferAppendErrorCount++;
-                            console.warn(`bufferAppendError 发生 ${bufferAppendErrorCount} 次`);
-                            
-                            // 如果视频已经开始播放，则忽略这个错误
-                            if (playbackStarted) {
-                                console.log('视频已在播放中，忽略bufferAppendError');
-                                return;
-                            }
-                            
-                            // 如果出现多次bufferAppendError但视频未播放，尝试恢复
-                            if (bufferAppendErrorCount >= 3) {
-                                hls.recoverMediaError();
-                            }
-                        }
-                        
-                        // 如果是致命错误，且视频未播放
-                        if (data.fatal && !playbackStarted) {
-                            console.error('致命HLS错误:', data);
-                            
-                            // 尝试恢复错误
-                            switch(data.type) {
-                                case Hls.ErrorTypes.NETWORK_ERROR:
-                                    console.log("尝试恢复网络错误");
-                                    hls.startLoad();
-                                    break;
-                                case Hls.ErrorTypes.MEDIA_ERROR:
-                                    console.log("尝试恢复媒体错误");
-                                    hls.recoverMediaError();
-                                    break;
-                                default:
-                                    // 仅在多次恢复尝试后显示错误
-                                    if (errorCount > 3 && !errorDisplayed) {
-                                        errorDisplayed = true;
-                                        showError('视频加载失败，可能是格式不兼容或源不可用');
-                                    }
-                                    break;
-                            }
-                        }
-                    });
-                    
-                    // 监听分段加载事件
-                    hls.on(Hls.Events.FRAG_LOADED, function() {
-                        document.getElementById('loading').style.display = 'none';
-                    });
-                    
-                    // 监听级别加载事件
-                    hls.on(Hls.Events.LEVEL_LOADED, function() {
-                        document.getElementById('loading').style.display = 'none';
-                    });
-                }
-            }
+    if (!videoUrl) {
+        showError('视频链接无效');
+        return;
     }
+    
+    // 隐藏错误提示
+    document.getElementById('error').style.display = 'none';
+    
+    // 显示加载指示器
+    const loadingElement = document.getElementById('loading');
+    if (loadingElement) {
+        loadingElement.style.display = 'flex';
+    }
+    
+    // 根据源代码调整处理逻辑
+    const sourceInfo = findSourceInfoByCode(sourceCode);
+    const displayName = sourceInfo ? sourceInfo.name : '未知来源';
+    console.log(`正在从 ${displayName} 加载视频...`);
+    
+    // 记录当前视频URL
+    currentVideoUrl = videoUrl;
+    
+    // 使用ArtPlayer API加载视频
+    if (window.playerAPI && typeof window.playerAPI.loadVideo === 'function') {
+        // 准备视频数据
+        const videoData = {
+            videoId: getVideoId(),
+            currentEpisode: currentEpisodeIndex,
+            title: currentVideoTitle,
+            url: videoUrl,
+            poster: ''
+        };
+        
+        // 使用ArtPlayer API加载视频
+        window.playerAPI.loadVideo(videoData)
+            .then(artPlayer => {
+                // 存储全局播放器实例引用
+                dp = artPlayer;
+                
+                // 隐藏加载动画
+                if (loadingElement) {
+                    loadingElement.style.display = 'none';
+                }
+                
+                // 设置ArtPlayer事件处理
+                setupArtPlayerEvents();
+                
+                // 添加到历史记录
+                saveToHistory();
+                
+                // 启动定期保存播放进度
+                startProgressSaveInterval();
+            })
+            .catch(error => {
+                console.error('加载视频失败:', error);
+                showError('视频加载失败: ' + (error.message || '未知错误'));
+            });
+    } else {
+        console.error('ArtPlayer API不可用');
+        showError('播放器加载失败: ArtPlayer API不可用');
+    }
+}
+
+// 设置ArtPlayer事件处理
+function setupArtPlayerEvents() {
+    if (!dp) return;
+    
+    // 事件映射 - 将ArtPlayer事件映射到原DPlayer事件处理函数
+    
+    // 视频加载完成事件
+    dp.on('ready', function() {
+        document.getElementById('loading').style.display = 'none';
+        videoHasEnded = false; // 视频加载时重置结束标志
+        
+        // 检查是否需要恢复播放进度
+        restorePlaybackPosition();
+        
+        // 设置进度条点击监听
+        setupProgressBarPreciseClicks();
+        
+        // 启动长按两倍速功能
+        setupLongPressSpeedControl();
     });
-    // 全屏模式下锁定横屏
-    dp.on('fullscreen', () => {
+    
+    // 错误处理
+    dp.on('error', function(error) {
+        // 如果正在切换视频，忽略错误
+        if (window.isSwitchingVideo) {
+            console.log('正在切换视频，忽略错误');
+            return;
+        }
+        
+        console.error('播放器错误:', error);
+        showError('视频播放失败: ' + (error.message || '未知错误'));
+    });
+    
+    // 视频播放结束事件
+    dp.on('video:ended', function() {
+        videoHasEnded = true;
+        console.log('视频播放结束');
+        
+        // 如果自动播放下一集开启，且确实有下一集
+        if (autoplayEnabled && currentEpisodeIndex < currentEpisodes.length - 1) {
+            console.log('自动播放下一集...');
+            setTimeout(() => playNextEpisode(), 1500);
+        }
+    });
+    
+    // 全屏模式处理
+    dp.on('fullscreen', function() {
         if (window.screen.orientation && window.screen.orientation.lock) {
             window.screen.orientation.lock('landscape')
             .then(() => {
                 console.log('屏幕已锁定为横向模式');
             })
             .catch((error) => {
-                console.warn('无法锁定屏幕方向，请手动旋转设备:', error);
+                console.warn('无法锁定屏幕方向:', error);
             });
-        } else {
-            console.warn('当前浏览器不支持锁定屏幕方向，请手动旋转设备。');
         }
     });
-      // 全屏取消时解锁屏幕方向
-    dp.on('fullscreen_cancel', () => {
+    
+    // 退出全屏模式
+    dp.on('fullscreen_cancel', function() {
         if (window.screen.orientation && window.screen.orientation.unlock) {
             window.screen.orientation.unlock();
         }
     });
+}
+
+// 恢复播放进度
+function restorePlaybackPosition() {
+    if (!dp || !dp.duration) return;
     
+    // 优先使用URL传递的position参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const savedPosition = parseInt(urlParams.get('position') || '0');
+    
+    if (savedPosition > 10 && savedPosition < dp.duration - 2) {
+        // 如果URL中有有效的播放位置参数，直接使用它
+        dp.currentTime = savedPosition;
+        showPositionRestoreHint(savedPosition);
+    } else {
+        // 否则尝试从本地存储恢复播放进度
+        try {
+            const progressKey = 'videoProgress_' + getVideoId();
+            const progressStr = localStorage.getItem(progressKey);
+            if (progressStr && dp.duration > 0) {
+                const progress = JSON.parse(progressStr);
+                if (
+                    progress &&
+                    typeof progress.position === 'number' &&
+                    progress.position > 10 &&
+                    progress.position < dp.duration - 2
+                ) {
+                    dp.currentTime = progress.position;
+                    showPositionRestoreHint(progress.position);
+                }
+            }
+        } catch (e) {
+            console.error('恢复播放进度失败:', e);
+        }
+    }
+}
+    // Note: fullscreen_cancel is already handled in setupArtPlayerEvents
+    
+    // Note: loadedmetadata event is handled in setupArtPlayerEvents as 'ready'
+    // This is retained for backward compatibility
     dp.on('loadedmetadata', function() {
         document.getElementById('loading').style.display = 'none';
         videoHasEnded = false; // 视频加载时重置结束标志
@@ -566,7 +527,12 @@ function initPlayer(videoUrl, sourceCode) {
         
         if (savedPosition > 10 && dp && dp.video && dp.video.duration > 0 && savedPosition < dp.video.duration - 2) {
             // 如果URL中有有效的播放位置参数，直接使用它
-            dp.seek(savedPosition);
+            // Use currentTime instead of seek for ArtPlayer
+            if (typeof dp.seek === 'function') {
+                dp.seek(savedPosition);
+            } else if (dp.currentTime !== undefined) {
+                dp.currentTime = savedPosition;
+            }
             showPositionRestoreHint(savedPosition);
         } else {
             // 否则尝试从本地存储恢复播放进度
@@ -581,7 +547,12 @@ function initPlayer(videoUrl, sourceCode) {
                         progress.position > 10 &&
                         progress.position < dp.video.duration - 2
                     ) {
-                        dp.seek(progress.position);
+                        // Use currentTime instead of seek for ArtPlayer
+                        if (typeof dp.seek === 'function') {
+                            dp.seek(progress.position);
+                        } else if (dp.currentTime !== undefined) {
+                            dp.currentTime = progress.position;
+                        }
                         showPositionRestoreHint(progress.position);
                     }
                 }
@@ -734,7 +705,9 @@ function initPlayer(videoUrl, sourceCode) {
 }
 
 // 自定义M3U8 Loader用于过滤广告
-class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
+// Only define if Hls is available
+if (typeof Hls !== 'undefined' && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
+    class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
     constructor(config) {
         super(config);
         const load = this.load.bind(this);
@@ -757,7 +730,9 @@ class CustomHlsJsLoader extends Hls.DefaultConfig.loader {
     }
 }
 
-// M3U8清单广告过滤函数
+}
+
+// 过滤可疑的广告内容
 function filterAdsFromM3U8(m3u8Content, strictMode = false) {
     if (!m3u8Content) return '';
 
