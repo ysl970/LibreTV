@@ -912,6 +912,14 @@ function playEpisode(index) {
         // 清空播放器容器，确保没有残留的 video 元素
         const playerContainer = document.getElementById('player');
         if (playerContainer) {
+            // Remove any lingering <video> elements
+            const videos = playerContainer.querySelectorAll('video');
+            videos.forEach(v => {
+                v.pause();
+                v.src = '';
+                v.load();
+                v.remove();
+            });
             playerContainer.innerHTML = '';
         }
     }
