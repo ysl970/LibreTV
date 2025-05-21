@@ -893,6 +893,10 @@ function playEpisode(index) {
         progressSaveInterval = null;
     }
     
+    // 获取 sourceCode
+    const urlParams2 = new URLSearchParams(window.location.search);
+    const sourceCode = urlParams2.get('source_code');
+    
     // 准备切换剧集的URL
     const url = currentEpisodes[index];
     const currentUrl = new URL(window.location.href);
