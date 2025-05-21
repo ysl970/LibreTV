@@ -814,6 +814,13 @@
                 window.location.href = '/';
             }
         }
+
+        // Fix: Force reload if page is restored from bfcache (history navigation)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                window.location.reload();
+            }
+        });
     </script>
 </body>
 </html>
