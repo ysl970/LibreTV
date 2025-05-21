@@ -843,88 +843,176 @@
             event.stopPropagation();
         }
         
-        console.log('Home navigation triggered');
+        console.log('Home navigation triggered - Starting cleanup');
         
-        // Clean up any media elements first
-        try {
-            // Pause all media elements
-            document.querySelectorAll('video, audio').forEach(media => {
-                if (!media.paused) media.pause();
-            });
-            
-            // Clean up player instances
-            if (window.dp) {
-                if (typeof window.dp.pause === 'function') window.dp.pause();
-                if (typeof window.dp.destroy === 'function') window.dp.destroy();
-                window.dp = null;
+        // 1. First, remove all event listeners that might interfere
+        const cleanEventListeners = () => {
+            try {
+                // Remove all event listeners from window
+                const newWindow = window.open('', '_blank');
+                newWindow.close();
+                
+                // Clone and replace the body to remove all event listeners
+                const body = document.body;
+                const newBody = body.cloneNode(true);
+                body.parentNode.replaceChild(newBody, body);
+            } catch(e) {
+                console.warn('Error cleaning event listeners:', e);
             }
-        } catch(e) { 
-            console.warn('Player cleanup failed:', e); 
-        }
+        };
+        
+        // 2. Clean up media elements and players
+        const cleanupMedia = () => {
+            try {
+                // Force stop all media elements
+                const mediaElements = document.querySelectorAll('video, audio, iframe');
+                mediaElements.forEach(media => {
+                    try {
+                        if (!media.paused) media.pause();
+                        media.src = '';
+                        media.srcObject = null;
+                        media.load();
+                        media.remove();
+                    } catch(e) {
+                        console.warn('Error cleaning media element:', e);
+                    }
+                });
+                
+                // Clean up ArtPlayer instance
+                if (window.art && typeof window.art.destroy === 'function') {
+                    try {
+                        window.art.destroy(true);
+                        window.art = null;
+                    } catch(e) {
+                        console.warn('Error destroying ArtPlayer:', e);
+                    }
+                }
+                
+                // Clean up any other player instances
+                if (window.dp) {
+                    try {
+                        if (typeof window.dp.pause === 'function') window.dp.pause();
+                        if (typeof window.dp.destroy === 'function') window.dp.destroy();
+                        window.dp = null;
+                    } catch(e) {
+                        console.warn('Error destroying dp player:', e);
+                    }
+                }
+                
+                // Force garbage collection if available
+                if (window.gc) {
+                    try {
+                        window.gc();
+                    } catch(e) {
+                        console.warn('Garbage collection failed:', e);
+                    }
+                }
+            } catch(e) {
+                console.error('Error during media cleanup:', e);
+            }
+        };
+        
+        // 3. Execute cleanup
+        cleanEventListeners();
+        cleanupMedia();
         
         return true;
     }
     
     // Force navigation to home page with multiple fallback methods
     function forceGoHome(event) {
+        // Show loading state immediately
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000;
+            color: white;
+            font-size: 1.5rem;
+        `;
+        loadingOverlay.innerHTML = '正在返回首页...';
+        document.body.appendChild(loadingOverlay);
+        
+        // Disable all interactive elements
+        document.body.style.pointerEvents = 'none';
+        
         // First try to clean up
         const cleanupSuccess = goHome(event);
         
-        // Create a hidden iframe for navigation if needed
-        let navIframe = document.getElementById('nav-helper');
-        if (!navIframe) {
-            navIframe = document.createElement('iframe');
-            navIframe.id = 'nav-helper';
-            navIframe.style.display = 'none';
-            document.body.appendChild(navIframe);
-        }
-        
-        // Try multiple navigation methods with timeouts
-        try {
-            // Method 1: location.replace (most reliable)
-            window.location.replace('/');
+        // Navigation function with retry logic
+        const navigateHome = (attempt = 0) => {
+            const maxAttempts = 3;
+            const methods = [
+                () => window.location.replace('/'),
+                () => window.location.href = '/',
+                () => {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    document.body.appendChild(iframe);
+                    iframe.onload = () => window.location.href = '/';
+                    iframe.src = '/';
+                },
+                () => {
+                    window.stop();
+                    document.open();
+                    document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <meta http-equiv="refresh" content="0;url=/">
+                            <title>Redirecting...</title>
+                        </head>
+                        <body>
+                            <p>If you are not redirected, <a href="/">click here</a>.</p>
+                        </body>
+                        </html>
+                    `);
+                    document.close();
+                }
+            ];
             
-            // Method 2: If still on same page after a short delay, try href
-            setTimeout(() => {
-                if (window.location.pathname !== '/') {
-                    console.log('Method 1 failed, trying location.href');
-                    window.location.href = '/';
+            try {
+                if (attempt < methods.length) {
+                    console.log(`Trying navigation method ${attempt + 1}`);
+                    methods[attempt]();
                     
-                    // Method 3: If still not redirected, use iframe
+                    // If we're still here after a short delay, try the next method
                     setTimeout(() => {
                         if (window.location.pathname !== '/') {
-                            console.log('Method 2 failed, trying iframe navigation');
-                            try {
-                                navIframe.src = '/';
-                                navIframe.onload = function() {
-                                    window.location.href = '/';
-                                };
-                            } catch(e) {
-                                console.error('Iframe navigation failed:', e);
-                            }
-                            
-                            // Final fallback: document.write
-                            setTimeout(() => {
-                                if (window.location.pathname !== '/') {
-                                    console.log('Method 3 failed, using document.write');
-                                    try {
-                                        document.open();
-                                        document.write('<script>window.location.href=\'' + '/' + '\'<\/script>');
-                                        document.close();
-                                    } catch(e) {
-                                        console.error('Document write failed:', e);
-                                    }
-                                }
-                            }, 300);
+                            navigateHome(attempt + 1);
                         }
-                    }, 200);
+                    }, 300);
+                } else {
+                    // Last resort: force a hard reload
+                    window.location.href = '/';
                 }
-            }, 100);
-        } catch(e) {
-            console.error('Navigation error, trying fallback methods:', e);
-            // If any error occurs, try the most basic method
-            window.location.href = '/';
-        }
+            } catch(e) {
+                console.error(`Navigation method ${attempt + 1} failed:`, e);
+                if (attempt < methods.length - 1) {
+                    navigateHome(attempt + 1);
+                } else {
+                    window.location.href = '/';
+                }
+            }
+        };
+        
+        // Start navigation attempts
+        setTimeout(() => navigateHome(), 50);
+        
+        // Force navigation after a timeout as last resort
+        setTimeout(() => {
+            if (window.location.pathname !== '/') {
+                window.stop();
+                window.location.href = '/';
+            }
+        }, 2000);
         
         return false;
     }
