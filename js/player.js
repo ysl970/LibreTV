@@ -531,7 +531,10 @@ function setupArtPlayerEvents() {
     
     // 视频加载完成事件
     dp.on('ready', function() {
-        document.getElementById('loading').style.display = 'none';
+        const loadingElement = document.getElementById('loading');
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
         videoHasEnded = false; // 视频加载时重置结束标志
         
         // 检查是否需要恢复播放进度
