@@ -15,6 +15,170 @@
     <script src="js/version-check.js"></script>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/player.css">
+    
+    <!-- Add optimized player loading styles -->
+    <style>
+      /* Critical loading styles to prevent FOUC */
+      .player-placeholder {
+        width: 100% !important;
+        height: auto !important;
+        aspect-ratio: 16/9 !important;
+        background-color: #1f2937 !important;
+        position: relative !important;
+        display: block !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+      }
+      
+      .player-loading-container {
+        width: 100% !important;
+        height: 0 !important;
+        padding-bottom: 56.25% !important;
+        position: relative !important;
+        background-color: #1f2937 !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        display: block !important;
+      }
+      
+      .player-loading-overlay {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background-color: rgba(17, 24, 39, 0.7) !important;
+      }
+      
+      .player-loading-spinner {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 50% !important;
+        position: relative !important;
+        margin-bottom: 16px !important;
+      }
+    
+      /* Critical styles for loading text */
+      .player-loading-text,
+      .player-loading-overlay div:nth-child(2),
+      div.player-loading-text {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        color: #f9fafb !important;
+        font-size: 16px !important;
+        font-weight: 500 !important;
+        margin-bottom: 8px !important;
+        text-align: center !important;
+        font-family: system-ui, -apple-system, sans-serif !important;
+        line-height: 1.4 !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+        pointer-events: none !important;
+        z-index: 100 !important;
+        background: transparent !important;
+        max-width: 90% !important;
+      }
+      
+      @keyframes player-spinner-rotate {
+        to { transform: rotate(360deg); }
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* ArtPlayer specific styles */
+      .art-video-player, .art-video-player video {
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 150px !important;
+        max-height: 100vh !important;
+        background: #000 !important;
+        object-fit: contain !important;
+        position: relative !important;
+        display: block !important;
+      }
+    
+      /* Fix for Chrome-specific issues */
+      @media screen and (-webkit-min-device-pixel-ratio: 0) {
+        .art-video-player video {
+          transform: translateZ(0) !important;
+          will-change: transform !important;
+        }
+    
+        /* Force visibility of video element */
+        .art-video-player.art-playing video {
+          visibility: visible !important;
+          opacity: 1 !important;
+        }
+      }
+    </style>
+    
+    <!-- Early player loader script -->
+    <script>
+      // Ensure basic loading animation is shown immediately
+      window.addEventListener('DOMContentLoaded', function() {
+        const playerPlaceholder = document.querySelector('#playerContainer .relative');
+        if (!playerPlaceholder) return;
+        
+        // Check if enhanced loading is already created
+        if (playerPlaceholder.querySelector('.player-loading-container')) return;
+        
+        // Get video information
+        const videoTitle = document.querySelector('#videoTitle')?.textContent || '视频加载中';
+        
+        // Add spinner animation style if needed
+        if (!document.getElementById('spinner-animation-style')) {
+          const style = document.createElement('style');
+          style.id = 'spinner-animation-style';
+          style.textContent = `
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        // Create enhanced loading UI
+        const loadingContainer = document.createElement('div');
+        loadingContainer.className = 'player-loading-container';
+        loadingContainer.style.width = '100%';
+        loadingContainer.style.height = '0';
+        loadingContainer.style.paddingBottom = '56.25%';
+        loadingContainer.style.position = 'relative';
+        loadingContainer.style.backgroundColor = '#1f2937';
+        loadingContainer.style.borderRadius = '8px';
+        loadingContainer.style.overflow = 'hidden';
+        loadingContainer.style.display = 'block';
+        
+        // Set loading container content with inline styles
+        loadingContainer.innerHTML = `
+          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: rgba(17, 24, 39, 0.7); z-index: 10;">
+            <div role="progressbar" aria-label="加载中" style="width: 48px; height: 48px; border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.1); border-top-color: #f97316; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
+            <div style="font-size: 16px; font-weight: 500; color: #f9fafb; margin-bottom: 8px; text-align: center; font-family: system-ui, -apple-system, sans-serif; line-height: 1.4; display: block; width: auto; max-width: 80%; opacity: 1; visibility: visible;">${videoTitle}</div>
+            <div style="font-size: 14px; color: #e5e7eb; text-align: center; max-width: 80%; line-height: 1.4;">正在加载播放器，请稍候...</div>
+          </div>
+        `;
+        
+        // Replace loading with the new enhanced loading UI
+        const oldLoading = document.querySelector('#loading');
+        if (oldLoading) {
+          oldLoading.style.display = 'none';
+        }
+        
+        // Add loading container to the placeholder
+        const playerElement = document.querySelector('#player');
+        if (playerElement) {
+          playerElement.parentNode.insertBefore(loadingContainer, playerElement.nextSibling);
+        }
+      });
+    </script>
 </head>
 <body>
     <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header">
@@ -58,8 +222,14 @@
         <!-- 视频播放区 -->
         <div id="playerContainer" class="player-container">
             <div class="relative">
-                <div id="player"></div>
-                <div class="loading-container" id="loading">
+                <div id="player" class="player-placeholder" style="width: 100%; height: auto; aspect-ratio: 16/9; background-color: #1f2937; position: relative; display: block;">
+                    <!-- Initial loading state before JavaScript loads -->
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white;">
+                        <div style="width: 48px; height: 48px; border: 4px solid rgba(255, 255, 255, 0.1); border-radius: 50%; border-top-color: #f97316; margin: 0 auto 16px; animation: spin 1s linear infinite;"></div>
+                        <div style="font-size: 16px; font-weight: 500;" id="loading-title">正在加载视频...</div>
+                    </div>
+                </div>
+                <div class="loading-container" id="loading" style="display: none;">
                     <div class="loading-spinner"></div>
                     <div>正在加载视频...</div>
                 </div>
@@ -188,11 +358,362 @@
     </script>
     
     <script src="libs/hls.min.js" crossorigin="anonymous"></script>
-    <script src="libs/DPlayer.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/artplayer/dist/artplayer.js" crossorigin="anonymous"></script>
 
     <script src="js/config.js"></script>
     <script src="js/password.js"></script>
     <script src="js/ui.js"></script>
+    <!-- Replace player.js with ArtPlayer implementation -->
+    <script>
+        // Global variables
+        let art = null;
+        const rateKey = 'vodg-playback-rate';
+        const cacheKey = 'vod-play-progress';
+        let playbackTimeUpdated = Date.now();
+        let videoId = null;
+        let currentEpisode = null;
+
+        // Configure player settings
+        function initArtPlayer(videoUrl, videoTitle, posterUrl) {
+            // Clear previous player instance
+            if (art) {
+                art.destroy();
+                art = null;
+            }
+
+            // Clear player container
+            document.getElementById('player').innerHTML = '';
+
+            // Get stored playback rate
+            const storedRate = parseFloat(localStorage.getItem(rateKey) || '1');
+            const playbackRate = (storedRate > 0 && storedRate < 5) ? storedRate : 1;
+
+            // Determine if we need to use the m3u8 custom type
+            const type = videoUrl.endsWith('.m3u8') ? 'customHls' : 'auto';
+
+            // Create new ArtPlayer instance
+            art = new Artplayer({
+                container: '#player',
+                url: videoUrl,
+                type: type,
+                title: videoTitle,
+                poster: posterUrl,
+                posterScaling: 'contain',
+                volume: 0.8,
+                isLive: false,
+                muted: false,
+                autoplay: false,
+                pip: true,
+                autoSize: true,
+                autoMini: true,
+                screenshot: true,
+                setting: true,
+                loop: false,
+                flip: true,
+                playbackRate: true,
+                aspectRatio: true,
+                fullscreen: true,
+                fullscreenWeb: false,
+                subtitleOffset: true,
+                miniProgressBar: true,
+                mutex: true,
+                backdrop: true,
+                playsInline: true,
+                autoPlayback: false,
+                airplay: true,
+                theme: '#23ade5',
+                lang: navigator.language.toLowerCase(),
+                moreVideoAttr: {
+                  crossOrigin: 'anonymous',
+                },
+                customType: {
+                  customHls: function(video, url) {
+                    if (Hls.isSupported()) {
+                      const hls = new Hls({
+                        maxBufferLength: 60,
+                        maxMaxBufferLength: 90,
+                        maxBufferSize: 100 * 1000 * 1000,
+                        maxBufferHole: 1,
+                        lowLatencyMode: false,
+                        manifestLoadingMaxRetry: 6,
+                        levelLoadingMaxRetry: 6,
+                        fragLoadingMaxRetry: 6,
+                        fragLoadingMaxRetryTimeout: 10000
+                      });
+
+                      hls.loadSource(url);
+                      hls.attachMedia(video);
+
+                      hls.on(Hls.Events.ERROR, function(event, data) {
+                        if (data.fatal) {
+                          switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                              // HLS network error
+                              hls.startLoad();
+                              break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                              // HLS media error
+                              hls.recoverMediaError();
+                              break;
+                            default:
+                              // HLS fatal error
+                              showError('视频流加载失败: ' + data.details);
+                              break;
+                          }
+                        }
+                      });
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                      video.src = url;
+                    }
+                  }
+                }
+            });
+
+            // Hide loading animation when player is ready
+            art.on('ready', () => {
+                // Force video element to be visible
+                const video = art.template.$video;
+                if (video) {
+                    video.style.display = 'block';
+                    video.style.visibility = 'visible';
+                    video.style.opacity = '1';
+                    video.style.zIndex = '2';
+
+                    // Force hardware acceleration
+                    video.style.transform = 'translateZ(0)';
+                    video.style.backfaceVisibility = 'hidden';
+                }
+                
+                // Hide loading indicator
+                const loadingContainer = document.querySelector('.player-loading-container');
+                if (loadingContainer) {
+                    loadingContainer.style.display = 'none';
+                }
+                
+                // Hide default loading
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.style.display = 'none';
+                }
+
+                // Set player aspect ratio (16:9 for most videos)
+                document.getElementById('player').style.aspectRatio = '16/9';
+            });
+
+            // Error handling
+            art.on('error', (error) => {
+                showError('播放器加载失败: ' + (error.message || '未知错误'));
+            });
+
+            // Auto-play next episode when current one ends
+            art.on('video:ended', () => {
+                try {
+                    removePlayProgressRate();
+                    // Check if autoplay is enabled
+                    const autoplayToggle = document.getElementById('autoplayToggle');
+                    if (autoplayToggle && autoplayToggle.checked) {
+                        playNextEpisode();
+                    }
+                } catch (error) {
+                    console.error('Error in video:ended event:', error);
+                }
+            });
+
+            // Update playback progress
+            art.on('video:timeupdate', () => {
+                try {
+                    updatePlayProgressRate(art.currentTime, art.duration);
+                } catch (error) {
+                    console.error('Error in video:timeupdate event:', error);
+                }
+            });
+
+            // Handle duration change to seek to saved position
+            let seeked = false;
+            art.on('video:durationchange', () => {
+                try {
+                    if (!seeked && art.duration > 0) {
+                        seeked = true;
+                        // Seek to saved position
+                        art.currentTime = getSeekTime(art.duration);
+                        // Set saved playback rate
+                        if (playbackRate > 0 && playbackRate < 5) {
+                            art.playbackRate = playbackRate;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error in video:durationchange event:', error);
+                }
+            });
+
+            // Store playback rate when changed
+            art.on('video:ratechange', () => {
+                try {
+                    if (art.playbackRate > 0) {
+                        localStorage.setItem(rateKey, art.playbackRate);
+                    }
+                } catch (error) {
+                    console.error('Error in video:ratechange event:', error);
+                }
+            });
+
+            // Fix for Chrome - ensure video is visible when playing
+            art.on('play', () => {
+                const video = art.template.$video;
+                if (video) {
+                    // Force redraw of video element
+                    video.style.display = 'none';
+                    setTimeout(() => {
+                        video.style.display = 'block';
+                        video.style.visibility = 'visible';
+                        video.style.opacity = '1';
+                    }, 50);
+                }
+            });
+
+            // Set window.art as a global reference
+            window.art = art;
+            return art;
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorContainer = document.getElementById('error');
+            const errorMessage = document.getElementById('error-message');
+            if (errorContainer && errorMessage) {
+                errorMessage.textContent = message || '视频加载失败';
+                errorContainer.style.display = 'flex';
+            }
+        }
+
+        // Progress caching functions
+        function getPlayCache() {
+            let cache = localStorage.getItem(cacheKey);
+            if (cache && typeof cache == 'string') {
+                try {
+                    cache = JSON.parse(cache);
+                } catch {
+                    cache = {};
+                }
+            } else {
+                cache = {};
+            }
+            if (!cache[videoId] || typeof cache[videoId] != 'object') {
+                cache[videoId] = {};
+            }
+            if (!cache[videoId][currentEpisode] || typeof cache[videoId][currentEpisode] != 'object') {
+                cache[videoId][currentEpisode] = {};
+            }
+            return cache;
+        }
+
+        function getPlaybackCache() {
+            const cache = getPlayCache()[videoId][currentEpisode];
+            if (!cache.playProgressRate) {
+                cache.playProgressRate = 0;
+            }
+            return cache;
+        }
+
+        function updatePlayProgressRate(currTime, duration) {
+            const now = Date.now();
+            if (playbackTimeUpdated + 1000 < now && currTime > 2) {
+                playbackTimeUpdated = now;
+                const playProgressRate = currTime / duration;
+                if (playProgressRate > 0 && playProgressRate <= 1) {
+                    const cache = getPlayCache();
+                    cache[videoId][currentEpisode].playProgressRate = playProgressRate;
+                    cache[videoId][currentEpisode].updated = now;
+                    localStorage.setItem(cacheKey, JSON.stringify(cache));
+                }
+            }
+        }
+
+        function removePlayProgressRate() {
+            const cache = getPlayCache();
+            delete cache[videoId][currentEpisode];
+            if (Object.keys(cache[videoId]).length == 0) {
+                delete cache[videoId];
+            }
+            localStorage.setItem(cacheKey, JSON.stringify(cache));
+        }
+
+        function getSeekTime(duration) {
+            return Math.max(Math.min(Math.max(getPlaybackCache().playProgressRate, 0), 1) * duration - 2, 0);
+        }
+
+        // Load M3U8 with proxy handling if needed
+        async function loadM3u8Url(url) {
+            if (!url.endsWith('.m3u8')) {
+                return url;
+            }
+            try {
+                // Custom m3u8 processing logic can be added here if needed
+                // For now, just return the URL as-is
+                return url;
+            } catch (error) {
+                console.error('Error processing m3u8:', error);
+                return url;
+            }
+        }
+
+        // Initialize player with video data
+        async function loadVideo(data) {
+            try {
+                // Set global variables
+                videoId = data.videoId;
+                currentEpisode = data.currentEpisode;
+                const videoTitle = data.title || document.getElementById('videoTitle').textContent;
+                document.getElementById('videoTitle').textContent = videoTitle;
+                // Update loading title
+                const loadingTitle = document.getElementById('loading-title');
+                if (loadingTitle) {
+                    loadingTitle.textContent = videoTitle;
+                }
+
+                // Process video URL (handle m3u8 if needed)
+                let videoUrl = data.url;
+                if (videoUrl.endsWith('.m3u8')) {
+                    videoUrl = await loadM3u8Url(videoUrl);
+                }
+
+                // Initialize player
+                document.getElementById('error').style.display = 'none';
+                return initArtPlayer(videoUrl, videoTitle, data.poster || '');
+            } catch (error) {
+                console.error('Error loading video:', error);
+                showError('视频加载失败: ' + error.message);
+                return null;
+            }
+        }
+
+        // Expose functions to be used by other scripts
+        window.playerAPI = {
+            loadVideo: loadVideo,
+            showError: showError
+        };
+
+        // Clean up outdated cache entries
+        (function cleanupCache() {
+            try {
+                const now = Date.now();
+                const cache = JSON.parse(localStorage.getItem(cacheKey) || '{}');
+                for (const vid in cache) {
+                    for (const ep in cache[vid]) {
+                        if (cache[vid][ep].updated < now - 86400000 * 92) {
+                            delete cache[vid][ep];
+                        }
+                    }
+                    if (Object.keys(cache[vid]).length == 0) {
+                        delete cache[vid];
+                    }
+                }
+                localStorage.setItem(cacheKey, JSON.stringify(cache));
+            } catch (error) {
+                console.error('Error cleaning up cache:', error);
+            }
+        })();
+    </script>
     <script src="js/player.js"></script>
 
     <script>
