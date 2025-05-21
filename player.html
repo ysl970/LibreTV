@@ -864,17 +864,37 @@
         // 2. Clean up media elements and players
         const cleanupMedia = () => {
             try {
-                // Force stop all media elements
-                const mediaElements = document.querySelectorAll('video, audio, iframe');
+                // Handle video and audio elements
+                const mediaElements = document.querySelectorAll('video, audio');
                 mediaElements.forEach(media => {
                     try {
-                        if (!media.paused) media.pause();
-                        media.src = '';
-                        media.srcObject = null;
-                        media.load();
-                        media.remove();
+                        if (media && typeof media.pause === 'function' && !media.paused) {
+                            media.pause();
+                        }
+                        if (media && 'src' in media) media.src = '';
+                        if (media && 'srcObject' in media) media.srcObject = null;
+                        if (media && typeof media.load === 'function') media.load();
+                        if (media && media.parentNode) media.remove();
                     } catch(e) {
                         console.warn('Error cleaning media element:', e);
+                    }
+                });
+                
+                // Handle iframes separately
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    try {
+                        // Stop any ongoing content
+                        if (iframe && iframe.contentWindow) {
+                            iframe.contentWindow.postMessage('', '*');
+                        }
+                        // Remove the iframe
+                        if (iframe && iframe.parentNode) {
+                            iframe.src = 'about:blank';
+                            setTimeout(() => iframe.parentNode.removeChild(iframe), 0);
+                        }
+                    } catch(e) {
+                        console.warn('Error cleaning iframe:', e);
                     }
                 });
                 
