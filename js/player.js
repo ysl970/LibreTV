@@ -425,6 +425,12 @@ function initPlayer(videoUrl, sourceCode) {
         });
     };
 
+    // 配置HLS.js以使用自定义加载器（如果可用）
+    if (typeof Hls !== 'undefined' && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
+        // 如果Hls可用，确保使用我们的自定义加载器
+        Hls.DefaultConfig.loader = CustomHlsJsLoader;
+    }
+
     // 使用ArtPlayer API加载视频
     if (window.playerAPI && typeof window.playerAPI.loadVideo === 'function') {
         // 准备视频数据
@@ -433,7 +439,13 @@ function initPlayer(videoUrl, sourceCode) {
             currentEpisode: currentEpisodeIndex,
             title: currentVideoTitle,
             url: videoUrl,
-            poster: ''
+            poster: '',
+            // 添加自定义HLS配置
+            customHLS: {
+                enableWorker: true,
+                debug: false,
+                // 其他HLS.js配置...
+            }
         };
         
         // 使用ArtPlayer API加载视频
