@@ -404,76 +404,6 @@ function initPlayer(videoUrl, sourceCode) {
     // 记录当前视频URL
     currentVideoUrl = videoUrl;
     
-    // 设置播放器加载完成后的回调
-    const setupPlayerCallbacks = function() {
-        // 设置loadedmetadata事件
-        dp.on('loadedmetadata', function() {
-            // 隐藏所有加载指示器
-            const loadingElements = document.querySelectorAll('#loading, .player-loading-container');
-            loadingElements.forEach(el => {
-                if (el) el.style.display = 'none';
-            });
-            
-            // 隐藏播放器占位符
-            const playerPlaceholder = document.querySelector('.player-placeholder');
-            if (playerPlaceholder) {
-                playerPlaceholder.style.display = 'none';
-            }
-            videoHasEnded = false; // 视频加载时重置结束标志
-
-            // 优先使用URL传递的position参数
-            const urlParams = new URLSearchParams(window.location.search);
-            const savedPosition = parseInt(urlParams.get('position') || '0');
-            
-            if (savedPosition > 10 && dp && dp.video && dp.video.duration > 0 && savedPosition < dp.video.duration - 2) {
-                // 如果URL中有有效的播放位置参数，直接使用它
-                if (typeof dp.seek === 'function') {
-                    dp.seek(savedPosition);
-                } else if (dp.video) {
-                    dp.video.currentTime = savedPosition;
-                }
-                showPositionRestoreHint(savedPosition);
-            } else if (dp.video && dp.video.duration > 0) {
-                // 否则尝试恢复本地保存的播放进度
-                restorePlaybackPosition();
-            }
-        });
-        
-        // 设置错误处理
-        dp.on('error', function() {
-            // 如果正在切换视频，忽略错误
-            if (window.isSwitchingVideo) {
-                console.log('正在切换视频，忽略错误');
-                return;
-            }
-            
-            // 检查视频是否已经在播放
-            if (dp.video && dp.video.currentTime > 1) {
-                console.log('发生错误，但视频已在播放中，忽略');
-                return;
-            }
-
-            // 显示错误信息
-            showError('视频加载失败，请尝试其他源或刷新页面');
-            
-            // 隐藏加载指示器
-            const loadingElement = document.getElementById('loading');
-            if (loadingElement) {
-                loadingElement.style.display = 'none';
-            }
-        });
-    };
-
-    // 配置HLS.js以使用自定义加载器（如果可用）
-    if (typeof Hls !== 'undefined' && Hls.DefaultConfig && Hls.DefaultConfig.loader) {
-        try {
-            // 如果Hls可用，确保使用我们的自定义加载器
-            Hls.DefaultConfig.loader = CustomHlsJsLoader;
-        } catch (e) {
-            console.error('Failed to set custom HLS loader:', e);
-        }
-    }
-
     // 使用ArtPlayer API加载视频
     if (window.playerAPI && typeof window.playerAPI.loadVideo === 'function') {
         // 准备视频数据
@@ -501,8 +431,6 @@ function initPlayer(videoUrl, sourceCode) {
                 }
                 // 设置ArtPlayer事件处理
                 setupArtPlayerEvents();
-                // 设置播放器回调
-                setupPlayerCallbacks();
                 // 添加到历史记录
                 saveToHistory();
                 // 启动定期保存播放进度
