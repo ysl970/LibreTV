@@ -639,7 +639,7 @@ function findSourceInfoByCode(code) {
 }
 
     // 添加seeking和seeked事件监听器，以检测用户是否在拖动进度条
-    if (dp) {
+    if (dp && dp.on) {
         dp.on('seeking', function() {
             isUserSeeking = true;
             videoHasEnded = false; // 重置视频结束标志
@@ -748,16 +748,22 @@ function findSourceInfoByCode(code) {
     // 绑定原生全屏：DPlayer 触发全屏时调用 requestFullscreen
     (function(){
         const fsContainer = document.getElementById('playerContainer');
-        dp.on('fullscreen', () => {
-            if (fsContainer.requestFullscreen) {
-                fsContainer.requestFullscreen().catch(err => console.warn('原生全屏失败:', err));
+        if (dp && dp.on && fsContainer) {
+            try {
+                dp.on('fullscreen', () => {
+                    if (fsContainer.requestFullscreen) {
+                        fsContainer.requestFullscreen().catch(err => console.warn('原生全屏失败:', err));
+                    }
+                });
+                dp.on('fullscreen_cancel', () => {
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    }
+                });
+            } catch (e) {
+                console.warn('绑定全屏事件时出错:', e);
             }
-        });
-        dp.on('fullscreen_cancel', () => {
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-            }
-        });
+        }
     })();
 
 
@@ -886,11 +892,14 @@ function playEpisode(index) {
     // 首先隐藏之前可能显示的错误
     document.getElementById('error').style.display = 'none';
     // 显示加载指示器
-    document.getElementById('loading').style.display = 'flex';
-    document.getElementById('loading').innerHTML = `
-        <div class="loading-spinner"></div>
-        <div>正在加载视频...</div>
-    `;
+    const loadingElement = document.getElementById('loading');
+    if (loadingElement) {
+        loadingElement.style.display = 'flex';
+        loadingElement.innerHTML = `
+            <div class="loading-spinner"></div>
+            <div>正在加载视频...</div>
+        `;
+    }
     
     // 停止当前播放并清理资源
     if (dp) {
@@ -900,7 +909,7 @@ function playEpisode(index) {
                 dp.video.pause();
                 // 移除视频源
                 if (dp.video.src) {
-                    if (dp.video.src.startsWith('blob:')) {
+                    if (typeof dp.video.src === 'string' && dp.video.src.startsWith('blob:')) {
                         URL.revokeObjectURL(dp.video.src);
                     }
                 }
@@ -921,10 +930,16 @@ function playEpisode(index) {
             
             // 不要移除所有事件监听器，因为我们需要保留一些基本的播放器功能
             // 只移除特定的事件监听器
-            const eventsToRemove = ['loadedmetadata', 'error', 'play', 'pause', 'ended', 'timeupdate', 'seeking', 'seeked'];
-            eventsToRemove.forEach(event => {
-                dp.off(event);
-            });
+            if (dp.off) {
+                const eventsToRemove = ['loadedmetadata', 'error', 'play', 'pause', 'ended', 'timeupdate', 'seeking', 'seeked'];
+                eventsToRemove.forEach(event => {
+                    try {
+                        dp.off(event);
+                    } catch (e) {
+                        console.warn(`移除事件监听器 ${event} 时出错:`, e);
+                    }
+                });
+            }
         } catch (e) {
             console.error('清理播放器时出错:', e);
         }
