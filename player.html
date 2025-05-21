@@ -406,37 +406,54 @@
                   customHls: function(video, url) {
                     // Clean up previous HLS instance if exists
                     if (window.hlsInstance) {
-                        window.hlsInstance.destroy();
+                        try {
+                            window.hlsInstance.destroy();
+                        } catch (e) {
+                            console.warn('Error destroying previous HLS instance:', e);
+                        }
                         window.hlsInstance = null;
                     }
                     
                     if (Hls.isSupported()) {
-                      window.hlsInstance = new Hls({
-                        maxBufferLength: 60,
-                        maxMaxBufferLength: 90,
-                        maxBufferSize: 100 * 1000 * 1000,
-                        maxBufferHole: 1,
-                        lowLatencyMode: false,
-                        manifestLoadingMaxRetry: 6,
-                        levelLoadingMaxRetry: 6,
-                        fragLoadingMaxRetry: 6,
-                        fragLoadingMaxRetryTimeout: 10000
-                      });
+                        const hls = new Hls({
+                            maxBufferLength: 60,
+                            maxMaxBufferLength: 90,
+                            maxBufferSize: 100 * 1000 * 1000,
+                            maxBufferHole: 1,
+                            lowLatencyMode: false,
+                            manifestLoadingMaxRetry: 6,
+                            levelLoadingMaxRetry: 6,
+                            fragLoadingMaxRetry: 6,
+                            fragLoadingMaxRetryTimeout: 10000
+                        });
 
-                      hls.loadSource(url);
-                      hls.attachMedia(video);
+                        // Store the HLS instance for cleanup
+                        window.hlsInstance = hls;
 
-                      hls.on(Hls.Events.ERROR, function(event, data) {
-                        if (data.fatal) {
-                          switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                              // HLS network error
-                              try { hls.startLoad(); } catch (e) { console.warn('HLS startLoad error:', e); }
-                              break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                              // HLS media error
-                              try { hls.recoverMediaError(); } catch (e) { console.warn('HLS recoverMediaError error:', e); }
-                              break;
+                        hls.loadSource(url);
+                        hls.attachMedia(video);
+
+                        hls.on(Hls.Events.ERROR, function(event, data) {
+                            if (!hls) return; // Skip if hls instance is already destroyed
+                            
+                            if (data.fatal) {
+                                switch (data.type) {
+                                    case Hls.ErrorTypes.NETWORK_ERROR:
+                                        // HLS network error
+                                        try { 
+                                            hls.startLoad(); 
+                                        } catch (e) { 
+                                            console.warn('HLS startLoad error:', e); 
+                                        }
+                                        break;
+                                    case Hls.ErrorTypes.MEDIA_ERROR:
+                                        // HLS media error
+                                        try { 
+                                            hls.recoverMediaError(); 
+                                        } catch (e) { 
+                                            console.warn('HLS recoverMediaError error:', e); 
+                                        }
+                                        break;
                             default:
                               // HLS fatal error
                               showError('视频流加载失败: ' + data.details);
