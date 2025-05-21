@@ -893,127 +893,41 @@ function playEpisode(index) {
         progressSaveInterval = null;
     }
     
-    // 首先隐藏之前可能显示的错误
-    document.getElementById('error').style.display = 'none';
-    // 显示加载指示器
-    const loadingElement = document.getElementById('loading');
-    if (loadingElement) {
-        loadingElement.style.display = 'flex';
-        loadingElement.innerHTML = `
-            <div class="loading-spinner"></div>
-            <div>正在加载视频...</div>
-        `;
-    }
-    
-    // 停止当前播放并清理资源
-    if (window.dp) {
-        try {
-            // 0. 立即静音所有音频上下文
-            if (window.AudioContext || window.webkitAudioContext) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                const audioContext = new AudioContext();
-                if (audioContext.state === 'running') {
-                    audioContext.suspend().catch(console.error);
-                }
-            }
-
-            // 1. 强制停止所有媒体元素
-            document.querySelectorAll('video, audio').forEach(media => {
-                try {
-                    media.pause();
-                    media.muted = true;
-                    media.volume = 0;
-                    media.removeAttribute('src');
-                    media.load();
-                    media.remove();
-                } catch (e) {
-                    console.warn('Error stopping media element:', e);
-                }
-            });
-            
-            // 2. 处理播放器实例
-            if (window.dp.video) {
-                const video = window.dp.video;
-                video.pause();
-                video.muted = true;
-                video.volume = 0;
-                video.removeAttribute('src');
-                video.load();
-            }
-            
-            // 3. 销毁播放器
-            if (typeof window.dp.destroy === 'function') {
-                try {
-                    window.dp.destroy(true);
-                } catch (e) {
-                    console.warn('Error destroying player:', e);
-                }
-            }
-            
-            // 3. 清理HLS实例
-            if (typeof window.currentHls?.destroy === 'function') {
-                window.currentHls.destroy();
-                window.currentHls = null;
-            }
-            
-            // 4. 强制移除所有video元素
-            const videoElements = document.querySelectorAll('video');
-            videoElements.forEach(video => {
-                video.pause();
-                video.muted = true;
-                video.src = '';
-                video.load();
-                video.remove();
-            });
-            
-            // 5. 清空播放器容器
-            const playerContainer = document.getElementById('player');
-            if (playerContainer) {
-                playerContainer.innerHTML = '';
-            }
-            
-            // 6. 移除可能的事件监听器
-            window.removeEventListener('beforeunload', cleanupBeforeUnload);
-            window.removeEventListener('unload', cleanupBeforeUnload);
-            
-            // 7. 清空播放器引用
-            window.dp = null;
-        } catch (e) {
-            console.error('清理播放器时出错:', e);
-        }
-    }
-    
+    // 准备切换剧集的URL
     const url = currentEpisodes[index];
-    // 更新全局URL记录
-    currentVideoUrl = url;
-    currentEpisodeIndex = index;
-    videoHasEnded = false; // 重置视频结束标志
-    
-    // 清除之前的播放位置记录，确保切换选集后从头开始播放
-    clearVideoProgress();
-    
-    // 获取当前URL的所有参数
     const currentUrl = new URL(window.location.href);
     const urlParams = currentUrl.searchParams;
-    const sourceName = urlParams.get('source') || ''; 
-    const sourceCode = urlParams.get('source_code') || '';
-    const videoId = urlParams.get('id') || '';
-    const returnUrl = urlParams.get('returnUrl') || '';
     
-    // 构建新的URL，保持查询参数但更新index和url
+    // 构建新的URL参数
     const newUrl = new URL(window.location.origin + window.location.pathname);
     // 保留所有原始参数
     for(const [key, value] of urlParams.entries()) {
         newUrl.searchParams.set(key, value);
     }
+    
     // 更新需要变更的参数
     newUrl.searchParams.set('index', index);
     newUrl.searchParams.set('url', url);
-    // 移除position参数，确保不会从记录的位置开始播放
+    // 确保不会从记录的位置开始播放
     newUrl.searchParams.delete('position');
     
-    // 使用replaceState更新URL，这样不会增加浏览历史记录
-    window.history.replaceState({}, '', newUrl);
+    // 显示加载指示器，然后重新加载页面
+    const loadingElement = document.getElementById('loading');
+    if (loadingElement) {
+        loadingElement.style.display = 'flex';
+        loadingElement.innerHTML = `
+            <div class="loading-spinner"></div>
+            <div>正在加载集数 ${index+1}...</div>
+        `;
+    }
+    
+    // 使用页面重载方式切换剧集，这将完全清理所有资源
+    console.log(`切换到剧集 ${index+1}，完全重载页面...`);
+    setTimeout(() => {
+        window.location.href = newUrl.toString();
+    }, 100); // 短暂停以显示加载指示器
+    
+    return; // 提前返回，不执行后续代码
     
     // 更新播放器
     if (dp) {
