@@ -372,8 +372,9 @@ function initPlayer(videoUrl, sourceCode) {
     // 记录当前视频URL
     currentVideoUrl = videoUrl;
     
-    // Set up loadedmetadata event after dp is initialized
-    if (dp) {
+    // 设置播放器加载完成后的回调
+    const setupPlayerCallbacks = function() {
+        // 设置loadedmetadata事件
         dp.on('loadedmetadata', function() {
             const loadingElement = document.getElementById('loading');
             if (loadingElement) {
@@ -398,10 +399,8 @@ function initPlayer(videoUrl, sourceCode) {
                 restorePlaybackPosition();
             }
         });
-    }
-    
-    // Set up error handler
-    if (dp) {
+        
+        // 设置错误处理
         dp.on('error', function() {
             // 如果正在切换视频，忽略错误
             if (window.isSwitchingVideo) {
@@ -424,7 +423,7 @@ function initPlayer(videoUrl, sourceCode) {
                 loadingElement.style.display = 'none';
             }
         });
-    }
+    };
 
     // 使用ArtPlayer API加载视频
     if (window.playerAPI && typeof window.playerAPI.loadVideo === 'function') {
@@ -450,6 +449,9 @@ function initPlayer(videoUrl, sourceCode) {
                 
                 // 设置ArtPlayer事件处理
                 setupArtPlayerEvents();
+                
+                // 设置播放器回调
+                setupPlayerCallbacks();
                 
                 // 添加到历史记录
                 saveToHistory();
