@@ -408,22 +408,29 @@ function initializePageContent() {
                         } else if (typeof window.showToast === 'function') {
                             window.showToast(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
                         }
-                    } else {
-                        episodeUrlForPlayer = currentEpisodes[indexForPlayer];
-                        // indexForPlayer 保持不变
-
-                        const newUrl = new URL(window.location.href);
-                        newUrl.searchParams.set('url', episodeUrlForPlayer);
-                        newUrl.searchParams.set('index', indexForPlayer.toString());
-                        newUrl.searchParams.delete('position');
-                        window.history.replaceState({}, '', newUrl.toString());
-
-                        if (typeof window.showMessage === 'function') {
-                            window.showMessage('已从头开始播放', 'info');
-                        } else if (typeof window.showToast === 'function') {
-                            window.showToast('已从头开始播放', 'info');
-                        }
+            } else {
+                // 【关键插入 START】
+                // 用户选择“从头播放”，应立刻清除该集的 progress
+                try {
+                    const all = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || '{}');
+                    const vid = `${currentVideoTitle}_${sourceCodeFromUrl || 'unknown_source'}`;
+                    if (all[vid] && all[vid][indexForPlayer.toString()]) {
+                        delete all[vid][indexForPlayer.toString()];
+                        localStorage.setItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY, JSON.stringify(all));
                     }
+                } catch (e) {
+                    console.warn('清除本集进度失败：', e);
+               }
+                // 【关键插入 END】
+                episodeUrlForPlayer = currentEpisodes[indexForPlayer];
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.set('url', episodeUrlForPlayer);
+                newUrl.searchParams.set('index', indexForPlayer.toString());
+                newUrl.searchParams.delete('position');
+                window.history.replaceState({}, '', newUrl.toString());
+                if (typeof showMessage === 'function') showMessage('已从头开始播放', 'info');
+                else if (typeof showToast === 'function') showToast('已从头开始播放', 'info');
+            }
                     // ★ 弹窗回调里，直接重新初始化（再次走此流程就不会再弹窗）
                     initializePageContent();
                 });
