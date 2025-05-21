@@ -475,7 +475,7 @@ function initPlayer(videoUrl, sourceCode) {
     }
 
     // 使用ArtPlayer API加载视频
-    if (window.art && typeof window.art.loadVideo === 'function') {
+    if (window.playerAPI && typeof window.playerAPI.loadVideo === 'function') {
         // 准备视频数据
         const videoData = {
             videoId: getVideoId(),
@@ -492,25 +492,19 @@ function initPlayer(videoUrl, sourceCode) {
         };
         
         // 使用ArtPlayer API加载视频
-        window.art.loadVideo(videoData)
+        window.playerAPI.loadVideo(videoData)
             .then(artPlayer => {
-                // 存储全局播放器实例引用
                 art = artPlayer;
-                
                 // 隐藏加载动画
                 if (loadingElement) {
                     loadingElement.style.display = 'none';
                 }
-                
                 // 设置ArtPlayer事件处理
                 setupArtPlayerEvents();
-                
                 // 设置播放器回调
                 setupPlayerCallbacks();
-                
                 // 添加到历史记录
                 saveToHistory();
-                
                 // 启动定期保存播放进度
                 startProgressSaveInterval();
             })
@@ -801,10 +795,12 @@ function showError(message) {
         console.log('忽略错误:', message);
         return;
     }
-    
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error').style.display = 'flex';
-    document.getElementById('error-message').textContent = message;
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) loadingEl.style.display = 'none';
+    const errorEl = document.getElementById('error');
+    if (errorEl) errorEl.style.display = 'flex';
+    const errorMsgEl = document.getElementById('error-message');
+    if (errorMsgEl) errorMsgEl.textContent = message;
 }
 
 // 更新集数信息
@@ -935,8 +931,8 @@ function playEpisode(index) {
     // return; // 提前返回，不执行后续代码
     
     // 更新播放器
-    if (window.art && typeof window.art.switch === 'function') {
-        window.art.switch({
+    if (window.playerAPI && typeof window.playerAPI.switch === 'function') {
+        window.playerAPI.switch({
             url: url,
             title: currentVideoTitle
         });
