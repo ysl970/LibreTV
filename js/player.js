@@ -993,6 +993,18 @@ function playEpisode(index) {
         initPlayer(url, sourceCode);
     }
     
+    // 更新全局索引
+    currentEpisodeIndex = index;
+    // 如果有每集标题，可以在这里更新 currentVideoTitle
+    // currentVideoTitle = ... // 若有 per-episode title，可在此赋值
+
+    // 更新URL参数（不刷新页面）
+    window.history.replaceState({}, '', newUrl.toString());
+
+    // 更新页面标题
+    document.title = currentVideoTitle + ' - LibreTV播放器';
+    document.getElementById('videoTitle').textContent = currentVideoTitle;
+
     // 更新UI
     updateEpisodeInfo();
     updateButtonStates();
