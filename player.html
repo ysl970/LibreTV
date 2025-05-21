@@ -131,9 +131,19 @@
             position: relative;
             z-index: 10001; /* Very high z-index to stay on top */
             pointer-events: auto !important;
+            cursor: pointer;
         }
         #home-button * {
             pointer-events: none; /* Allow clicks to pass through to the anchor */
+        }
+        /* Ensure the home button stays interactive */
+        #home-button:active {
+            transform: scale(0.95);
+        }
+        /* Add a visual feedback for click */
+        #home-button:focus {
+            outline: 2px solid #00ccff;
+            outline-offset: 2px;
         }
     </style>
     
@@ -143,7 +153,7 @@
     <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header">
         <div class="flex items-center min-w-0">
             <!-- Direct home link that will always work -->
-            <a href="/" id="home-button" class="flex items-center min-w-0 cursor-pointer" onclick="goHome(event); return false;">
+            <a href="#" id="home-button" class="flex items-center min-w-0" onclick="forceGoHome(event); return false;">
                 <svg class="w-8 h-8 mr-2 text-[#00ccff] logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                 </svg>
@@ -852,19 +862,67 @@
             console.warn('Player cleanup failed:', e); 
         }
         
-        // Use the most direct navigation method first
+        return true;
+    }
+    
+    // Force navigation to home page with multiple fallback methods
+    function forceGoHome(event) {
+        // First try to clean up
+        const cleanupSuccess = goHome(event);
+        
+        // Create a hidden iframe for navigation if needed
+        let navIframe = document.getElementById('nav-helper');
+        if (!navIframe) {
+            navIframe = document.createElement('iframe');
+            navIframe.id = 'nav-helper';
+            navIframe.style.display = 'none';
+            document.body.appendChild(navIframe);
+        }
+        
+        // Try multiple navigation methods with timeouts
         try {
-            // This is the most reliable method and should work in all browsers
+            // Method 1: location.replace (most reliable)
             window.location.replace('/');
             
-            // Fallback in case replace is blocked
+            // Method 2: If still on same page after a short delay, try href
             setTimeout(() => {
                 if (window.location.pathname !== '/') {
+                    console.log('Method 1 failed, trying location.href');
                     window.location.href = '/';
+                    
+                    // Method 3: If still not redirected, use iframe
+                    setTimeout(() => {
+                        if (window.location.pathname !== '/') {
+                            console.log('Method 2 failed, trying iframe navigation');
+                            try {
+                                navIframe.src = '/';
+                                navIframe.onload = function() {
+                                    window.location.href = '/';
+                                };
+                            } catch(e) {
+                                console.error('Iframe navigation failed:', e);
+                            }
+                            
+                            // Final fallback: document.write
+                            setTimeout(() => {
+                                if (window.location.pathname !== '/') {
+                                    console.log('Method 3 failed, using document.write');
+                                    try {
+                                        document.open();
+                                        document.write('<script>window.location.href=\'' + '/' + '\'<\/script>');
+                                        document.close();
+                                    } catch(e) {
+                                        console.error('Document write failed:', e);
+                                    }
+                                }
+                            }, 300);
+                        }
+                    }, 200);
                 }
             }, 100);
         } catch(e) {
-            console.error('Primary navigation failed, using fallback:', e);
+            console.error('Navigation error, trying fallback methods:', e);
+            // If any error occurs, try the most basic method
             window.location.href = '/';
         }
         
