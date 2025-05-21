@@ -860,10 +860,9 @@ function renderEpisodes() {
         // 根据倒序状态计算真实的剧集索引
         const realIndex = episodesReversed ? currentEpisodes.length - 1 - index : index;
         const isActive = realIndex === currentEpisodeIndex;
-        
         html += `
             <button id="episode-${realIndex}" 
-                    onclick="playEpisode(${realIndex})" 
+                    onclick="playEpisodeByUrl('${episode.replace(/'/g, "\\'")}')" 
                     class="px-4 py-2 ${isActive ? 'episode-active' : '!bg-[#222] hover:!bg-[#333] hover:!shadow-none'} !border ${isActive ? '!border-blue-500' : '!border-[#333]'} rounded-lg transition-colors text-center episode-btn">
                 第${realIndex + 1}集
             </button>
@@ -871,6 +870,13 @@ function renderEpisodes() {
     });
     
     episodesList.innerHTML = html;
+}
+
+function playEpisodeByUrl(url) {
+    const index = currentEpisodes.indexOf(url);
+    if (index !== -1) {
+        playEpisode(index);
+    }
 }
 
 // 播放指定集数
