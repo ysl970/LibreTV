@@ -964,6 +964,11 @@ function playEpisode(index) {
                         media.load();
                     } catch (e) {}
                 });
+                // 彻底清空播放器容器，防止残留 video 元素
+                const playerContainer = document.getElementById('player');
+                if (playerContainer) {
+                    playerContainer.innerHTML = '';
+                }
                 
                 // 重新初始化播放器
                 initPlayer(url, sourceCode);
@@ -990,6 +995,11 @@ function playEpisode(index) {
                         media.load();
                     } catch (e) {}
                 });
+                // 彻底清空播放器容器，防止残留 video 元素
+                const playerContainer = document.getElementById('player');
+                if (playerContainer) {
+                    playerContainer.innerHTML = '';
+                }
                 
                 // 重新初始化播放器
                 initPlayer(url, sourceCode);
