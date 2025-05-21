@@ -875,90 +875,42 @@ function renderEpisodes() {
 
 // 播放指定集数
 function playEpisode(index) {
-    // 彻底销毁 ArtPlayer 实例，防止残留声音
-    if (window.art && typeof window.art.destroy === 'function') {
-        try {
-            window.art.destroy(true);
-        } catch (e) {}
-        window.art = null;
+    // 更新全局索引和标题
+    currentEpisodeIndex = index;
+    // currentVideoTitle = ... // 若有 per-episode title，可在此赋值
+    const url = currentEpisodes[index];
+    // 更新URL参数（不刷新页面）
+    const currentUrl = new URL(window.location.href);
+    const urlParams = currentUrl.searchParams;
+    const newUrl = new URL(window.location.origin + window.location.pathname);
+    for(const [key, value] of urlParams.entries()) {
+        newUrl.searchParams.set(key, value);
     }
-    // 彻底移除所有 video/audio 元素，防止残留声音
-    document.querySelectorAll('video, audio').forEach(media => {
-        try {
-            media.pause();
-            media.muted = true;
-            media.src = '';
-            media.load();
-            if (media.parentNode) {
-                media.parentNode.removeChild(media);
-            }
-        } catch (e) {}
-    });
-    // 彻底清空播放器容器，防止残留 video 元素
-    const playerContainer = document.getElementById('player');
-    if (playerContainer) {
-        playerContainer.innerHTML = '';
-    }
-    // Aggressively delay before creating new player
-    setTimeout(() => {
-        // 确保index在有效范围内
-        if (index < 0 || index >= currentEpisodes.length) {
-            console.error(`无效的剧集索引: ${index}, 当前剧集数量: ${currentEpisodes.length}`);
-            showToast(`无效的剧集索引: ${index + 1}，当前剧集总数: ${currentEpisodes.length}`);
-            return;
-        }
-        // 保存当前播放进度（如果正在播放）
-        if (dp && dp.video && !dp.video.paused && !videoHasEnded) {
-            saveCurrentProgress();
-        }
-        // 清除进度保存计时器
-        if (progressSaveInterval) {
-            clearInterval(progressSaveInterval);
-            progressSaveInterval = null;
-        }
-        // 获取 sourceCode
+    newUrl.searchParams.set('index', index);
+    newUrl.searchParams.set('url', url);
+    newUrl.searchParams.delete('position');
+    window.history.replaceState({}, '', newUrl.toString());
+    // 更新页面标题
+    document.title = currentVideoTitle + ' - LibreTV播放器';
+    document.getElementById('videoTitle').textContent = currentVideoTitle;
+    // 更新UI
+    updateEpisodeInfo();
+    updateButtonStates();
+    renderEpisodes();
+    userClickedPosition = null;
+    // 切换视频源
+    if (window.art) {
+        window.art.url = url;
+        window.art.title = currentVideoTitle;
+        // 保存历史（延迟2秒，确保播放器已切换）
+        setTimeout(() => saveToHistory(), 2000);
+    } else {
+        // 首次播放或播放器未初始化
         const urlParams2 = new URLSearchParams(window.location.search);
         const sourceCode = urlParams2.get('source_code');
-        // 准备切换剧集的URL
-        const url = currentEpisodes[index];
-        const currentUrl = new URL(window.location.href);
-        const urlParams = currentUrl.searchParams;
-        // 构建新的URL参数
-        const newUrl = new URL(window.location.origin + window.location.pathname);
-        for(const [key, value] of urlParams.entries()) {
-            newUrl.searchParams.set(key, value);
-        }
-        newUrl.searchParams.set('index', index);
-        newUrl.searchParams.set('url', url);
-        newUrl.searchParams.delete('position');
-        // 显示加载指示器
-        const loadingElement = document.getElementById('loading');
-        if (loadingElement) {
-            loadingElement.style.display = 'flex';
-            loadingElement.innerHTML = `
-                <div class="loading-spinner"></div>
-                <div>正在加载集数 ${index+1}...</div>
-            `;
-        }
-        // 更新全局索引
-        currentEpisodeIndex = index;
-        // 更新URL参数（不刷新页面）
-        window.history.replaceState({}, '', newUrl.toString());
-        // 更新页面标题
-        document.title = currentVideoTitle + ' - LibreTV播放器';
-        document.getElementById('videoTitle').textContent = currentVideoTitle;
-        // 更新UI
-        updateEpisodeInfo();
-        updateButtonStates();
-        renderEpisodes();
-        // 重置用户点击位置记录
-        userClickedPosition = null;
-        // 三秒后保存到历史记录
-        setTimeout(() => saveToHistory(), 3000);
-        // 重新初始化播放器
         initPlayer(url, sourceCode);
-    }, 100);
-    return;
+        setTimeout(() => saveToHistory(), 2000);
+    }
 }
 
 // 播放上一集
