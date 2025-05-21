@@ -125,7 +125,10 @@
     </script>
 </head>
 <body>
-    <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header">
+    <header class="bg-[#111] p-4 flex items-center border-b border-[#333] gap-2 player-header {
+  position: relative;
+  z-index: 1000;
+}">
         <div class="flex items-center min-w-0">
             <a href="/" id="homeButton" class="flex items-center min-w-0 cursor-pointer">
                 <svg class="w-8 h-8 mr-2 text-[#00ccff] logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -674,6 +677,7 @@
             document.body.addEventListener('click', function(event) {
                 const homeButton = event.target.closest('#homeButton');
                 if (homeButton) {
+    console.log('Home button clicked');
                     event.preventDefault();
                     event.stopPropagation();
                     
