@@ -1067,7 +1067,10 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0) {
     
     // 构建播放页面URL，使用watch.html作为中间跳转页
     let watchUrl = `watch.html?id=${videoId}&source=${sourceCode || ''}&url=${encodeURIComponent(url)}&index=${episodeIndex}&title=${encodeURIComponent(vod_name || '')}`;
-    
+    // 添加episodes参数
+    if (window.currentEpisodes && Array.isArray(window.currentEpisodes) && window.currentEpisodes.length > 0) {
+        watchUrl += `&episodes=${encodeURIComponent(JSON.stringify(window.currentEpisodes))}`;
+    }
     // 添加返回URL参数
     watchUrl += `&back=${encodeURIComponent(currentPath)}`;
     
@@ -1345,100 +1348,6 @@ async function importConfig() {
         } catch (error) {
             const message = typeof error === 'string' ? error : '配置文件格式错误';
             showToast(`配置文件读取出错 (${message})`, 'error');
-        }
-    });
-}
-
-// 从URL导入配置
-async function importConfigFromUrl() {
-    // 创建模态框元素
-    let modal = document.getElementById('importUrlModal');
-    if (modal) {
-        document.body.removeChild(modal);
-    }
-
-    modal = document.createElement('div');
-    modal.id = 'importUrlModal';
-    modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-40';
-
-    modal.innerHTML = `
-        <div class="bg-[#191919] rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto relative">
-            <button id="closeUrlModal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">&times;</button>
-            
-            <h3 class="text-xl font-bold mb-4">从URL导入配置</h3>
-            
-            <div class="mb-4">
-                <input type="text" id="configUrl" placeholder="输入配置文件URL" 
-                       class="w-full px-3 py-2 bg-[#222] border border-[#333] rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-            </div>
-            
-            <div class="flex justify-end space-x-2">
-                <button id="confirmUrlImport" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">导入</button>
-                <button id="cancelUrlImport" class="bg-[#444] hover:bg-[#555] text-white px-4 py-2 rounded">取消</button>
-            </div>
-        </div>`;
-
-    document.body.appendChild(modal);
-
-    // 关闭按钮事件
-    document.getElementById('closeUrlModal').addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
-
-    // 取消按钮事件
-    document.getElementById('cancelUrlImport').addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
-
-    // 确认导入按钮事件
-    document.getElementById('confirmUrlImport').addEventListener('click', async () => {
-        const url = document.getElementById('configUrl').value.trim();
-        if (!url) {
-            showToast('请输入配置文件URL', 'warning');
-            return;
-        }
-
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            showToast('URL必须以http://或https://开头', 'warning');
-            return;
-        }
-
-        showLoading('正在从URL导入配置...');
-        
-        try {
-            // 获取配置文件
-            const response = await fetch(PROXY_URL + encodeURIComponent(url));
-            if (!response.ok) throw '获取配置文件失败';
-
-            const config = await response.json();
-            if (config.name !== 'LibreTV-Settings') throw '配置文件格式不正确';
-
-            // 验证哈希
-            const dataHash = await sha256(JSON.stringify(config.data));
-            if (dataHash !== config.hash) throw '配置文件哈希值不匹配';
-
-            // 导入配置
-            for (let item in config.data) {
-                localStorage.setItem(item, config.data[item]);
-            }
-            
-            showToast('配置文件导入成功，3 秒后自动刷新本页面。', 'success');
-            setTimeout(() => {
-                window.location.reload();
-            }, 3000);
-        } catch (error) {
-            const message = typeof error === 'string' ? error : '导入配置失败';
-            showToast(`从URL导入配置出错 (${message})`, 'error');
-        } finally {
-            hideLoading();
-            document.body.removeChild(modal);
-        }
-    });
-
-    // 点击模态框外部关闭
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            document.body.removeChild(modal);
         }
     });
 }
