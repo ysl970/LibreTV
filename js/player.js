@@ -860,6 +860,14 @@ function playEpisode(index) {
     
     // 更新播放器
     if (art && typeof art.switch === 'function') {
+        // 清理所有多余的 video 元素，只保留 ArtPlayer 当前的
+        const playerContainer = document.getElementById('player');
+        if (playerContainer) {
+            const videos = playerContainer.querySelectorAll('video');
+            videos.forEach((v, idx) => {
+                if (idx > 0) v.remove(); // 只保留第一个 video
+            });
+        }
         // 切换前主动暂停
         if (art.video && !art.video.paused) art.pause();
         art.switch({
