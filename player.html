@@ -668,20 +668,61 @@
         // PASSWORD 变量将在这里被服务器端注入
         window.__ENV__.PASSWORD = "{{PASSWORD}}";        // 导航到首页
         function goHome(event) {
+            console.log('goHome function called');
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
             }
-            // 清除任何可能影响导航的状态
+            
+            // Destroy the player if it exists
+            if (window.dp && typeof window.dp.destroy === 'function') {
+                try {
+                    window.dp.destroy(true);
+                } catch (e) {
+                    console.warn('清理播放器时出错 (dp):', e);
+                }
+            }
+            
+            // Also try the playerAPI if it exists
             if (window.playerAPI && window.playerAPI.destroy) {
                 try {
                     window.playerAPI.destroy();
                 } catch (e) {
-                    console.warn('清理播放器时出错:', e);
+                    console.warn('清理播放器时出错 (playerAPI):', e);
                 }
             }
-            // 直接导航到根路径
-            window.location.href = '/';
+            
+            // Force cleanup of any resources that might block navigation
+            try {
+                // Pause any potentially playing media
+                document.querySelectorAll('video, audio').forEach(media => {
+                    if (!media.paused) {
+                        media.pause();
+                    }
+                });
+                
+                // Remove any event listeners that might interfere
+                window.removeEventListener('beforeunload', null);
+            } catch (e) {
+                console.warn('Additional cleanup error:', e);
+            }
+            
+            // Direct navigation with timeout as fallback
+            try {
+                window.location.href = '/';
+                
+                // Fallback if direct navigation fails
+                setTimeout(() => {
+                    if (document.location.pathname.includes('player')) {
+                        console.log('Fallback navigation to home');
+                        document.location.replace('/');
+                    }
+                }, 200);
+            } catch (e) {
+                console.error('Navigation error:', e);
+                // Last resort
+                document.location.href = '/';
+            }
         }
 
         // 改进返回上一页功能
@@ -757,6 +798,24 @@
                 window.location.href = '/';
             }
         }
+    // Ensure the home button always works by attaching a global event listener
+    document.addEventListener('DOMContentLoaded', function() {
+        // Attach click event to home button
+        const homeButton = document.querySelector('.logo-icon').parentElement;
+        if (homeButton) {
+            // Remove existing onclick attribute to prevent conflicts
+            homeButton.removeAttribute('onclick');
+            
+            // Add robust event listener
+            homeButton.addEventListener('click', function(e) {
+                console.log('Home button clicked');
+                goHome(e);
+                return false;
+            });
+            
+            console.log('Home button event listener attached');
+        }
+    });
     </script>
 </body>
 </html>
