@@ -10,7 +10,7 @@ const PASSWORD_CONFIG = {
     verificationTTL: 90 * 24 * 60 * 60 * 1000,  // 验证有效期（90天，约3个月）
 };
 
-// 网站信息配置
+// 网站信息配置 
 const SITE_CONFIG = {
     name: 'LibreTV',
     url: 'https://libretv.is-an.org',
