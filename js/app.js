@@ -1030,7 +1030,10 @@ async function showDetails(id, vod_name, sourceCode) {
             apiParams = '&source=' + sourceCode;
         }
         
-        const response = await fetch('/api/detail?id=' + encodeURIComponent(id) + apiParams);
+        // Add a timestamp to prevent caching
+        const timestamp = new Date().getTime();
+        const cacheBuster = `&_t=${timestamp}`;
+        const response = await fetch(`/api/detail?id=${encodeURIComponent(id)}${apiParams}${cacheBuster}`);
         
         const data = await response.json();
         
@@ -1140,8 +1143,8 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0) {
         console.error('保存播放状态失败:', e);
     }
     
-    // 在新窗口/标签页中打开播放页面
-    window.open(watchUrl, '_blank');
+    // 在当前标签页中打开播放页面
+    window.location.href = watchUrl;
 }
 
 // 弹出播放器页面
@@ -1478,13 +1481,3 @@ if (config.auth.enabled) {
 
 // 或者针对特定路由
 app.use('/api', authMiddleware);
-
-// 页面初始化时监听密码验证成功事件，重新渲染adultdiv
-document.addEventListener('passwordVerified', function() {
-    // 先移除已存在的adultdiv
-    const oldAdultDiv = document.getElementById('adultdiv');
-    if (oldAdultDiv && oldAdultDiv.parentNode) {
-        oldAdultDiv.parentNode.removeChild(oldAdultDiv);
-    }
-    addAdultAPI();
-});
