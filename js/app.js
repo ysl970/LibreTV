@@ -1166,7 +1166,7 @@ function showVideoPlayer(url) {
 }
 
 // 关闭播放器页面
-function closeVideoPlayer() {
+function closeVideoPlayer(home = false) {
     videoPlayerFrame = document.getElementById('VideoPlayerFrame');
     if (videoPlayerFrame) {
         videoPlayerFrame.remove();
@@ -1181,6 +1181,9 @@ function closeVideoPlayer() {
         if (localStorage.getItem('doubanEnabled') === 'true') {
             document.getElementById('doubanArea').classList.remove('hidden');
         }
+    }
+    if (home) {
+        resetToHome();
     }
 }
 
