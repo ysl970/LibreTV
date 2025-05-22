@@ -42,6 +42,17 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('hasInitializedDefaults', 'true');
     }
     
+    // 强制安全：如果过滤关闭但未通过密码，自动恢复为开启
+    if (
+        localStorage.getItem('yellowFilterEnabled') === 'false' &&
+        window.isPasswordProtected && window.isPasswordProtected() &&
+        (!window.isPasswordVerified || !window.isPasswordVerified())
+    ) {
+        localStorage.setItem('yellowFilterEnabled', 'true');
+        const yellowFilterToggle = document.getElementById('yellowFilterToggle');
+        if (yellowFilterToggle) yellowFilterToggle.checked = true;
+    }
+    
     // 设置黄色内容过滤开关初始状态为关闭状态
 
     const yellowFilterToggle = document.getElementById('yellowFilterToggle');
@@ -66,6 +77,36 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 初始检查成人API选中状态
     setTimeout(checkAdultAPIsSelected, 100);
+
+    function enforceYellowFilterIfNeeded() {
+        if (
+            localStorage.getItem('yellowFilterEnabled') === 'false' &&
+            window.isPasswordProtected && window.isPasswordProtected() &&
+            (!window.isPasswordVerified || !window.isPasswordVerified())
+        ) {
+            localStorage.setItem('yellowFilterEnabled', 'true');
+            const yellowFilterToggle = document.getElementById('yellowFilterToggle');
+            if (yellowFilterToggle) yellowFilterToggle.checked = true;
+        }
+    }
+    if (typeof window.isPasswordVerified === 'function') {
+        enforceYellowFilterIfNeeded();
+    } else {
+        setTimeout(enforceYellowFilterIfNeeded, 100);
+    }
+
+    // 终极保险：在初始化最后再强制一次
+    setTimeout(() => {
+        if (
+            localStorage.getItem('yellowFilterEnabled') === 'false' &&
+            window.isPasswordProtected && window.isPasswordProtected() &&
+            (!window.isPasswordVerified || !window.isPasswordVerified())
+        ) {
+            localStorage.setItem('yellowFilterEnabled', 'true');
+            const yellowFilterToggle = document.getElementById('yellowFilterToggle');
+            if (yellowFilterToggle) yellowFilterToggle.checked = true;
+        }
+    }, 500);
 });
 
 // 初始化API复选框
@@ -117,8 +158,12 @@ function initAPICheckboxes() {
 
 // 添加成人API列表
 function addAdultAPI() {
-    // 仅在隐藏设置为false时添加成人API组
-    if (!HIDE_BUILTIN_ADULT_APIS && (localStorage.getItem('yellowFilterEnabled') === 'false')) {
+    // 仅在隐藏设置为false、黄色内容过滤关闭且密码已验证时添加成人API组
+    if (
+        !HIDE_BUILTIN_ADULT_APIS &&
+        localStorage.getItem('yellowFilterEnabled') === 'false' &&
+        window.isPasswordVerified && window.isPasswordVerified()
+    ) {
         const container = document.getElementById('apiCheckboxes');
 
         // 添加成人API组标题
@@ -129,7 +174,7 @@ function addAdultAPI() {
         adultTitle.className = 'api-group-title adult';
         adultTitle.innerHTML = `黄色资源采集站 <span class="adult-warning">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77-1.333.192 3 1.732 3z" />
             </svg>
         </span>`;
         adultdiv.appendChild(adultTitle);
@@ -1433,3 +1478,13 @@ if (config.auth.enabled) {
 
 // 或者针对特定路由
 app.use('/api', authMiddleware);
+
+// 页面初始化时监听密码验证成功事件，重新渲染adultdiv
+document.addEventListener('passwordVerified', function() {
+    // 先移除已存在的adultdiv
+    const oldAdultDiv = document.getElementById('adultdiv');
+    if (oldAdultDiv && oldAdultDiv.parentNode) {
+        oldAdultDiv.parentNode.removeChild(oldAdultDiv);
+    }
+    addAdultAPI();
+});
