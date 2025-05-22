@@ -144,7 +144,7 @@ const API_SITES = {
         adult: true
     },
     lsb: {
-        api: : 'https://apilsbzy1.com/api.php/provide/vod',,
+        api: : 'https://apilsbzy1.com/api.php/provide/vod'，
         name: 'lsb资源',
         adult: true
     },
