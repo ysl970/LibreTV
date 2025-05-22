@@ -188,4 +188,4 @@ function initPasswordProtection() {
 }
 
 // 在页面加载完成后初始化密码保护
-document.addEventListener('DOMContentLoaded', initPasswordProtection);
+// document.addEventListener('DOMContentLoaded', initPasswordProtection);

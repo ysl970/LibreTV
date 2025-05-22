@@ -121,7 +121,7 @@ const API_SITES = {
     ckzy: {
         api:'https://ckzy.me/api.php/provide/vod',
         name: 'CK资源',
-       
+        adult: true
     },
     jkun: {
         api: 'https://jkunzyapi.com/api.php/provide/vod',
