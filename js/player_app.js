@@ -68,19 +68,24 @@ function patchAndroidVideoHack() {
 
 // 跳过片头和片尾功能
 (() => {
+    // 格式化播放器时间
     const formatPlayerTime = (seconds) => {
         const minutes = Math.floor(seconds / 60);
         const secondsPart = Math.floor(seconds % 60);
         return `${String(minutes).padStart(2, '0')}:${String(secondsPart).padStart(2, '0')}`;
     };
 
+    // 本地存储工具
     const localStorageUtil = {
+        handleError(action, key, e) {
+            console.error(`LocalStorage ${action}失败: ${key}`, e);
+        },
         get(key, defaultValue) {
             try {
                 const value = window.localStorage.getItem(key);
                 return value !== null ? JSON.parse(value) : defaultValue;
             } catch (e) {
-                console.error(`LocalStorage 读取失败: ${key}`, e);
+                this.handleError('读取', key, e);
                 return defaultValue;
             }
         },
@@ -88,12 +93,12 @@ function patchAndroidVideoHack() {
             try {
                 window.localStorage.setItem(key, JSON.stringify(value));
             } catch (e) {
-                console.error(`LocalStorage 保存失败: ${key}`, e);
+                this.handleError('保存', key, e);
             }
         }
     };
 
-    // 验证用户输入的时间是否合理
+    // 验证用户输入内容
     const validateInput = (value, min, max) => {
         const number = parseInt(value, 10);
         if (isNaN(number) || number < min || number > max) return null;
@@ -103,14 +108,14 @@ function patchAndroidVideoHack() {
     // 跳过片头逻辑
     const skipIntroLogic = () => {
         const introTimeInput = document.getElementById('menu-skip-intro');
-        const introTime = validateInput(introTimeInput?.value, 0, 600);
+        const introTime = validateInput(introTimeInput.value, 0, 600);
 
         if (introTime === null) {
             showToast('片头秒数输入无效，请检查', 'error');
             return;
         }
 
-        localStorageUtil.set(window.config.skipIntroStorageKey, introTime); // 保存片头秒数
+        localStorageUtil.set(window.config.skipIntroStorageKey, introTime);
         if (dp && dp.video) {
             const newTime = Math.min(introTime, dp.video.duration - 1);
             dp.seek(newTime);
@@ -123,14 +128,14 @@ function patchAndroidVideoHack() {
     // 跳过片尾逻辑
     const skipOutroLogic = () => {
         const outroTimeInput = document.getElementById('menu-skip-outro');
-        const outroTime = validateInput(outroTimeInput?.value, 0, 600);
+        const outroTime = validateInput(outroTimeInput.value, 0, 600);
 
         if (outroTime === null) {
             showToast('片尾倒计秒数输入无效，请检查', 'error');
             return;
         }
 
-        localStorageUtil.set(window.config.skipOutroStorageKey, outroTime); // 保存片尾秒数
+        localStorageUtil.set(window.config.skipOutroStorageKey, outroTime);
         if (dp && dp.video) {
             const skipToEnd = dp.video.duration - outroTime;
             if (dp.video.currentTime < skipToEnd) {
@@ -181,74 +186,58 @@ function patchAndroidVideoHack() {
         }
     };
 
-    // 页面加载时进行初始化
+    // 页面加载完成后的初始化
     document.addEventListener('DOMContentLoaded', () => {
-        // 应用跳过设置
+        // 自动应用片头片尾跳过时间
         applySkipTimes();
 
-        // 菜单相关元素
+        // 初始化菜单相关功能
         const skipMenuButton = document.getElementById('skip-menu-button');
         const skipMenu = document.getElementById('skip-menu');
         const skipMenuWrapper = document.getElementById('skip-menu-wrapper');
 
-        // 跳过片头和片尾按钮绑定事件
+        // 跳过按钮绑定
         const skipIntroButton = document.getElementById('menu-skip-intro-button');
         const skipOutroButton = document.getElementById('menu-skip-outro-button');
-        if (skipIntroButton) {
-            skipIntroButton.addEventListener('click', skipIntroLogic);
-        }
-        if (skipOutroButton) {
-            skipOutroButton.addEventListener('click', skipOutroLogic);
-        }
+        skipIntroButton.addEventListener('click', skipIntroLogic);
+        skipOutroButton.addEventListener('click', skipOutroLogic);
 
-        // 点击菜单按钮显示或隐藏下拉菜单
-        if (skipMenuButton) {
-            skipMenuButton.addEventListener('click', () => {
-                skipMenu.classList.toggle('hidden');
-            });
-        }
+        // 菜单显示/隐藏逻辑
+        skipMenuButton.addEventListener('click', () => {
+            skipMenu.classList.toggle('hidden');
+        });
 
-        // 点击其他地方关闭菜单
         document.addEventListener('click', (e) => {
-            if (skipMenuWrapper && !skipMenuWrapper.contains(e.target)) {
+            if (!skipMenuWrapper.contains(e.target)) {
                 skipMenu.classList.add('hidden');
             }
         });
 
-        // 恢复设置 (片头片尾跳过时间)
+        // 恢复片头片尾设置
         const introTimeInput = document.getElementById('menu-skip-intro');
         const outroTimeInput = document.getElementById('menu-skip-outro');
         const introTime = localStorageUtil.get(window.config.skipIntroStorageKey, window.config.defaultSkipIntroTime);
         const outroTime = localStorageUtil.get(window.config.skipOutroStorageKey, window.config.defaultSkipOutroCountdown);
 
-        if (introTimeInput) {
-            introTimeInput.value = introTime; // 恢复片头设置
-        }
-        if (outroTimeInput) {
-            outroTimeInput.value = outroTime; // 恢复片尾设置
-        }
+        introTimeInput.value = introTime;
+        outroTimeInput.value = outroTime;
+
+        // 重置按钮绑定
+        const resetButton = document.getElementById('reset-skip');
+        resetButton.addEventListener('click', resetSkipTimes);
     });
 
-    // 重置按钮绑定
-    const resetSkipButton = document.getElementById('reset-skip');
-    if (resetSkipButton) {
-        resetSkipButton.addEventListener('click', resetSkipTimes);
-    }
-
-    // 监听下一集播放并自动使用跳过设置
+    // 下一集逻辑
     if (dp) {
         dp.on('ended', () => {
             showToast('当前视频播放完毕，准备播放下一集...', 'info');
             setTimeout(() => {
-                dp.nextVideo(); // 假设播放器有加载下一集的功能
+                dp.nextVideo();
             }, 2000);
-        });
-
-        dp.on('loadeddata', () => { // 下一集加载时自动应用跳过时间
-            applySkipTimes();
         });
     }
 })();
+
 
 /**
  * 展示自定义的“记住进度恢复”弹窗，并Promise化回调
