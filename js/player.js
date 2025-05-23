@@ -1057,6 +1057,7 @@ function saveToHistory() {
     console.log('[saveToHistory in player.js] urlParams id:', urlParams.get('id')); // Log 2a
     console.log('[saveToHistory in player.js] urlParams source:', urlParams.get('source')); // Log 2b
     const sourceName = urlParams.get('source') || '';
+    const sourceCode = urlParams.get('source_code') || '';
     const id_from_params = urlParams.get('id'); // Get video ID from player URL (passed as 'id')
     console.log('[saveToHistory in player.js] Derived id_from_params:', id_from_params, 'Derived sourceName:', sourceName); // Log 3
 
