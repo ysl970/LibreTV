@@ -67,120 +67,187 @@ function patchAndroidVideoHack() {
 }
 
 // 跳过片头和片尾功能
-// 格式化时间显示 (只保留一个函数声明)
 (() => {
-const formatPlayerTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const secondsPart = Math.floor(seconds % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(secondsPart).padStart(2, '0')}`;
-};
+    const formatPlayerTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const secondsPart = Math.floor(seconds % 60);
+        return `${String(minutes).padStart(2, '0')}:${String(secondsPart).padStart(2, '0')}`;
+    };
 
-const localStorageUtil = {
-    get(key, defaultValue) {
-        try {
-            const value = window.localStorage.getItem(key);
-            return value !== null ? JSON.parse(value) : defaultValue;
-        } catch (e) {
-            console.error(`LocalStorage 读取失败: ${key}`, e);
-            return defaultValue;
+    const localStorageUtil = {
+        get(key, defaultValue) {
+            try {
+                const value = window.localStorage.getItem(key);
+                return value !== null ? JSON.parse(value) : defaultValue;
+            } catch (e) {
+                console.error(`LocalStorage 读取失败: ${key}`, e);
+                return defaultValue;
+            }
+        },
+        set(key, value) {
+            try {
+                window.localStorage.setItem(key, JSON.stringify(value));
+            } catch (e) {
+                console.error(`LocalStorage 保存失败: ${key}`, e);
+            }
         }
-    },
-    set(key, value) {
-        try {
-            window.localStorage.setItem(key, JSON.stringify(value));
-        } catch (e) {
-            console.error(`LocalStorage 保存失败: ${key}`, e);
+    };
+
+    // 验证用户输入的时间是否合理
+    const validateInput = (value, min, max) => {
+        const number = parseInt(value, 10);
+        if (isNaN(number) || number < min || number > max) return null;
+        return number;
+    };
+
+    // 跳过片头逻辑
+    const skipIntroLogic = () => {
+        const introTimeInput = document.getElementById('menu-skip-intro');
+        const introTime = validateInput(introTimeInput?.value, 0, 600);
+
+        if (introTime === null) {
+            showToast('片头秒数输入无效，请检查', 'error');
+            return;
         }
-    }
-};
 
-// 验证用户输入的时间是否合理
-const validateInput = (value, min, max) => {
-    const number = parseInt(value, 10);
-    if (isNaN(number) || number < min || number > max) return null;
-    return number;
-};
-
-// 跳过片头逻辑
-const skipIntroLogic = () => {
-    const introTimeInput = document.getElementById('menu-skip-intro');
-    const introTime = validateInput(introTimeInput.value, 0, 600);
-
-    if (introTime === null) {
-        showToast('片头秒数输入无效，请检查', 'error');
-        return;
-    }
-
-    localStorageUtil.set(window.config.skipIntroStorageKey, introTime); // 保存片头秒数
-    if (dp && dp.video) {
-        const newTime = Math.min(introTime, dp.video.duration - 1);
-        dp.seek(newTime);
-        showToast(`跳过片头，跳到 ${formatPlayerTime(newTime)}`, 'success');
-    } else {
-        showToast('播放器状态异常，无法跳过片头', 'error');
-    }
-};
-
-// 跳过片尾逻辑
-const skipOutroLogic = () => {
-    const outroTimeInput = document.getElementById('menu-skip-outro'); // 下拉菜单输入框
-    const outroTime = validateInput(outroTimeInput.value, 0, 600);
-
-    if (outroTime === null) {
-        showToast('片尾倒计秒数输入无效，请检查', 'error');
-        return;
-    }
-
-    localStorageUtil.set(window.config.skipOutroStorageKey, outroTime); // 保存片尾秒数
-    if (dp && dp.video) {
-        const skipToEnd = dp.video.duration - outroTime;
-        if (dp.video.currentTime < skipToEnd) {
-            dp.seek(skipToEnd);
-            showToast(`跳过片尾，跳到 ${formatPlayerTime(skipToEnd)}，视频结束`, 'success');
-            dp.pause();
+        localStorageUtil.set(window.config.skipIntroStorageKey, introTime); // 保存片头秒数
+        if (dp && dp.video) {
+            const newTime = Math.min(introTime, dp.video.duration - 1);
+            dp.seek(newTime);
+            showToast(`跳过片头，跳到 ${formatPlayerTime(newTime)}`, 'success');
         } else {
-            showToast('已超过片尾，无需跳过', 'info');
+            showToast('播放器状态异常，无法跳过片头', 'error');
         }
-    } else {
-        showToast('播放器状态异常，无法跳过片尾', 'error');
+    };
+
+    // 跳过片尾逻辑
+    const skipOutroLogic = () => {
+        const outroTimeInput = document.getElementById('menu-skip-outro');
+        const outroTime = validateInput(outroTimeInput?.value, 0, 600);
+
+        if (outroTime === null) {
+            showToast('片尾倒计秒数输入无效，请检查', 'error');
+            return;
+        }
+
+        localStorageUtil.set(window.config.skipOutroStorageKey, outroTime); // 保存片尾秒数
+        if (dp && dp.video) {
+            const skipToEnd = dp.video.duration - outroTime;
+            if (dp.video.currentTime < skipToEnd) {
+                dp.seek(skipToEnd);
+                showToast(`跳过片尾，跳到 ${formatPlayerTime(skipToEnd)}，视频结束`, 'success');
+                dp.pause();
+            } else {
+                showToast('已超过片尾，无需跳过', 'info');
+            }
+        } else {
+            showToast('播放器状态异常，无法跳过片尾', 'error');
+        }
+    };
+
+    // 自动应用跳过设置
+    const applySkipTimes = () => {
+        const introTime = localStorageUtil.get(window.config.skipIntroStorageKey, 0);
+        const outroTime = localStorageUtil.get(window.config.skipOutroStorageKey, 0);
+
+        if (dp && dp.video) {
+            dp.on('loadeddata', () => {
+                if (introTime > 0) {
+                    dp.seek(introTime);
+                    showToast(`自动跳过片头，已跳到 ${formatPlayerTime(introTime)}`, 'info');
+                }
+            });
+
+            dp.on('timeupdate', () => {
+                if (outroTime > 0 && dp.video.duration > 0) {
+                    const outroSkipPoint = dp.video.duration - outroTime;
+                    if (dp.video.currentTime >= outroSkipPoint) {
+                        showToast(`自动跳过片尾，跳到视频结束`, 'info');
+                        dp.pause();
+                    }
+                }
+            });
+        } else {
+            console.error("播放器未初始化，无法应用跳过设置");
+        }
+    };
+
+    // 重置跳过时间
+    const resetSkipTimes = () => {
+        if (confirm('确定要重置跳过时间设置吗？重置后需要重新设置')) {
+            localStorageUtil.set(window.config.skipIntroStorageKey, 0);
+            localStorageUtil.set(window.config.skipOutroStorageKey, 0);
+            showToast('跳过时间已重置。', 'success');
+        }
+    };
+
+    // 页面加载时进行初始化
+    document.addEventListener('DOMContentLoaded', () => {
+        // 应用跳过设置
+        applySkipTimes();
+
+        // 菜单相关元素
+        const skipMenuButton = document.getElementById('skip-menu-button');
+        const skipMenu = document.getElementById('skip-menu');
+        const skipMenuWrapper = document.getElementById('skip-menu-wrapper');
+
+        // 跳过片头和片尾按钮绑定事件
+        const skipIntroButton = document.getElementById('menu-skip-intro-button');
+        const skipOutroButton = document.getElementById('menu-skip-outro-button');
+        if (skipIntroButton) {
+            skipIntroButton.addEventListener('click', skipIntroLogic);
+        }
+        if (skipOutroButton) {
+            skipOutroButton.addEventListener('click', skipOutroLogic);
+        }
+
+        // 点击菜单按钮显示或隐藏下拉菜单
+        if (skipMenuButton) {
+            skipMenuButton.addEventListener('click', () => {
+                skipMenu.classList.toggle('hidden');
+            });
+        }
+
+        // 点击其他地方关闭菜单
+        document.addEventListener('click', (e) => {
+            if (skipMenuWrapper && !skipMenuWrapper.contains(e.target)) {
+                skipMenu.classList.add('hidden');
+            }
+        });
+
+        // 恢复设置 (片头片尾跳过时间)
+        const introTimeInput = document.getElementById('menu-skip-intro');
+        const outroTimeInput = document.getElementById('menu-skip-outro');
+        const introTime = localStorageUtil.get(window.config.skipIntroStorageKey, window.config.defaultSkipIntroTime);
+        const outroTime = localStorageUtil.get(window.config.skipOutroStorageKey, window.config.defaultSkipOutroCountdown);
+
+        if (introTimeInput) {
+            introTimeInput.value = introTime; // 恢复片头设置
+        }
+        if (outroTimeInput) {
+            outroTimeInput.value = outroTime; // 恢复片尾设置
+        }
+    });
+
+    // 重置按钮绑定
+    const resetSkipButton = document.getElementById('reset-skip');
+    if (resetSkipButton) {
+        resetSkipButton.addEventListener('click', resetSkipTimes);
     }
-};
 
-// 初始化
-document.addEventListener('DOMContentLoaded', () => {
-    // 菜单相关元素
-    const skipMenuButton = document.getElementById('skip-menu-button');
-    const skipMenu = document.getElementById('skip-menu');
-    const skipMenuWrapper = document.getElementById('skip-menu-wrapper'); // 添加定义
+    // 监听下一集播放并自动使用跳过设置
+    if (dp) {
+        dp.on('ended', () => {
+            showToast('当前视频播放完毕，准备播放下一集...', 'info');
+            setTimeout(() => {
+                dp.nextVideo(); // 假设播放器有加载下一集的功能
+            }, 2000);
+        });
 
-    // 跳过片头和片尾按钮绑定事件
-    const skipIntroButton = document.getElementById('menu-skip-intro-button');
-    const skipOutroButton = document.getElementById('menu-skip-outro-button');
-    skipIntroButton.addEventListener('click', skipIntroLogic);
-    skipOutroButton.addEventListener('click', skipOutroLogic);
-
-    // 点击菜单按钮显示或隐藏下拉菜单
-    skipMenuButton.addEventListener('click', () => {
-        skipMenu.classList.toggle('hidden');
-    });
-
-    // 点击其他地方关闭菜单
-    document.addEventListener('click', (e) => {
-        if (!skipMenuWrapper.contains(e.target)) {
-            skipMenu.classList.add('hidden');
-        }
-    });
-
-    // 恢复设置 (片头片尾跳过时间)
-    const introTimeInput = document.getElementById('menu-skip-intro');
-    const outroTimeInput = document.getElementById('menu-skip-outro');
-
-    const introTime = localStorageUtil.get(window.config.skipIntroStorageKey, window.config.defaultSkipIntroTime);
-    const outroTime = localStorageUtil.get(window.config.skipOutroStorageKey, window.config.defaultSkipOutroCountdown);
-
-    introTimeInput.value = introTime; // 恢复片头设置
-    outroTimeInput.value = outroTime; // 恢复片尾设置
-});
+        dp.on('loadeddata', () => { // 下一集加载时自动应用跳过时间
+            applySkipTimes();
+        });
+    }
 })();
 
 /**
