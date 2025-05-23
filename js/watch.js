@@ -1,5 +1,6 @@
 // 获取当前URL的参数，并将它们传递给player.html
 window.onload = function() {
+    console.log('[watch.js] Received search params:', window.location.search); // Log 1
     // 获取当前URL的查询参数
     const currentParams = new URLSearchParams(window.location.search);
     
@@ -35,6 +36,8 @@ window.onload = function() {
     currentParams.forEach((value, key) => {
         playerUrlObj.searchParams.set(key, value);
     });
+    
+    console.log('[watch.js] Forwarding params to player.html:', playerUrlObj.search); // Log 2
     
     // 获取来源URL (如果存在)
     const referrer = document.referrer;

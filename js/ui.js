@@ -483,6 +483,7 @@ function deleteHistoryItem(encodedUrl) {
 
 // 从历史记录播放
 async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
+    console.log('[playFromHistory in ui.js] Called with:', { url, title, episodeIndex, playbackPosition }); // Log 1
     try {
         let episodesList = [];
         let historyItem = null; // To store the full history item
@@ -491,9 +492,11 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
         const historyRaw = localStorage.getItem('viewingHistory');
         if (historyRaw) {
             const history = JSON.parse(historyRaw);
-            // The 'url' passed to this function is the player.html?... link, 
-            // which is stored as 'item.url' in the history objects.
             historyItem = history.find(item => item.url === url);
+            console.log('[playFromHistory in ui.js] Found historyItem:', historyItem ? JSON.parse(JSON.stringify(historyItem)) : null); // Log 2 (stringify/parse for deep copy)
+            if (historyItem) {
+                console.log('[playFromHistory in ui.js] historyItem.vod_id:', historyItem.vod_id, 'historyItem.sourceName:', historyItem.sourceName); // Log 3
+            }
 
             if (historyItem && historyItem.episodes && Array.isArray(historyItem.episodes)) {
                 episodesList = historyItem.episodes; // Default to stored episodes
@@ -503,7 +506,7 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
 
         // Attempt to fetch fresh episode list if we have the necessary info
         if (historyItem && historyItem.vod_id && historyItem.sourceName) {
-            console.log(`尝试为 "${title}" (ID: ${historyItem.vod_id}, Source: ${historyItem.sourceName}) 获取最新剧集列表...`);
+            console.log(`[playFromHistory in ui.js] Attempting to fetch details for vod_id: ${historyItem.vod_id}, sourceName: ${historyItem.sourceName}`); // Log 4
             try {
                 // Assuming fetchVideoDetailsGlobal exists and can be called.
                 // sourceName from historyItem is equivalent to sourceCode for fetchVideoDetailsGlobal

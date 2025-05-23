@@ -1045,6 +1045,7 @@ function handleProgressBarTouch(e) {
 
 // 在播放器初始化后添加视频到历史记录
 function saveToHistory() {
+    console.log('[saveToHistory in player.js] Player page URL:', window.location.href); // Log 1
     // 确保 currentEpisodes 非空且有当前视频URL
     if (!currentEpisodes || currentEpisodes.length === 0 || !currentVideoUrl) {
         console.warn('没有可用的剧集列表或视频URL，无法保存完整的历史记录');
@@ -1053,9 +1054,11 @@ function saveToHistory() {
 
     // 尝试从URL中获取参数
     const urlParams = new URLSearchParams(window.location.search);
+    console.log('[saveToHistory in player.js] urlParams id:', urlParams.get('id')); // Log 2a
+    console.log('[saveToHistory in player.js] urlParams source:', urlParams.get('source')); // Log 2b
     const sourceName = urlParams.get('source') || '';
-    const sourceCode = urlParams.get('source_code') || '';
     const id_from_params = urlParams.get('id'); // Get video ID from player URL (passed as 'id')
+    console.log('[saveToHistory in player.js] Derived id_from_params:', id_from_params, 'Derived sourceName:', sourceName); // Log 3
 
     // 获取当前播放进度
     let currentPosition = 0;
@@ -1076,6 +1079,7 @@ function saveToHistory() {
             console.warn(`saveToHistory: Missing sourceName or id in URL params for "${currentVideoTitle}". Falling back to URL-based showIdentifier: ${show_identifier_for_video_info}`);
         }
     }
+    console.log('[saveToHistory in player.js] Generated show_identifier_for_video_info:', show_identifier_for_video_info); // Log 4
 
     // 构建要保存的视频信息对象
     const videoInfo = {
@@ -1092,6 +1096,7 @@ function saveToHistory() {
         duration: videoDuration,
         episodes: currentEpisodes && currentEpisodes.length > 0 ? [...currentEpisodes] : []
     };
+    console.log('[saveToHistory in player.js] videoInfo object to be saved:', JSON.parse(JSON.stringify(videoInfo))); // Log 5 (stringify/parse for deep copy in log)
 
     try {
         const history = JSON.parse(localStorage.getItem('viewingHistory') || '[]' );
