@@ -368,3 +368,30 @@ input:checked+.slider:before {
     font-size: 0.98rem;
   }
 }
+
+.skip-control-container {
+  position: relative;
+  display: inline-block;
+}
+
+.skip-control-container .icon-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#skip-control-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  display: none;
+  z-index: 1000;
+  background-color: #1a1a1a;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+#skip-control-dropdown.active {
+  display: block;
+}

@@ -110,23 +110,9 @@ let isShowingToast = false;
  * @param {string} message 消息内容
  * @param {string} type 消息类型 (error|success|info|warning)
  */
-function showToast(message, type = 'info') {
-    const toast = document.getElementById('toast');
-
-    const backgroundColors = {
-        info: 'bg-blue-500',
-        success: 'bg-green-500',
-        error: 'bg-red-500',
-        warning: 'bg-yellow-500'
-    };
-
-    toast.textContent = message;
-    toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded text-white shadow-lg ${backgroundColors[type] || 'bg-blue-500'}`;
-    toast.style.opacity = '1';
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-    }, 3000);
+function showToast(message, type = 'error') {
+    toastQueue.push({ message, type });
+    if (!isShowingToast) showNextToast();
 }
 
 /**
