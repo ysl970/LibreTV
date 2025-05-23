@@ -122,7 +122,6 @@ function setupSkipControls() {
     skipOutroInput.value = savedOutroTime;
 }
 
-
 // 自动跳过片头和片尾
 function handleSkipIntroOutro(dpInstance) {
     // 读取跳过设置
@@ -159,6 +158,25 @@ function handleSkipIntroOutro(dpInstance) {
     }
 }
 
+// 绑定跳过功能菜单交互事件
+function setupSkipDropdownEvents() {
+    document.addEventListener('click', (event) => {
+        const dropdown = document.getElementById('skip-control-dropdown');
+        const skipButton = document.getElementById('skip-control-button');
+
+        // 确保按钮和菜单存在
+        if (!skipButton || !dropdown) return;
+
+        // 点击按钮时显示/隐藏菜单
+        if (skipButton.contains(event.target)) {
+            dropdown.classList.toggle('active');
+        } else if (!dropdown.contains(event.target)) {
+            // 点击其他区域时隐藏菜单
+            dropdown.classList.remove('active');
+        }
+    });
+}
+
 // 初始化跳过功能
 document.addEventListener('DOMContentLoaded', () => {
     // 初始化 UI 控件
@@ -170,6 +188,11 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.error("播放器实例未初始化，无法绑定跳过功能！");
     }
+    // 新增 Dropdown 菜单显示/隐藏的事件处理
+    setupSkipDropdownEvents();
+
+    // 初始化其他页面功能
+    initializePageContent();
 });
 
 document.addEventListener('click', (event) => {
@@ -353,7 +376,6 @@ function setupRememberEpisodeProgressToggle() {
     });
 }
 
-// In js/player_app.js
 document.addEventListener('DOMContentLoaded', function () {
     // Existing password check and initializePageContent call
     if (typeof window.isPasswordVerified === 'function' && typeof window.isPasswordProtected === 'function') {
@@ -366,6 +388,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
         console.warn("Password functions (isPasswordProtected/isPasswordVerified) not found. Assuming no password protection.");
     }
+    setupSkipDropdownEvents();
     initializePageContent();
 });
 
