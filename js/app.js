@@ -786,7 +786,7 @@ async function search() {
             // 使用HTML5 History API更新URL，不刷新页面
             window.history.pushState(
                 { search: query }, 
-                `搜索: ${query} - LibreTV`, 
+                `搜索: ${query} - 像素圣殿`, 
                 `/s=${encodedQuery}`
             );
             // 更新页面标题
