@@ -2,34 +2,34 @@
 function goBack(event) {
     // 防止默认链接行为
     if (event) event.preventDefault();
-    
+
     // 1. 优先检查URL参数中的returnUrl
     const urlParams = new URLSearchParams(window.location.search);
     const returnUrl = urlParams.get('returnUrl');
-    
+
     if (returnUrl) {
         // 如果URL中有returnUrl参数，优先使用
         window.location.href = decodeURIComponent(returnUrl);
         return;
     }
-    
+
     // 2. 检查localStorage中保存的lastPageUrl
     const lastPageUrl = localStorage.getItem('lastPageUrl');
     if (lastPageUrl && lastPageUrl !== window.location.href) {
         window.location.href = lastPageUrl;
         return;
     }
-    
+
     // 3. 检查是否是从搜索页面进入的播放器
     const referrer = document.referrer;
-    
+
     // 检查 referrer 是否包含搜索参数
     if (referrer && (referrer.includes('/s=') || referrer.includes('?s='))) {
         // 如果是从搜索页面来的，返回到搜索页面
         window.location.href = referrer;
         return;
     }
-    
+
     // 4. 如果是在iframe中打开的，尝试关闭iframe
     if (window.self !== window.top) {
         try {
@@ -40,13 +40,13 @@ function goBack(event) {
             console.error('调用父窗口closeVideoPlayer失败:', e);
         }
     }
-    
+
     // 5. 无法确定上一页，则返回首页
     if (!referrer || referrer === '') {
         window.location.href = '/';
         return;
     }
-    
+
     // 6. 以上都不满足，使用默认行为：返回上一页
     window.history.back();
 }
@@ -839,8 +839,8 @@ function renderEpisodes() {
         const isActive = realIndex === currentEpisodeIndex;
 
         html += `
-            <button id="episode-${realIndex}" 
-                    onclick="playEpisode(${realIndex})" 
+            <button id="episode-${realIndex}"
+                    onclick="playEpisode(${realIndex})"
                     class="px-4 py-2 ${isActive ? 'episode-active' : '!bg-[#222] hover:!bg-[#333] hover:!shadow-none'} !border ${isActive ? '!border-blue-500' : '!border-[#333]'} rounded-lg transition-colors text-center episode-btn">
                 第${realIndex + 1}集
             </button>
@@ -1055,6 +1055,8 @@ function saveToHistory() {
     const urlParams = new URLSearchParams(window.location.search);
     const sourceName = urlParams.get('source') || '';
     const sourceCode = urlParams.get('source_code') || '';
+    // 获取视频ID（如果存在）
+    const videoId = urlParams.get('id') || '';
 
     // 获取当前播放进度
     let currentPosition = 0;
@@ -1071,7 +1073,7 @@ function saveToHistory() {
         // 直接保存原始视频链接，而非播放页面链接
         directVideoUrl: currentVideoUrl,
         // 完整的播放器URL
-        url: `player.html?url=${encodeURIComponent(currentVideoUrl)}&title=${encodeURIComponent(currentVideoTitle)}&source=${encodeURIComponent(sourceName)}&source_code=${encodeURIComponent(sourceCode)}&index=${currentEpisodeIndex}&position=${Math.floor(currentPosition || 0)}`,
+        url: `player.html?url=${encodeURIComponent(currentVideoUrl)}&title=${encodeURIComponent(currentVideoTitle)}&source=${encodeURIComponent(sourceName)}&source_code=${encodeURIComponent(sourceCode)}&index=${currentEpisodeIndex}&position=${Math.floor(currentPosition || 0)}${videoId ? `&id=${videoId}` : ''}`,
         episodeIndex: currentEpisodeIndex,
         sourceName: sourceName,
         timestamp: Date.now(),
@@ -1079,15 +1081,36 @@ function saveToHistory() {
         playbackPosition: currentPosition,
         duration: videoDuration,
         // 重要：保存完整的集数列表，确保进行深拷贝
-        episodes: currentEpisodes && currentEpisodes.length > 0 ? [...currentEpisodes] : []
+        episodes: currentEpisodes && currentEpisodes.length > 0 ? [...currentEpisodes] : [],
+        // 添加视频ID用于唯一标识
+        videoId: videoId
     };
 
     try {
         // 获取现有历史记录
         const history = JSON.parse(localStorage.getItem('viewingHistory') || '[]');
 
-        // 检查是否已经存在相同标题的记录（同一视频的不同集数）
-        const existingIndex = history.findIndex(item => item.title === videoInfo.title);
+        // 创建更唯一的标识符，结合标题和视频ID（如果有）
+        const getUniqueIdentifier = (item) => {
+            if (item.videoId) {
+                return `${item.title}_${item.videoId}`;
+            }
+            // 如果没有ID，尝试使用URL作为备用唯一标识
+            if (item.directVideoUrl) {
+                // 从URL中提取唯一部分，避免使用完整URL导致过长
+                const urlMatch = item.directVideoUrl.match(/\/([a-f0-9]{32}|[a-zA-Z0-9]{16,})\.m3u8$/);
+                if (urlMatch && urlMatch[1]) {
+                    return `${item.title}_${urlMatch[1]}`;
+                }
+            }
+            // 最后的备用方案：使用标题和来源名称
+            return `${item.title}_${item.sourceName || ''}`;
+        };
+
+        // 使用更唯一的标识符检查是否存在相同视频
+        const uniqueId = getUniqueIdentifier(videoInfo);
+        const existingIndex = history.findIndex(item => getUniqueIdentifier(item) === uniqueId);
+
         if (existingIndex !== -1) {
             // 存在则更新现有记录的集数、时间戳和URL
             history[existingIndex].episodeIndex = currentEpisodeIndex;
@@ -1100,6 +1123,10 @@ function saveToHistory() {
             history[existingIndex].duration = videoDuration || history[existingIndex].duration;
             // 更新完整URL，确保带有正确的视频链接
             history[existingIndex].url = videoInfo.url;
+            // 确保videoId字段存在
+            if (videoId && !history[existingIndex].videoId) {
+                history[existingIndex].videoId = videoId;
+            }
             // 更新集数列表（如果有且与当前不同）
             if (currentEpisodes && currentEpisodes.length > 0) {
                 // 检查是否需要更新集数数据（针对不同长度的集数列表）
@@ -1116,7 +1143,7 @@ function saveToHistory() {
             history.unshift(updatedItem);
         } else {
             // 添加新记录到最前面
-            console.log(`创建新的历史记录: "${currentVideoTitle}", ${currentEpisodes.length}集`);
+            console.log(`创建新的历史记录: "${currentVideoTitle}", ${currentEpisodes.length}集, ID: ${videoId || '无'}`);
             history.unshift(videoInfo);
         }
 
@@ -1207,11 +1234,44 @@ function saveCurrentProgress() {
             const historyRaw = localStorage.getItem('viewingHistory');
             if (historyRaw) {
                 const history = JSON.parse(historyRaw);
-                // 用 title + 集数索引唯一标识
-                const idx = history.findIndex(item =>
-                    item.title === currentVideoTitle &&
-                    (item.episodeIndex === undefined || item.episodeIndex === currentEpisodeIndex)
-                );
+
+                // 获取当前视频的唯一标识符
+                const urlParams = new URLSearchParams(window.location.search);
+                const videoId = urlParams.get('id') || '';
+                const sourceName = urlParams.get('source') || '';
+
+                // 创建唯一标识符函数
+                const getUniqueIdentifier = (item) => {
+                    if (item.videoId) {
+                        return `${item.title}_${item.videoId}`;
+                    }
+                    // 如果没有ID，尝试使用URL作为备用唯一标识
+                    if (item.directVideoUrl) {
+                        // 从URL中提取唯一部分，避免使用完整URL导致过长
+                        const urlMatch = item.directVideoUrl.match(/\/([a-f0-9]{32}|[a-zA-Z0-9]{16,})\.m3u8$/);
+                        if (urlMatch && urlMatch[1]) {
+                            return `${item.title}_${urlMatch[1]}`;
+                        }
+                    }
+                    // 最后的备用方案：使用标题和来源名称
+                    return `${item.title}_${item.sourceName || ''}`;
+                };
+
+                // 构建当前视频的信息对象，用于生成唯一标识符
+                const currentVideoInfo = {
+                    title: currentVideoTitle,
+                    directVideoUrl: currentVideoUrl,
+                    episodeIndex: currentEpisodeIndex,
+                    videoId: videoId,
+                    sourceName: sourceName
+                };
+
+                // 生成当前视频的唯一标识符
+                const currentUniqueId = getUniqueIdentifier(currentVideoInfo);
+
+                // 查找匹配的历史记录
+                const idx = history.findIndex(item => getUniqueIdentifier(item) === currentUniqueId);
+
                 if (idx !== -1) {
                     // 只在进度有明显变化时才更新，减少写入
                     if (
@@ -1361,12 +1421,29 @@ function clearVideoProgress() {
 
 // 获取视频唯一标识
 function getVideoId() {
-    // 使用视频标题和集数索引作为唯一标识
-    // If currentVideoUrl is available and more unique, prefer it. Otherwise, fallback.
+    // 获取当前视频的唯一标识符
+    const urlParams = new URLSearchParams(window.location.search);
+    const videoId = urlParams.get('id') || '';
+    const sourceName = urlParams.get('source') || '';
+
+    // 如果有视频ID，优先使用视频ID作为唯一标识
+    if (videoId) {
+        return `${encodeURIComponent(currentVideoTitle)}_${videoId}`;
+    }
+
+    // 如果有视频URL，尝试从URL中提取唯一部分
     if (currentVideoUrl) {
+        // 尝试从URL中提取唯一标识符
+        const urlMatch = currentVideoUrl.match(/\/([a-f0-9]{32}|[a-zA-Z0-9]{16,})\.m3u8$/);
+        if (urlMatch && urlMatch[1]) {
+            return `${encodeURIComponent(currentVideoTitle)}_${urlMatch[1]}`;
+        }
+        // 如果无法提取，使用完整URL
         return `${encodeURIComponent(currentVideoUrl)}`;
     }
-    return `${encodeURIComponent(currentVideoTitle)}_${currentEpisodeIndex}`;
+
+    // 最后的备用方案：使用标题、来源名称和集数索引
+    return `${encodeURIComponent(currentVideoTitle)}_${sourceName}_${currentEpisodeIndex}`;
 }
 
 let controlsLocked = false;
