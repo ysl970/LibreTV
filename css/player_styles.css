@@ -369,42 +369,102 @@ input:checked+.slider:before {
   }
 }
 
+
 .skip-control-container {
   position: relative;
   display: inline-block;
 }
+
 .skip-control-container .icon-btn {
   display: flex;
   justify-content: center;
   align-items: center;
 }
-@media (max-width: 600px) {
+
+/* ↓↓↓ 美化跳过片头片尾下拉菜单样式，适配移动端 ↓↓↓ */
+#skip-control-dropdown {
+  min-width: 160px;
+  max-width: 225px;
+  width: 85vw;
+  left: auto;
+  right: 0;
+  padding: 0.75rem 0.8rem 0.6rem 0.8rem;
+  box-sizing: border-box;
+  border-radius: 10px;
+  background: rgba(30, 34, 46, 0.98);
+  border: 1px solid #222;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.16);
+  z-index: 2222;
+}
+
+#skip-control-dropdown input[type="number"] {
+  font-size: 1.05rem;
+  padding: 0.26rem 0.5rem;
+  border-radius: 6px;
+  border: none;
+  background: #232531;
+  color: #e1e6fa;
+  margin-top: 0.15em;
+}
+
+#skip-control-dropdown input[type="number"]:focus {
+  outline: 2px solid #00ccff;
+  background: #35374b;
+}
+
+#skip-control-dropdown label {
+  margin-bottom: 0.65em;
+  color: #badcff;
+  font-size: 0.98em;
+}
+
+#skip-control-dropdown button {
+  font-size: .99em;
+  border-radius: 7px;
+  margin-top: 0.45em;
+  padding: 0.5em 0.7em;
+  width: 100%;
+  transition: background .18s, color .12s;
+  font-weight: 600;
+}
+
+#skip-control-dropdown .bg-blue-600 {
+  background: linear-gradient(90deg, #04d1fb, #40d8f6);
+}
+
+#skip-control-dropdown .bg-blue-700 {
+  background: #04d1fb !important;
+}
+
+#skip-control-dropdown .bg-red-600 {
+  background: #ff4b5c;
+}
+
+#skip-control-dropdown .bg-red-700 {
+  background: #c0392b !important;
+}
+
+@media (max-width:480px) {
   #skip-control-dropdown {
-    min-width: unset;
-    width: 96vw;
-    max-width: 98vw;
-    right: 2vw;
-    left: unset;
-    padding: 0.45rem 0.5rem 0.4rem 0.5rem;
-    font-size: 0.90em;
-    border-radius: 8px;
-  }
-  #skip-control-dropdown label {
-    font-size: 0.97em;
-    margin-bottom: 0.35em;
-  }
-  #skip-control-dropdown input[type="number"] {
-    font-size: 0.97em;
-    padding: 0.15rem 0.36rem;
-    border-radius: 4px;
-    margin-top: 0.08em;
-    height: 2.1em;
-  }
-  #skip-control-dropdown button {
-    font-size: 0.94em;
-    border-radius: 5px;
-    margin-top: 0.24em;
-    padding: 0.5em 0;
-    height: 2.1em;
+    min-width: 110px;
+    max-width: 99vw;
+    font-size: 0.98em;
+    right: 0.5rem;
+    left: auto;
   }
 }
+
+#skip-control-dropdown {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px) scale(0.96);
+  transition: opacity 0.18s, transform 0.22s;
+}
+
+#skip-control-dropdown.block {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+/* ↑↑↑ 美化跳过片头片尾下拉菜单 ↑↑↑ */

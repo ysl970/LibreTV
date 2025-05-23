@@ -135,6 +135,7 @@
                     </label>
                 </div>
 
+                <!-- Skip Intro/Outro Control -->
                 <div class="relative skip-control-container">
                     <button id="skip-control-button" title="跳过设置"
                         class="icon-btn bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors"
@@ -145,18 +146,27 @@
                                 d="M3 3h18M3 21h18M3 7h18M3 14h18" />
                         </svg>
                     </button>
-                    <div id="skip-control-dropdown" class="...">
-                        <label>
-                         片头（秒）
-                         <input id="skip-intro-input" type="number" min="0" step="1" placeholder="0">
+                    <div id="skip-control-dropdown"
+                        class="hidden absolute top-10 left-0 bg-gray-900 rounded shadow-lg p-3 w-48">
+                        <label class="block text-gray-300 text-sm mb-2">
+                            跳过片头时间（秒）
+                            <input id="skip-intro-input" type="number" min="0" step="1"
+                                class="w-full mt-1 bg-gray-800 rounded p-2 text-gray-300" placeholder="输入时间">
                         </label>
-                        <label>
-                         片尾（秒）
-                         <input id="skip-outro-input" type="number" min="0" step="1" placeholder="0">
+                        <label class="block text-gray-300 text-sm mb-2">
+                            跳过片尾时间（秒）
+                            <input id="skip-outro-input" type="number" min="0" step="1"
+                                class="w-full mt-1 bg-gray-800 rounded p-2 text-gray-300" placeholder="输入时间">
                         </label>
-                        <button id="apply-skip-settings">应用</button>
-                        <button id="reset-skip-settings">重置</button>
-                      </div>                      
+                        <button id="apply-skip-settings"
+                            class="w-full bg-blue-600 rounded p-2 text-white hover:bg-blue-700 mt-2">
+                            应用
+                        </button>
+                        <button id="reset-skip-settings"
+                            class="w-full bg-red-600 rounded p-2 text-white hover:bg-red-700 mt-2">
+                            重置
+                        </button>
+                    </div>
                 </div>
 
                 <button onclick="copyLinks()" title="复制当前视频链接"
@@ -190,45 +200,45 @@
             </div>
         </div>
 
-                <!-- 剧集选择区域 -->
-                <div id="episodes-container" class="mt-2 mx-4 mb-4 hidden" role="navigation" aria-label="剧集选择">
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-xl font-bold">选集</h2>
-                        <span id="episodes-count" class="text-gray-400"></span>
+        <!-- 剧集选择区域 -->
+        <div id="episodes-container" class="mt-2 mx-4 mb-4 hidden" role="navigation" aria-label="剧集选择">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-xl font-bold">选集</h2>
+                <span id="episodes-count" class="text-gray-400"></span>
 
-                    </div>
-                    <div id="episode-grid" class="episode-grid grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
-                    </div>
-                </div>
-
-                <!-- 快捷键提示 -->
-                <div id="shortcut-hint" class="shortcut-hint" aria-live="polite" aria-atomic="true">
-                    <span id="shortcut-key"></span>
-                    <span id="shortcut-action"></span>
-                </div>
-
-                <!-- 消息提示 -->
-                <div id="message" class="fixed top-4 right-4 p-4 rounded shadow-lg z-50 hidden" aria-live="polite">
-                </div>
             </div>
-            <!-- toast 容器 -->
-            <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 opacity-0
+            <div id="episode-grid" class="episode-grid grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+            </div>
+        </div>
+
+        <!-- 快捷键提示 -->
+        <div id="shortcut-hint" class="shortcut-hint" aria-live="polite" aria-atomic="true">
+            <span id="shortcut-key"></span>
+            <span id="shortcut-action"></span>
+        </div>
+
+        <!-- 消息提示 -->
+        <div id="message" class="fixed top-4 right-4 p-4 rounded shadow-lg z-50 hidden" aria-live="polite">
+        </div>
+    </div>
+    <!-- toast 容器 -->
+    <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 opacity-0
              px-6 py-3 rounded-lg shadow-lg transform transition-all
              duration-300 text-white z-[10001] pointer-events-none">
-                <span id="toastMessage"></span>
-            </div>
+        <span id="toastMessage"></span>
+    </div>
 
-            <!-- 记住进度弹窗（居中，默认隐藏） -->
-            <div id="progress-restore-modal" tabindex="-1" aria-modal="true" role="dialog">
-                <div class="progress-restore-card" role="document">
-                    <div class="progress-modal-title">继续播放？</div>
-                    <div class="progress-modal-content"><!-- JS填充 --></div>
-                    <div class="progress-modal-actions">
-                        <button class="progress-modal-btn cancel" id="progress-restore-cancel">取消</button>
-                        <button class="progress-modal-btn confirm" id="progress-restore-confirm">确定</button>
-                    </div>
-                </div>
+    <!-- 记住进度弹窗（居中，默认隐藏） -->
+    <div id="progress-restore-modal" tabindex="-1" aria-modal="true" role="dialog">
+        <div class="progress-restore-card" role="document">
+            <div class="progress-modal-title">继续播放？</div>
+            <div class="progress-modal-content"><!-- JS填充 --></div>
+            <div class="progress-modal-actions">
+                <button class="progress-modal-btn cancel" id="progress-restore-cancel">取消</button>
+                <button class="progress-modal-btn confirm" id="progress-restore-confirm">确定</button>
             </div>
+        </div>
+    </div>
 </body>
 
 </html>
