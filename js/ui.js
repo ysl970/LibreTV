@@ -613,8 +613,7 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
 
 // 添加观看历史 - 确保每个视频标题只有一条记录
 // IMPORTANT: videoInfo passed to this function should include a 'showIdentifier' property
-// (e.g., the URL of the first episode, or the video's own URL if it's a single movie/video)
-// to correctly group episodes of the same series.
+// (ideally `${sourceName}_${vod_id}`), 'sourceName', and 'vod_id'.
 function addToViewingHistory(videoInfo) {
     // 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
@@ -625,62 +624,59 @@ function addToViewingHistory(videoInfo) {
     }
     try {
         const history = getViewingHistory();
+
+        // Ensure videoInfo has a showIdentifier
+        if (!videoInfo.showIdentifier) {
+            if (videoInfo.sourceName && videoInfo.vod_id) {
+                videoInfo.showIdentifier = `${videoInfo.sourceName}_${videoInfo.vod_id}`;
+            } else {
+                // Fallback if critical IDs are missing for the preferred identifier
+                videoInfo.showIdentifier = (videoInfo.episodes && videoInfo.episodes.length > 0) ? videoInfo.episodes[0] : videoInfo.directVideoUrl;
+                console.warn(`addToViewingHistory: videoInfo for "${videoInfo.title}" was missing sourceName or vod_id for preferred showIdentifier. Generated fallback: ${videoInfo.showIdentifier}`);
+            }
+        }
         
-        // 检查是否已经存在相同的系列记录 (基于标题、来源和 showIdentifier)
-        // Fallback for items that might not have showIdentifier yet (older history)
         const existingIndex = history.findIndex(item => 
             item.title === videoInfo.title && 
             item.sourceName === videoInfo.sourceName &&
-            (item.showIdentifier ? item.showIdentifier === videoInfo.showIdentifier : true) // Check showIdentifier if present
+            item.showIdentifier === videoInfo.showIdentifier // Strict check using the determined showIdentifier
         );
 
-        if (existingIndex !== -1 && videoInfo.showIdentifier && history[existingIndex].showIdentifier === videoInfo.showIdentifier) {
+        if (existingIndex !== -1) {
             // Exact match with showIdentifier: Update existing series entry
             const existingItem = history[existingIndex];
             existingItem.episodeIndex = videoInfo.episodeIndex;
-            existingItem.timestamp = Date.now(); // Always update timestamp
-            
-            // Ensure other relevant fields are updated from the new videoInfo
+            existingItem.timestamp = Date.now();
             existingItem.sourceName = videoInfo.sourceName || existingItem.sourceName;
             existingItem.sourceCode = videoInfo.sourceCode || existingItem.sourceCode;
             existingItem.vod_id = videoInfo.vod_id || existingItem.vod_id;
-            existingItem.directVideoUrl = videoInfo.directVideoUrl || existingItem.directVideoUrl; // URL of current episode
-            existingItem.url = videoInfo.url || existingItem.url; // player.html link for current episode
+            existingItem.directVideoUrl = videoInfo.directVideoUrl || existingItem.directVideoUrl;
+            existingItem.url = videoInfo.url || existingItem.url;
             existingItem.playbackPosition = videoInfo.playbackPosition > 10 ? videoInfo.playbackPosition : (existingItem.playbackPosition || 0);
             existingItem.duration = videoInfo.duration || existingItem.duration;
 
-            // Update episodes list if the new one is different or more complete
             if (videoInfo.episodes && Array.isArray(videoInfo.episodes) && videoInfo.episodes.length > 0) {
                 if (!existingItem.episodes || 
                     !Array.isArray(existingItem.episodes) || 
                     existingItem.episodes.length !== videoInfo.episodes.length ||
                     !videoInfo.episodes.every((ep, i) => ep === existingItem.episodes[i])) {
+                    existingItem.episodes = [...videoInfo.episodes];
                     console.log(`更新 (addToViewingHistory) "${videoInfo.title}" 的剧集数据: ${videoInfo.episodes.length}集`);
-                    existingItem.episodes = [...videoInfo.episodes]; // Deep copy
                 }
             }
             
             history.splice(existingIndex, 1);
             history.unshift(existingItem);
-            console.log(`更新历史记录 (addToViewingHistory): "${videoInfo.title}", 第 ${videoInfo.episodeIndex + 1} 集`);
+            console.log(`更新历史记录 (addToViewingHistory): "${videoInfo.title}", 第 ${videoInfo.episodeIndex !== undefined ? videoInfo.episodeIndex + 1 : 'N/A'} 集`);
         } else {
-            // No exact match with showIdentifier, or it's missing: Add as a new entry
-            // This handles older history items or cases where showIdentifier isn't provided yet.
+            // No exact match: Add as a new entry
             const newItem = {
-                ...videoInfo,
+                ...videoInfo, // Includes the showIdentifier we ensured is present
                 timestamp: Date.now()
             };
             
-            if (!newItem.showIdentifier) {
-                // If showIdentifier is missing from videoInfo, create a basic one.
-                // This is a fallback and ideally showIdentifier should be provided by the caller.
-                newItem.showIdentifier = (newItem.episodes && newItem.episodes.length > 0) ? newItem.episodes[0] : newItem.directVideoUrl;
-                console.warn(`addToViewingHistory: videoInfo for "${newItem.title}" was missing showIdentifier. Generated a fallback.`);
-            }
-
-            // Ensure episodes field is an array
             if (videoInfo.episodes && Array.isArray(videoInfo.episodes)) {
-                newItem.episodes = [...videoInfo.episodes]; // Deep copy
+                newItem.episodes = [...videoInfo.episodes];
             } else {
                 newItem.episodes = [];
             }
