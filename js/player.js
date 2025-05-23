@@ -1124,17 +1124,14 @@ function saveToHistory() {
                     existingItem.episodes.length !== videoInfo.episodes.length || 
                     !videoInfo.episodes.every((ep, i) => ep === existingItem.episodes[i])) { // Basic check for content change
                     existingItem.episodes = [...videoInfo.episodes]; // Deep copy
-                    console.log(`更新 \"${videoInfo.title}\" 的剧集数据: ${videoInfo.episodes.length}集`);
                 }
             }
             
             // 移到最前面
             const updatedItem = history.splice(existingIndex, 1)[0];
             history.unshift(updatedItem);
-            console.log(`更新历史记录: \"${videoInfo.title}\", 第 ${videoInfo.episodeIndex + 1} 集`);
         } else {
             // 添加新记录到最前面
-            console.log(`创建新的历史记录: \"${currentVideoTitle}\", ${currentEpisodes.length}集`);
             history.unshift(videoInfo);
         }
 
@@ -1142,7 +1139,6 @@ function saveToHistory() {
         if (history.length > 50) history.splice(50);
 
         localStorage.setItem('viewingHistory', JSON.stringify(history));
-        console.log('成功保存历史记录');
     } catch (e) {
         console.error('保存观看历史失败:', e);
     }
