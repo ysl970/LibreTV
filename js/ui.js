@@ -482,25 +482,57 @@ function deleteHistoryItem(encodedUrl) {
 }
 
 // 从历史记录播放
-function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
+async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     try {
-        // 尝试从localStorage获取当前视频的集数信息
         let episodesList = [];
-        
-        // 检查viewingHistory，查找匹配的项以获取其集数数据
+        let historyItem = null; // To store the full history item
+
+        // 检查viewingHistory，查找匹配的项
         const historyRaw = localStorage.getItem('viewingHistory');
         if (historyRaw) {
             const history = JSON.parse(historyRaw);
-            // 根据标题查找匹配的历史记录
-            const historyItem = history.find(item => item.title === title);
-            
-            // 如果找到了匹配的历史记录，尝试获取该条目的集数数据
+            // The 'url' passed to this function is the player.html?... link, 
+            // which is stored as 'item.url' in the history objects.
+            historyItem = history.find(item => item.url === url);
+
             if (historyItem && historyItem.episodes && Array.isArray(historyItem.episodes)) {
-                episodesList = historyItem.episodes;
-                console.log(`从历史记录找到视频 ${title} 的集数数据:`, episodesList.length);
+                episodesList = historyItem.episodes; // Default to stored episodes
+                console.log(`从历史记录找到视频 "${title}" 的集数数据 (默认):`, episodesList.length);
             }
         }
-        
+
+        // Attempt to fetch fresh episode list if we have the necessary info
+        if (historyItem && historyItem.vod_id && historyItem.sourceName) {
+            console.log(`尝试为 "${title}" (ID: ${historyItem.vod_id}, Source: ${historyItem.sourceName}) 获取最新剧集列表...`);
+            try {
+                // Assuming fetchVideoDetailsGlobal exists and can be called.
+                // sourceName from historyItem is equivalent to sourceCode for fetchVideoDetailsGlobal
+                const videoDetails = await window.electron.fetchVideoDetailsGlobal(historyItem.vod_id, historyItem.sourceName);
+                if (videoDetails && videoDetails.episodes && videoDetails.episodes.length > 0) {
+                    episodesList = videoDetails.episodes;
+                    console.log(`成功获取 "${title}" 最新剧集列表:`, episodesList.length, "集");
+                    // Optionally, update the history item in localStorage with the fresh episodes
+                    if (historyItem) {
+                        historyItem.episodes = [...episodesList]; // Deep copy
+                        const history = JSON.parse(historyRaw);
+                        const idx = history.findIndex(item => item.url === url);
+                        if (idx !== -1) {
+                            history[idx] = historyItem;
+                            localStorage.setItem('viewingHistory', JSON.stringify(history));
+                            console.log("观看历史中的剧集列表已更新。");
+                        }
+                    }
+                } else {
+                    console.log(`未能获取 "${title}" 的最新剧集列表，或列表为空。将使用已存储的剧集。`);
+                }
+            } catch (fetchError) {
+                console.error(`获取 "${title}" 最新剧集列表失败:`, fetchError, "将使用已存储的剧集。");
+            }
+        } else if (historyItem) {
+            console.log(`历史记录项 "${title}" 缺少 vod_id 或 sourceName，无法刷新剧集列表。将使用已存储的剧集。`);
+        }
+
+
         // 如果在历史记录中没找到，尝试使用上一个会话的集数数据
         if (episodesList.length === 0) {
             try {
@@ -513,67 +545,67 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
                 console.error('解析currentEpisodes失败:', e);
             }
         }
-        
-        // 将剧集列表保存到localStorage，避免过长的URL
+
+        // 将剧集列表保存到localStorage，播放器页面会读取它
         if (episodesList.length > 0) {
             localStorage.setItem('currentEpisodes', JSON.stringify(episodesList));
             console.log(`已将剧集列表保存到localStorage，共 ${episodesList.length} 集`);
         }
-        
+
         // 保存当前页面URL作为返回地址
-        // 优先使用 location.origin + location.pathname + location.search，避免 hash 干扰
         let currentPath;
         if (window.location.pathname.startsWith('/player.html') || window.location.pathname.startsWith('/watch.html')) {
-            // 如果当前在 player/watch 页面，优先取 localStorage.lastPageUrl 或回退到首页
             currentPath = localStorage.getItem('lastPageUrl') || '/';
         } else {
             currentPath = window.location.origin + window.location.pathname + window.location.search;
         }
         localStorage.setItem('lastPageUrl', currentPath);
-        
+
         // 构造播放器URL
         let playerUrl;
-        
-        // 检查URL是否是嵌套的player.html链接
+        const sourceNameForUrl = historyItem ? historyItem.sourceName : (new URLSearchParams(new URL(url, window.location.origin).search)).get('source');
+        const sourceCodeForUrl = historyItem ? historyItem.sourceCode || historyItem.sourceName : (new URLSearchParams(new URL(url, window.location.origin).search)).get('source_code'); // Fallback sourceCode to sourceName if not present
+        const vodIdForUrl = historyItem ? historyItem.vod_id : '';
+
+
         if (url.includes('player.html') || url.includes('watch.html')) {
             console.log('检测到嵌套播放链接，解析真实URL');
             try {
                 const nestedUrl = new URL(url, window.location.origin);
                 const nestedParams = nestedUrl.searchParams;
                 const realVideoUrl = nestedParams.get('url') || url;
-                
-                // 构造更干净的播放链接
+
                 playerUrl = `player.html?url=${encodeURIComponent(realVideoUrl)}&title=${encodeURIComponent(title)}&index=${episodeIndex}&position=${Math.floor(playbackPosition || 0)}&returnUrl=${encodeURIComponent(currentPath)}`;
-                
-                // 如果有source和source_code，也添加
-                const source = nestedParams.get('source');
-                const sourceCode = nestedParams.get('source_code');
-                if (source) playerUrl += `&source=${encodeURIComponent(source)}`;
-                if (sourceCode) playerUrl += `&source_code=${encodeURIComponent(sourceCode)}`;
+                if (sourceNameForUrl) playerUrl += `&source=${encodeURIComponent(sourceNameForUrl)}`;
+                if (sourceCodeForUrl) playerUrl += `&source_code=${encodeURIComponent(sourceCodeForUrl)}`;
+                if (vodIdForUrl) playerUrl += `&vod_id=${encodeURIComponent(vodIdForUrl)}`;
+
+
             } catch (e) {
                 console.error('解析嵌套URL出错:', e);
-                // fallback到简单URL
                 playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}&position=${Math.floor(playbackPosition || 0)}&returnUrl=${encodeURIComponent(currentPath)}`;
+                if (sourceNameForUrl) playerUrl += `&source=${encodeURIComponent(sourceNameForUrl)}`;
+                if (sourceCodeForUrl) playerUrl += `&source_code=${encodeURIComponent(sourceCodeForUrl)}`;
+                if (vodIdForUrl) playerUrl += `&vod_id=${encodeURIComponent(vodIdForUrl)}`;
             }
-        } else if (url.includes('?')) {
-            // URL已有参数，添加索引和位置参数
+        } else {
+             // This case should ideally not happen if 'url' is always a player.html link from history
+            console.warn("Playing from history with a non-player.html URL structure. This might be an issue.");
             const playUrl = new URL(url, window.location.origin);
             if (!playUrl.searchParams.has('index') && episodeIndex > 0) {
                 playUrl.searchParams.set('index', episodeIndex);
             }
             playUrl.searchParams.set('position', Math.floor(playbackPosition || 0).toString());
-            // 添加返回URL
             playUrl.searchParams.set('returnUrl', encodeURIComponent(currentPath));
+            if (sourceNameForUrl) playUrl.searchParams.set('source', sourceNameForUrl);
+            if (sourceCodeForUrl) playUrl.searchParams.set('source_code', sourceCodeForUrl);
+            if (vodIdForUrl) playUrl.searchParams.set('vod_id', vodIdForUrl);
             playerUrl = playUrl.toString();
-        } else {
-            // 原始URL，构造player页面链接
-            playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}&position=${Math.floor(playbackPosition || 0)}&returnUrl=${encodeURIComponent(currentPath)}`;
         }
 
         showVideoPlayer(playerUrl);
     } catch (e) {
         console.error('从历史记录播放失败:', e);
-        // 回退到原始简单URL
         const simpleUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}`;
         showVideoPlayer(simpleUrl);
     }
