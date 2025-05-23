@@ -83,9 +83,15 @@ const DEFAULTS = {
     debugMode: false      // 调试模式
 };
 
+// 跳过片头和片尾
 window.config = {
-    introEndTime: 60, // 默认片头结束时间
-    outroStartTime: 120 // 默认片尾开始时间倒数秒
+    // 默认值
+    defaultSkipIntroTime: 60,        // 默认跳过片头时间 (秒)
+    defaultSkipOutroCountdown: 120, // 默认跳过片尾倒计时间 (秒)
+
+    // LocalStorage 键名
+    skipIntroStorageKey: 'player_skip_intro_time', // LocalStorage 键名：片头跳过时间
+    skipOutroStorageKey: 'player_skip_outro_time' // LocalStorage 键名：片尾倒计时间
 };
 
 // 播放器配置

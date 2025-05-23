@@ -23,7 +23,7 @@
     <script src="libs/tailwindcss.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js" defer></script>
     <!--  <script src="libs/hls.min.js" defer></script> -->
-   <!--  <script src="libs/DPlayer.min.js" defer></script>  -->
+    <!--  <script src="libs/DPlayer.min.js" defer></script>  -->
     <script src="https://cdn.jsdelivr.net/npm/dplayer/dist/DPlayer.min.js" defer></script>
     <script src="libs/sha256.min.js" defer></script>
 
@@ -116,26 +116,28 @@
             </button>
         </div>
 
-        <!-- Position 3, 5: Controls and Lock Button -->               
-                <!-- 跳过片头/片尾按钮 -->
-                <div class="relative">
-                    <button id="skip-menu-button" class="icon-btn bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors" aria-label="跳过菜单">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="12"></line>
-                            <line x1="12" y1="16" x2="12" y2="16"></line>
-                        </svg>
-                    </button>
-        
-                    <!-- 下拉菜单 -->
-                    <div id="skip-menu" class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded shadow-lg text-gray-300">
-                        <button id="skip-intro" class="block px-3 py-2 text-left hover:bg-gray-700 transition-colors">跳过片头</button>
-                        <button id="skip-outro" class="block px-3 py-2 text-left hover:bg-gray-700 transition-colors">跳过片尾</button>
-                    </div>
-                </div>
+        <!-- Position 3, 5: Controls and Lock Button -->
+
+        <div class="flex items-center gap-4">
+            <!-- 跳过片头 -->
+            <div class="setting-group">
+                <label for="skip-intro-time" class="text-gray-300">片头秒数</label>
+                <input id="skip-intro-time" type="number" min="0" max="600"
+                    class="w-16 text-gray-700 rounded px-2 py-1">
+                <button id="skip-intro-button"
+                    class="text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded">跳过片头</button>
+            </div>
+
+            <!-- 跳过片尾 -->
+            <div class="setting-group">
+                <label for="skip-outro-time" class="text-gray-300">片尾倒计秒数</label>
+                <input id="skip-outro-time" type="number" min="0" max="600"
+                    class="w-16 text-gray-700 rounded px-2 py-1">
+                <button id="skip-outro-button"
+                    class="text-white bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded">跳过片尾</button>
             </div>
         </div>
-        
+
         <div class="p-4 bg-gray-900 rounded-lg mx-4 mb-4">
             <div class="player-control-bar">
                 <div class="flex items-center gap-2">
