@@ -122,6 +122,21 @@ function setupSkipControls() {
     skipOutroInput.value = savedOutroTime;
 }
 
+function setupSkipDropdownEvents() {
+    document.addEventListener('click', (event) => {
+        const dropdown = document.getElementById('skip-control-dropdown');
+        const skipButton = document.getElementById('skip-control-button');
+
+        if (!skipButton || !dropdown) return;
+
+        if (skipButton.contains(event.target)) {
+            dropdown.classList.toggle('active');
+        } else if (!dropdown.contains(event.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
+}
+
 // 自动跳过片头和片尾
 function handleSkipIntroOutro(dpInstance) {
     // 读取跳过设置
@@ -146,35 +161,24 @@ function handleSkipIntroOutro(dpInstance) {
         dpInstance.on('timeupdate', () => {
             if (!dpInstance.video) return; // 确保视频元素存在
             const remainingTime = dpInstance.video.duration - dpInstance.video.currentTime;
-
             if (remainingTime <= skipOutroTime) {
-                dpInstance.pause();
-                dpInstance.video.currentTime = dpInstance.video.duration; // 设置为结束时的时间
-                if (typeof showToast === 'function') {
-                    showToast(`已跳过 ${skipOutroTime} 秒片尾`, 'info');
-                }
+                if (autoplayEnabled && currentEpisodeIndex < currentEpisodes.length - 1) {
+                    // 自动播放下一集
+                    playNextEpisode();
+                } else {
+                    // 如果是最后一集，则暂停并提示
+                    dpInstance.pause();
+                    dpInstance.video.currentTime = dpInstance.video.duration;
+                    showToast(
+                        currentEpisodeIndex < currentEpisodes.length - 1
+                            ? `已跳过 ${skipOutroTime} 秒片尾`
+                            : '已播放完全部剧集',
+                        'info'
+                    );               
             }
-        });
-    }
-}
-
-// 绑定跳过功能菜单交互事件
-function setupSkipDropdownEvents() {
-    document.addEventListener('click', (event) => {
-        const dropdown = document.getElementById('skip-control-dropdown');
-        const skipButton = document.getElementById('skip-control-button');
-
-        // 确保按钮和菜单存在
-        if (!skipButton || !dropdown) return;
-
-        // 点击按钮时显示/隐藏菜单
-        if (skipButton.contains(event.target)) {
-            dropdown.classList.toggle('active');
-        } else if (!dropdown.contains(event.target)) {
-            // 点击其他区域时隐藏菜单
-            dropdown.classList.remove('active');
         }
-    });
+        });
+}
 }
 
 // 初始化跳过功能
@@ -193,21 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 初始化其他页面功能
     initializePageContent();
-});
-
-document.addEventListener('click', (event) => {
-    const dropdown = document.getElementById('skip-control-dropdown');
-    const skipButton = document.getElementById('skip-control-button');
-
-    if (!skipButton || !dropdown) return;
-
-    if (skipButton.contains(event.target)) {
-        // 点击按钮时显示切换
-        dropdown.classList.toggle('active');
-    } else if (!dropdown.contains(event.target)) {
-        // 点击其他地方时隐藏菜单
-        dropdown.classList.remove('active');
-    }
 });
 
 
