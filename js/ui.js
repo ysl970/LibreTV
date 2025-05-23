@@ -508,19 +508,28 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
         if (historyItem && historyItem.vod_id && historyItem.sourceName) {
             console.log(`[playFromHistory in ui.js] Attempting to fetch details for vod_id: ${historyItem.vod_id}, sourceName: ${historyItem.sourceName}`); // Log 4
             try {
-                // Assuming fetchVideoDetailsGlobal exists and can be called.
-                // sourceName from historyItem is equivalent to sourceCode for fetchVideoDetailsGlobal
-                const videoDetails = await window.electron.fetchVideoDetailsGlobal(historyItem.vod_id, historyItem.sourceName);
+                // Construct the API URL for detail fetching
+                // historyItem.sourceName is used as the sourceCode here
+                // Add a cache buster timestamp
+                const timestamp = new Date().getTime();
+                const apiUrl = `/api/detail?id=${encodeURIComponent(historyItem.vod_id)}&source=${encodeURIComponent(historyItem.sourceName)}&_t=${timestamp}`;
+                
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+                const videoDetails = await response.json();
+
                 if (videoDetails && videoDetails.episodes && videoDetails.episodes.length > 0) {
                     episodesList = videoDetails.episodes;
                     console.log(`成功获取 "${title}" 最新剧集列表:`, episodesList.length, "集");
                     // Optionally, update the history item in localStorage with the fresh episodes
                     if (historyItem) {
                         historyItem.episodes = [...episodesList]; // Deep copy
-                        const history = JSON.parse(historyRaw);
+                        const history = JSON.parse(historyRaw); // Re-parse to ensure we have the latest version
                         const idx = history.findIndex(item => item.url === url);
                         if (idx !== -1) {
-                            history[idx] = historyItem;
+                            history[idx] = { ...history[idx], ...historyItem }; // Merge, ensuring other properties are kept
                             localStorage.setItem('viewingHistory', JSON.stringify(history));
                             console.log("观看历史中的剧集列表已更新。");
                         }
