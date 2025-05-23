@@ -66,7 +66,7 @@ function patchAndroidVideoHack() {
     }, 800); // 确保DPlayer结构已渲染
 }
 
-// 跳过片头和片尾
+// 跳过片头和片尾功能
 const localStorageUtil = {
     get(key, defaultValue) {
         try {
@@ -86,19 +86,6 @@ const localStorageUtil = {
     }
 };
 
-// 初始化跳过设置 (恢复设置值)
-document.addEventListener('DOMContentLoaded', () => {
-    const introSkipInput = document.getElementById('skip-intro-time');
-    const outroSkipInput = document.getElementById('skip-outro-time');
-
-    // 读取本地存储并恢复值，不存在则使用默认值
-    const introTime = localStorageUtil.get(window.config.skipIntroStorageKey, window.config.defaultSkipIntroTime);
-    const outroTime = localStorageUtil.get(window.config.skipOutroStorageKey, window.config.defaultSkipOutroCountdown);
-
-    introSkipInput.value = introTime; // 恢复片头设置
-    outroSkipInput.value = outroTime; // 恢复片尾设置
-});
-
 // 验证用户输入的时间是否合理
 const validateInput = (value, min, max) => {
     const number = parseInt(value, 10);
@@ -106,42 +93,21 @@ const validateInput = (value, min, max) => {
     return number;
 };
 
-// 保存片头时间到 LocalStorage
-const saveIntroTime = () => {
-    const introSkipInput = document.getElementById('skip-intro-time');
-    const introTime = validateInput(introSkipInput.value, 0, 600);
-    if (introTime === null) {
-        showToast('片头秒数输入无效，请检查', 'error');
-        introSkipInput.value = localStorageUtil.get(window.config.skipIntroStorageKey, window.config.defaultSkipIntroTime);
-        return;
-    }
-    localStorageUtil.set(window.config.skipIntroStorageKey, introTime);
-    showToast(`片头跳过秒数设置已保存：${introTime} 秒`, 'success');
-};
-
-// 保存片尾时间到 LocalStorage
-const saveOutroTime = () => {
-    const outroSkipInput = document.getElementById('skip-outro-time');
-    const outroTime = validateInput(outroSkipInput.value, 0, 600);
-    if (outroTime === null) {
-        showToast('片尾倒计秒数输入无效，请检查', 'error');
-        outroSkipInput.value = localStorageUtil.get(window.config.skipOutroStorageKey, window.config.defaultSkipOutroCountdown);
-        return;
-    }
-    localStorageUtil.set(window.config.skipOutroStorageKey, outroTime);
-    showToast(`片尾倒计时间设置已保存：${outroTime} 秒`, 'success');
-};
-
 // 跳过片头逻辑
 const skipIntroLogic = () => {
-    saveIntroTime(); // 保存用户设置
-    const introSkipInput = document.getElementById('skip-intro-time');
-    const introTime = parseInt(introSkipInput.value, 10);
+    const introTimeInput = document.getElementById('menu-skip-intro'); // 下拉菜单输入框
+    const introTime = validateInput(introTimeInput.value, 0, 600);
 
+    if (introTime === null) {
+        showToast('片头秒数输入无效，请检查', 'error');
+        return;
+    }
+
+    localStorageUtil.set(window.config.skipIntroStorageKey, introTime); // 保存片头秒数
     if (dp && dp.video) {
         const newTime = Math.min(introTime, dp.video.duration - 1);
         dp.seek(newTime);
-        showToast(`已跳过片头，跳到 ${formatPlayerTime(newTime)}`, 'success');
+        showToast(`跳过片头，跳到 ${formatPlayerTime(newTime)}`, 'success');
     } else {
         showToast('播放器状态异常，无法跳过片头', 'error');
     }
@@ -149,37 +115,63 @@ const skipIntroLogic = () => {
 
 // 跳过片尾逻辑
 const skipOutroLogic = () => {
-    saveOutroTime(); // 保存用户设置
-    const outroSkipInput = document.getElementById('skip-outro-time');
-    const outroTime = parseInt(outroSkipInput.value, 10);
+    const outroTimeInput = document.getElementById('menu-skip-outro'); // 下拉菜单输入框
+    const outroTime = validateInput(outroTimeInput.value, 0, 600);
 
+    if (outroTime === null) {
+        showToast('片尾倒计秒数输入无效，请检查', 'error');
+        return;
+    }
+
+    localStorageUtil.set(window.config.skipOutroStorageKey, outroTime); // 保存片尾秒数
     if (dp && dp.video) {
         const skipToEnd = dp.video.duration - outroTime;
         if (dp.video.currentTime < skipToEnd) {
             dp.seek(skipToEnd);
-            showToast(`已跳过片尾，跳到 ${formatPlayerTime(skipToEnd)}，视频结束`, 'success');
-            dp.pause(); // 模拟视频结束
+            showToast(`跳过片尾，跳到 ${formatPlayerTime(skipToEnd)}，视频结束`, 'success');
+            dp.pause();
         } else {
-            showToast('已超过片尾跳过时间，无需跳过', 'info');
+            showToast('已超过片尾，无需跳过', 'info');
         }
     } else {
         showToast('播放器状态异常，无法跳过片尾', 'error');
     }
 };
 
-// 绑定 DOM 事件
+// 初始化
 document.addEventListener('DOMContentLoaded', () => {
-    const skipIntroButton = document.getElementById('skip-intro-button');
-    const skipOutroButton = document.getElementById('skip-outro-button');
+    // 菜单相关元素
+    const skipMenuButton = document.getElementById('skip-menu-button');
+    const skipMenu = document.getElementById('skip-menu');
+    const skipMenuWrapper = document.getElementById('skip-menu-wrapper'); // 添加定义
 
+    // 跳过片头和片尾按钮绑定事件
+    const skipIntroButton = document.getElementById('menu-skip-intro-button');
+    const skipOutroButton = document.getElementById('menu-skip-outro-button');
     skipIntroButton.addEventListener('click', skipIntroLogic);
     skipOutroButton.addEventListener('click', skipOutroLogic);
 
-    const introSkipInput = document.getElementById('skip-intro-time');
-    const outroSkipInput = document.getElementById('skip-outro-time');
+    // 点击菜单按钮显示或隐藏下拉菜单
+    skipMenuButton.addEventListener('click', () => {
+        skipMenu.classList.toggle('hidden');
+    });
 
-    introSkipInput.addEventListener('change', saveIntroTime); // 保存片头设置事件
-    outroSkipInput.addEventListener('change', saveOutroTime); // 保存片尾设置事件
+    // 点击其他地方关闭菜单
+    document.addEventListener('click', (e) => {
+        if (!skipMenuWrapper.contains(e.target)) {
+            skipMenu.classList.add('hidden');
+        }
+    });
+
+    // 恢复设置 (片头片尾跳过时间)
+    const introTimeInput = document.getElementById('menu-skip-intro');
+    const outroTimeInput = document.getElementById('menu-skip-outro');
+
+    const introTime = localStorageUtil.get(window.config.skipIntroStorageKey, window.config.defaultSkipIntroTime);
+    const outroTime = localStorageUtil.get(window.config.skipOutroStorageKey, window.config.defaultSkipOutroCountdown);
+
+    introTimeInput.value = introTime; // 恢复片头设置
+    outroTimeInput.value = outroTime; // 恢复片尾设置
 });
 
 // 格式化时间显示

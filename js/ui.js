@@ -121,7 +121,7 @@ function showToast(message, type = 'info') {
     };
 
     toast.textContent = message;
-    toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded shadow-lg text-white ${backgroundColors[type] || 'bg-blue-500'}`;
+    toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded text-white shadow-lg ${backgroundColors[type] || 'bg-blue-500'}`;
     toast.style.opacity = '1';
 
     setTimeout(() => {
