@@ -139,46 +139,41 @@ function setupSkipDropdownEvents() {
 
 // 自动跳过片头和片尾
 function handleSkipIntroOutro(dpInstance) {
-    // 读取跳过设置
+    if (!dpInstance || !dpInstance.video) return;
+    // 防多绑：如已有旧的 handler，先 off（DPlayer 1.x 没命名空间，需要变量记住 handler）
+    if (dpInstance.__skipIntroHandler) dpInstance.off('loadedmetadata', dpInstance.__skipIntroHandler);
+    if (dpInstance.__skipOutroHandler) dpInstance.off('timeupdate', dpInstance.__skipOutroHandler);
+
     const skipIntroTime = parseInt(localStorage.getItem(SKIP_INTRO_KEY)) || 0;
-    const skipOutroTime = parseInt(localStorage.getItem(SKIP_OUTRO_KEY)) || 0;
-
-    // 跳过片头
     if (skipIntroTime > 0) {
-        // 等待视频元数据加载完成
-        dpInstance.on('loadedmetadata', () => {
-            if (dpInstance.video.duration > skipIntroTime) {
+        dpInstance.__skipIntroHandler = function () {
+            if (dpInstance.video && dpInstance.video.duration > skipIntroTime && dpInstance.video.currentTime < skipIntroTime) {
                 dpInstance.seek(skipIntroTime);
-                if (typeof showToast === 'function') {
-                    showToast(`已跳过 ${skipIntroTime} 秒片头`, 'info');
-                }
+                if (typeof showToast === 'function') showToast(`已跳过${skipIntroTime}秒片头`, 'info');
             }
-        });
+        };
+        dpInstance.on('loadedmetadata', dpInstance.__skipIntroHandler);
+    } else {
+        dpInstance.__skipIntroHandler = null;
     }
-
-    // 跳过片尾
+    const skipOutroTime = parseInt(localStorage.getItem(SKIP_OUTRO_KEY)) || 0;
     if (skipOutroTime > 0) {
-        dpInstance.on('timeupdate', () => {
-            if (!dpInstance.video) return; // 确保视频元素存在
-            const remainingTime = dpInstance.video.duration - dpInstance.video.currentTime;
-            if (remainingTime <= skipOutroTime) {
+        dpInstance.__skipOutroHandler = function () {
+            if (!dpInstance.video) return;
+            const remain = dpInstance.video.duration - dpInstance.video.currentTime;
+            if (remain <= skipOutroTime && !dpInstance.video.paused) {
                 if (autoplayEnabled && currentEpisodeIndex < currentEpisodes.length - 1) {
-                    // 自动播放下一集
                     playNextEpisode();
                 } else {
-                    // 如果是最后一集，则暂停并提示
                     dpInstance.pause();
-                    dpInstance.video.currentTime = dpInstance.video.duration;
-                    showToast(
-                        currentEpisodeIndex < currentEpisodes.length - 1
-                            ? `已跳过 ${skipOutroTime} 秒片尾`
-                            : '已播放完全部剧集',
-                        'info'
-                    );               
+                    if (typeof showToast === 'function') showToast(`已跳过${skipOutroTime}秒片尾`, 'info');
+                }
             }
-        }
-        });
-}
+        };
+        dpInstance.on('timeupdate', dpInstance.__skipOutroHandler);
+    } else {
+        dpInstance.__skipOutroHandler = null;
+    }
 }
 
 // 初始化跳过功能
@@ -827,7 +822,6 @@ function initPlayer(videoUrl, sourceCode) {
 
         // 安卓特殊hack，防止右半屏菜单
         patchAndroidVideoHack();
-
         // 添加跳过功能
         handleSkipIntroOutro(dp);
 
@@ -1800,6 +1794,7 @@ function doEpisodeSwitch(index, url) {
     dp.video.pause();
     dp.switchVideo({ url: newEpisodeUrl, type: 'hls' });
     patchAndroidVideoHack();
+    if (typeof handleSkipIntroOutro === 'function' && dp) handleSkipIntroOutro(dp);
     videoHasEnded = false;
 
     // 更新url
