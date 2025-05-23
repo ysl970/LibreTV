@@ -568,11 +568,11 @@ function resetSearchArea() {
     try {
         window.history.pushState(
             {}, 
-            `LibreTV - 免费在线视频搜索与观看平台`, 
+            `像素圣殿 - 仪式感观影，资源朝圣地`, 
             `/`
         );
         // 更新页面标题
-        document.title = `LibreTV - 免费在线视频搜索与观看平台`;
+        document.title = `像素圣殿 - 仪式感观影，资源朝圣地`;
     } catch (e) {
         console.error('更新浏览器历史失败:', e);
     }
@@ -790,7 +790,7 @@ async function search() {
                 `/s=${encodedQuery}`
             );
             // 更新页面标题
-            document.title = `搜索: ${query} - LibreTV`;
+            document.title = `搜索: ${query} - 像素圣殿`;
         } catch (e) {
             console.error('更新浏览器历史失败:', e);
             // 如果更新URL失败，继续执行搜索
