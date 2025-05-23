@@ -1039,7 +1039,6 @@ async function showDetails(id, vod_name, sourceCode) {
 
 // 更新播放视频函数，修改为使用/watch路径而不是直接打开player.html
 function playVideo(url, vod_name, sourceCode, episodeIndex = 0, vodId = '') {
-    // console.log('[playVideo in app.js] Called with:', { url, vod_name, sourceCode, episodeIndex, vodId }); // Log 1 - ensure vodId is logged
     // 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
         if (window.isPasswordProtected() && !window.isPasswordVerified()) {
@@ -1053,7 +1052,6 @@ function playVideo(url, vod_name, sourceCode, episodeIndex = 0, vodId = '') {
     
     // 构建播放页面URL，使用watch.html作为中间跳转页
     let watchUrl = `watch.html?id=${vodId || ''}&source=${sourceCode || ''}&url=${encodeURIComponent(url)}&index=${episodeIndex}&title=${encodeURIComponent(vod_name || '')}`;
-    // console.log('[playVideo in app.js] Constructed watchUrl:', watchUrl); // Log 3
     
     // 添加返回URL参数
     if (currentPath.includes('index.html') || currentPath.endsWith('/')) {
