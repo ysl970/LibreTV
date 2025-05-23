@@ -1676,7 +1676,7 @@ function doEpisodeSwitch(index, url) {
     if (currentSourceCode) newUrlForBrowser.searchParams.set('source_code', currentSourceCode);
 
     const adFilteringStorageKey = (PLAYER_CONFIG && PLAYER_CONFIG.adFilteringStorage) ? PLAYER_CONFIG.adFilteringStorage : 'adFilteringEnabled';
-    const adFilteringActive = (typeof getBoolConfig === 'function') ? getBoolConfig(adFilteringStorageKey, true) : true;
+    const adFilteringActive = (typeof getBoolConfig === 'function') ? getBoolConfig(adFilteringStorageKey, false) : false;
     newUrlForBrowser.searchParams.set('af', adFilteringActive ? '1' : '0');
     newUrlForBrowser.searchParams.delete('position');
     window.history.pushState(
