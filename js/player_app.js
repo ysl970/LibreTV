@@ -67,6 +67,13 @@ function patchAndroidVideoHack() {
 }
 
 // 跳过片头和片尾功能
+// 格式化时间显示 (只保留一个函数声明)
+const formatPlayerTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secondsPart = Math.floor(seconds % 60);
+    return `${String(minutes).padStart(2, '0')}:${String(secondsPart).padStart(2, '0')}`;
+};
+
 const localStorageUtil = {
     get(key, defaultValue) {
         try {
@@ -95,7 +102,7 @@ const validateInput = (value, min, max) => {
 
 // 跳过片头逻辑
 const skipIntroLogic = () => {
-    const introTimeInput = document.getElementById('menu-skip-intro'); // 下拉菜单输入框
+    const introTimeInput = document.getElementById('menu-skip-intro');
     const introTime = validateInput(introTimeInput.value, 0, 600);
 
     if (introTime === null) {
@@ -173,13 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
     introTimeInput.value = introTime; // 恢复片头设置
     outroTimeInput.value = outroTime; // 恢复片尾设置
 });
-
-// 格式化时间显示
-const formatPlayerTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const secondsPart = Math.floor(seconds % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(secondsPart).padStart(2, '0')}`;
-};
 
 /**
  * 展示自定义的“记住进度恢复”弹窗，并Promise化回调
