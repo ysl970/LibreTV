@@ -90,7 +90,7 @@ const PLAYER_CONFIG = {
     width: '100%',
     height: '600',
     timeout: 15000, // 播放器加载超时时间
-    filterAds: true, // 是否启用广告过滤
+    filterAds: false, // 是否启用广告过滤
     autoPlayNext: true, // 默认启用自动连播功能
     adFilteringEnabled: getBoolConfig('adFilteringEnabled', true), // 默认开启分片广告过滤
     adFilteringStorage: 'adFilteringEnabled', // 存储广告过滤设置的键名
