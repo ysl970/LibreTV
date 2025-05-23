@@ -210,19 +210,46 @@
         <!-- 集数导航 -->
         <div class="player-container">
             <div class="flex justify-between items-center my-4">
-                <button onclick="playPreviousEpisode()" ontouchend="event.preventDefault(); playPreviousEpisode();" id="prevButton" class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors">
+                <button onclick="playPreviousEpisode()" id="prevButton" class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors">
                     <svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                     </svg>
                     上一集
                 </button>
                 <span class="text-gray-400" id="episodeInfo">加载中...</span>
-                <button onclick="playNextEpisode()" ontouchend="event.preventDefault(); playNextEpisode();" id="nextButton" class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors">
+                <button onclick="playNextEpisode()" id="nextButton" class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors">
                     下一集
                     <svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                     </svg>
                 </button>
+
+                <!-- iOS设备专用的隐藏按钮，用于处理iOS上的集数切换 -->
+                <script>
+                    // 检查是否为iOS设备
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                    if (isIOS) {
+                        // 替换上一集和下一集按钮的点击事件
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const prevButton = document.getElementById('prevButton');
+                            const nextButton = document.getElementById('nextButton');
+
+                            if (prevButton) {
+                                prevButton.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    playPreviousEpisode();
+                                });
+                            }
+
+                            if (nextButton) {
+                                nextButton.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    playNextEpisode();
+                                });
+                            }
+                        });
+                    }
+                </script>
             </div>
         </div>
 
