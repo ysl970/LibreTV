@@ -1065,15 +1065,22 @@ function saveToHistory() {
         videoDuration = art.video.duration;
     }
 
+    // Define a show identifier: first episode URL if available, otherwise current video URL
+    const showIdentifier = (currentEpisodes && currentEpisodes.length > 0) ? currentEpisodes[0] : currentVideoUrl;
+
     // 构建要保存的视频信息对象
     const videoInfo = {
         title: currentVideoTitle,
-        // 直接保存原始视频链接，而非播放页面链接
+        // 直接保存原始视频链接 (current episode's URL)
         directVideoUrl: currentVideoUrl,
-        // 完整的播放器URL
+        // 完整的播放器URL for the current episode
         url: `player.html?url=${encodeURIComponent(currentVideoUrl)}&title=${encodeURIComponent(currentVideoTitle)}&source=${encodeURIComponent(sourceName)}&source_code=${encodeURIComponent(sourceCode)}&index=${currentEpisodeIndex}&position=${Math.floor(currentPosition || 0)}`,
         episodeIndex: currentEpisodeIndex,
         sourceName: sourceName,
+        // vod_id and sourceCode might be useful for refreshing episode lists later
+        vod_id: urlParams.get('vod_id') || '', // Assuming vod_id is passed in player URL
+        sourceCode: sourceCode,
+        showIdentifier: showIdentifier, // Identifier for the show/series
         timestamp: Date.now(),
         // 添加播放进度信息
         playbackPosition: currentPosition,
@@ -1085,38 +1092,45 @@ function saveToHistory() {
     try {
         const history = JSON.parse(localStorage.getItem('viewingHistory') || '[]' );
 
-        // 检查是否已经存在相同的视频记录 (基于标题、来源和直接视频URL)
+        // 检查是否已经存在相同的系列记录 (基于标题、来源和 showIdentifier)
         const existingIndex = history.findIndex(item => 
             item.title === videoInfo.title && 
             item.sourceName === videoInfo.sourceName && 
-            item.directVideoUrl === videoInfo.directVideoUrl
+            item.showIdentifier === videoInfo.showIdentifier
         );
+
         if (existingIndex !== -1) {
-            // 存在则更新现有记录的集数、时间戳和URL
-            history[existingIndex].episodeIndex = currentEpisodeIndex;
-            history[existingIndex].timestamp = Date.now();
-            history[existingIndex].sourceName = sourceName;
-            // 更新原始视频URL
-            history[existingIndex].directVideoUrl = currentVideoUrl;
+            // 存在则更新现有记录的当前集数、时间戳、播放进度和URL等
+            const existingItem = history[existingIndex];
+            existingItem.episodeIndex = videoInfo.episodeIndex;
+            existingItem.timestamp = videoInfo.timestamp;
+            existingItem.sourceName = videoInfo.sourceName; // Should be consistent, but update just in case
+            existingItem.sourceCode = videoInfo.sourceCode;
+            existingItem.vod_id = videoInfo.vod_id;
+            
+            // Update URLs to reflect the current episode being watched
+            existingItem.directVideoUrl = videoInfo.directVideoUrl; // Current episode's direct URL
+            existingItem.url = videoInfo.url; // Player link for the current episode
+
             // 更新播放进度信息
-            history[existingIndex].playbackPosition = currentPosition > 10 ? currentPosition : history[existingIndex].playbackPosition;
-            history[existingIndex].duration = videoDuration || history[existingIndex].duration;
-            // 更新完整URL，确保带有正确的视频链接
-            history[existingIndex].url = videoInfo.url;
-            // 更新集数列表（如果有且与当前不同）
-            if (currentEpisodes && currentEpisodes.length > 0) {
-                // 检查是否需要更新集数数据（针对不同长度的集数列表）
-                if (!history[existingIndex].episodes ||
-                    !Array.isArray(history[existingIndex].episodes) ||
-                    history[existingIndex].episodes.length !== currentEpisodes.length) {
-                    history[existingIndex].episodes = [...currentEpisodes]; // 深拷贝
-                    console.log(`更新 "${currentVideoTitle}" 的剧集数据: ${currentEpisodes.length}集`);
+            existingItem.playbackPosition = videoInfo.playbackPosition > 10 ? videoInfo.playbackPosition : (existingItem.playbackPosition || 0);
+            existingItem.duration = videoInfo.duration || existingItem.duration;
+            
+            // 更新集数列表（如果新的集数列表与存储的不同，例如集数增加了）
+            if (videoInfo.episodes && videoInfo.episodes.length > 0) {
+                if (!existingItem.episodes || 
+                    !Array.isArray(existingItem.episodes) || 
+                    existingItem.episodes.length !== videoInfo.episodes.length || 
+                    !videoInfo.episodes.every((ep, i) => ep === existingItem.episodes[i])) { // Basic check for content change
+                    existingItem.episodes = [...videoInfo.episodes]; // Deep copy
+                    console.log(`更新 \"${videoInfo.title}\" 的剧集数据: ${videoInfo.episodes.length}集`);
                 }
             }
-
+            
             // 移到最前面
             const updatedItem = history.splice(existingIndex, 1)[0];
             history.unshift(updatedItem);
+            console.log(`更新历史记录: \"${videoInfo.title}\", 第 ${videoInfo.episodeIndex + 1} 集`);
         } else {
             // 添加新记录到最前面
             console.log(`创建新的历史记录: "${currentVideoTitle}", ${currentEpisodes.length}集`);
