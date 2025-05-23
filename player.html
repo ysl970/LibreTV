@@ -145,27 +145,18 @@
                                 d="M3 3h18M3 21h18M3 7h18M3 14h18" />
                         </svg>
                     </button>
-                    <div id="skip-control-dropdown"
-                        class="hidden absolute top-10 left-0 bg-gray-900 rounded shadow-lg p-3 w-48">
-                        <label class="block text-gray-300 text-sm mb-2">
-                            跳片头（秒）
-                            <input id="skip-intro-input" type="number" min="0" step="1"
-                                class="w-full mt-1 bg-gray-800 rounded p-2 text-gray-300" placeholder="输入时间">
+                    <div id="skip-control-dropdown" class="...">
+                        <label>
+                         片头（秒）
+                         <input id="skip-intro-input" type="number" min="0" step="1" placeholder="0">
                         </label>
-                        <label class="block text-gray-300 text-sm mb-2">
-                            跳片尾（秒）
-                            <input id="skip-outro-input" type="number" min="0" step="1"
-                                class="w-full mt-1 bg-gray-800 rounded p-2 text-gray-300" placeholder="输入时间">
+                        <label>
+                         片尾（秒）
+                         <input id="skip-outro-input" type="number" min="0" step="1" placeholder="0">
                         </label>
-                        <button id="apply-skip-settings"
-                            class="w-full bg-blue-600 rounded p-2 text-white hover:bg-blue-700 mt-2">
-                            应用
-                        </button>
-                        <button id="reset-skip-settings"
-                            class="w-full bg-red-600 rounded p-2 text-white hover:bg-red-700 mt-2">
-                            重置
-                        </button>
-                    </div>
+                        <button id="apply-skip-settings">应用</button>
+                        <button id="reset-skip-settings">重置</button>
+                      </div>                      
                 </div>
 
                 <button onclick="copyLinks()" title="复制当前视频链接"
