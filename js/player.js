@@ -2,34 +2,34 @@
 function goBack(event) {
     // 防止默认链接行为
     if (event) event.preventDefault();
-    
+
     // 1. 优先检查URL参数中的returnUrl
     const urlParams = new URLSearchParams(window.location.search);
     const returnUrl = urlParams.get('returnUrl');
-    
+
     if (returnUrl) {
         // 如果URL中有returnUrl参数，优先使用
         window.location.href = decodeURIComponent(returnUrl);
         return;
     }
-    
+
     // 2. 检查localStorage中保存的lastPageUrl
     const lastPageUrl = localStorage.getItem('lastPageUrl');
     if (lastPageUrl && lastPageUrl !== window.location.href) {
         window.location.href = lastPageUrl;
         return;
     }
-    
+
     // 3. 检查是否是从搜索页面进入的播放器
     const referrer = document.referrer;
-    
+
     // 检查 referrer 是否包含搜索参数
     if (referrer && (referrer.includes('/s=') || referrer.includes('?s='))) {
         // 如果是从搜索页面来的，返回到搜索页面
         window.location.href = referrer;
         return;
     }
-    
+
     // 4. 如果是在iframe中打开的，尝试关闭iframe
     if (window.self !== window.top) {
         try {
@@ -40,13 +40,13 @@ function goBack(event) {
             console.error('调用父窗口closeVideoPlayer失败:', e);
         }
     }
-    
+
     // 5. 无法确定上一页，则返回首页
     if (!referrer || referrer === '') {
         window.location.href = '/';
         return;
     }
-    
+
     // 6. 以上都不满足，使用默认行为：返回上一页
     window.history.back();
 }
@@ -786,9 +786,14 @@ function renderEpisodes() {
         const realIndex = episodesReversed ? currentEpisodes.length - 1 - index : index;
         const isActive = realIndex === currentEpisodeIndex;
 
+        // 为iOS设备添加额外的触摸处理
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const iosTouchAttr = isIOS ? `ontouchend="event.preventDefault(); playEpisode(${realIndex});"` : '';
+
         html += `
-            <button id="episode-${realIndex}" 
-                    onclick="playEpisode(${realIndex})" 
+            <button id="episode-${realIndex}"
+                    onclick="playEpisode(${realIndex})"
+                    ${iosTouchAttr}
                     class="px-4 py-2 ${isActive ? 'episode-active' : '!bg-[#222] hover:!bg-[#333] hover:!shadow-none'} !border ${isActive ? '!border-blue-500' : '!border-[#333]'} rounded-lg transition-colors text-center episode-btn">
                 第${realIndex + 1}集
             </button>
@@ -872,15 +877,27 @@ function playEpisode(index) {
 
 // 播放上一集
 function playPreviousEpisode() {
+    console.log('尝试播放上一集，当前索引:', currentEpisodeIndex);
     if (currentEpisodeIndex > 0) {
-        playEpisode(currentEpisodeIndex - 1);
+        // 添加延迟以确保iOS设备上的触摸事件处理完成
+        setTimeout(() => {
+            playEpisode(currentEpisodeIndex - 1);
+        }, 50);
+    } else {
+        showToast('已经是第一集了', 'info');
     }
 }
 
 // 播放下一集
 function playNextEpisode() {
+    console.log('尝试播放下一集，当前索引:', currentEpisodeIndex, '总集数:', currentEpisodes.length);
     if (currentEpisodeIndex < currentEpisodes.length - 1) {
-        playEpisode(currentEpisodeIndex + 1);
+        // 添加延迟以确保iOS设备上的触摸事件处理完成
+        setTimeout(() => {
+            playEpisode(currentEpisodeIndex + 1);
+        }, 50);
+    } else {
+        showToast('已经是最后一集了', 'info');
     }
 }
 
@@ -1219,8 +1236,23 @@ function setupLongPressSpeedControl() {
         return true; // 在桌面设备上允许右键菜单
     };
 
+    // 检查是否为iOS设备
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
     // 触摸开始事件
     playerElement.addEventListener('touchstart', function (e) {
+        // 检查触摸事件是否来自导航按钮或集数按钮
+        const target = e.target;
+        const isNavigationButton =
+            target.closest('#prevButton') ||
+            target.closest('#nextButton') ||
+            target.closest('.episode-btn');
+
+        // 如果是导航按钮，不启用长按功能
+        if (isNavigationButton) {
+            return;
+        }
+
         // 检查视频是否正在播放，如果没有播放则不触发长按功能
         if (art.video.paused) {
             return; // 视频暂停时不触发长按功能
@@ -1250,6 +1282,18 @@ function setupLongPressSpeedControl() {
 
     // 触摸结束事件
     playerElement.addEventListener('touchend', function (e) {
+        // 检查触摸事件是否来自导航按钮或集数按钮
+        const target = e.target;
+        const isNavigationButton =
+            target.closest('#prevButton') ||
+            target.closest('#nextButton') ||
+            target.closest('.episode-btn');
+
+        // 如果是导航按钮，不干预默认行为
+        if (isNavigationButton) {
+            return;
+        }
+
         // 清除长按计时器
         if (longPressTimer) {
             clearTimeout(longPressTimer);
@@ -1285,6 +1329,18 @@ function setupLongPressSpeedControl() {
 
     // 触摸移动事件 - 防止在长按时触发页面滚动
     playerElement.addEventListener('touchmove', function (e) {
+        // 检查触摸事件是否来自导航按钮或集数按钮
+        const target = e.target;
+        const isNavigationButton =
+            target.closest('#prevButton') ||
+            target.closest('#nextButton') ||
+            target.closest('.episode-btn');
+
+        // 如果是导航按钮，不干预默认行为
+        if (isNavigationButton) {
+            return;
+        }
+
         if (isLongPress) {
             e.preventDefault();
         }
