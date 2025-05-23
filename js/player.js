@@ -436,17 +436,6 @@ function initPlayer(videoUrl) {
                 const hls = new Hls(hlsConfig);
                 currentHls = hls;
 
-                // 检查是否为iOS设备
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                if (isIOS) {
-                    console.log('iOS设备检测到，使用优化的HLS配置');
-                    // 为iOS设备设置特殊的HLS配置
-                    hls.config.maxBufferLength = 15;
-                    hls.config.maxMaxBufferLength = 30;
-                    hls.config.liveSyncDurationCount = 2;
-                    hls.config.enableWorker = false; // 在iOS上禁用Web Worker可能更稳定
-                }
-
                 // 跟踪是否已经显示错误
                 let errorDisplayed = false;
                 // 跟踪是否有错误发生
@@ -471,92 +460,27 @@ function initPlayer(videoUrl) {
                     }
                 });
 
-                // 检查是否为iOS设备
-                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                hls.loadSource(url);
+                hls.attachMedia(video);
 
-                // 为iOS设备添加特殊处理
-                if (isIOS) {
-                    console.log('iOS设备检测到，使用优化的媒体加载方式');
-
-                    // 先清理视频元素
-                    video.pause();
-                    video.removeAttribute('src');
-                    video.load();
-
-                    // 确保视频元素已准备好
-                    setTimeout(() => {
-                        try {
-                            // 加载源并附加媒体
-                            hls.loadSource(url);
-                            hls.attachMedia(video);
-
-                            // 添加source元素以支持AirPlay
-                            let sourceElement = video.querySelector('source');
-                            if (sourceElement) {
-                                sourceElement.src = url;
-                            } else {
-                                sourceElement = document.createElement('source');
-                                sourceElement.src = url;
-                                video.appendChild(sourceElement);
-                            }
-                            video.disableRemotePlayback = false;
-
-                            console.log('iOS: HLS实例已加载源并附加到媒体元素');
-                        } catch (e) {
-                            console.error('iOS: HLS加载失败:', e);
-                        }
-                    }, 100);
+                // enable airplay, from https://github.com/video-dev/hls.js/issues/5989
+                // 检查是否已存在source元素，如果存在则更新，不存在则创建
+                let sourceElement = video.querySelector('source');
+                if (sourceElement) {
+                    // 更新现有source元素的URL
+                    sourceElement.src = videoUrl;
                 } else {
-                    // 非iOS设备使用标准方式
-                    hls.loadSource(url);
-                    hls.attachMedia(video);
-
-                    // enable airplay, from https://github.com/video-dev/hls.js/issues/5989
-                    // 检查是否已存在source元素，如果存在则更新，不存在则创建
-                    let sourceElement = video.querySelector('source');
-                    if (sourceElement) {
-                        // 更新现有source元素的URL
-                        sourceElement.src = url;
-                    } else {
-                        // 创建新的source元素
-                        sourceElement = document.createElement('source');
-                        sourceElement.src = url;
-                        video.appendChild(sourceElement);
-                    }
-                    video.disableRemotePlayback = false;
+                    // 创建新的source元素
+                    sourceElement = document.createElement('source');
+                    sourceElement.src = videoUrl;
+                    video.appendChild(sourceElement);
                 }
+                video.disableRemotePlayback = false;
 
                 hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                    // 检查是否为iOS设备
-                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-                    if (isIOS) {
-                        console.log('iOS设备检测到，使用延迟播放');
-                        // 在iOS上，添加短暂延迟以确保媒体已准备好
-                        setTimeout(() => {
-                            // 确保视频元素已准备好
-                            if (video.readyState === 0) {
-                                console.log('iOS: 视频元素尚未准备好，重新加载');
-                                video.load();
-                            }
-
-                            // 尝试播放
-                            const playPromise = video.play();
-                            if (playPromise !== undefined) {
-                                playPromise.catch(e => {
-                                    console.warn('iOS: 自动播放被阻止:', e);
-                                    // 在iOS上，可能需要用户交互才能播放
-                                    // 显示播放按钮或提示用户点击屏幕
-                                    showToast('点击屏幕开始播放', 'info');
-                                });
-                            }
-                        }, 300);
-                    } else {
-                        // 非iOS设备使用标准方式
-                        video.play().catch(e => {
-                            console.warn('自动播放被阻止:', e);
-                        });
-                    }
+                    video.play().catch(e => {
+                        console.warn('自动播放被阻止:', e);
+                    });
                 });
 
                 hls.on(Hls.Events.ERROR, function (event, data) {
@@ -582,91 +506,27 @@ function initPlayer(videoUrl) {
                         }
                     }
 
-                    // 检查是否为iOS设备
-                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
                     // 如果是致命错误，且视频未播放
                     if (data.fatal && !playbackStarted) {
                         console.error('致命HLS错误:', data);
 
-                        // 为iOS设备使用更积极的错误恢复策略
-                        if (isIOS) {
-                            console.log('iOS设备检测到，使用特殊的错误恢复策略');
-
-                            switch (data.type) {
-                                case Hls.ErrorTypes.NETWORK_ERROR:
-                                    console.log("iOS: 尝试恢复网络错误");
-                                    // 在iOS上，可能需要完全重新加载
-                                    setTimeout(() => {
-                                        try {
-                                            hls.stopLoad();
-                                            hls.startLoad();
-                                            console.log("iOS: 已重新加载网络");
-                                        } catch (e) {
-                                            console.error("iOS: 重新加载失败", e);
-                                        }
-                                    }, 100);
-                                    break;
-
-                                case Hls.ErrorTypes.MEDIA_ERROR:
-                                    console.log("iOS: 尝试恢复媒体错误");
-                                    // 在iOS上，媒体错误可能需要更彻底的恢复
-                                    setTimeout(() => {
-                                        try {
-                                            hls.recoverMediaError();
-                                            console.log("iOS: 已尝试恢复媒体错误");
-
-                                            // 如果是iOS，可能需要重新加载视频元素
-                                            video.load();
-                                        } catch (e) {
-                                            console.error("iOS: 恢复媒体错误失败", e);
-                                        }
-                                    }, 100);
-                                    break;
-
-                                default:
-                                    // 仅在多次恢复尝试后显示错误
-                                    if (errorCount > 2 && !errorDisplayed) {
-                                        errorDisplayed = true;
-                                        showError('iOS设备视频加载失败，可能是格式不兼容或源不可用');
-
-                                        // 在iOS上，可能需要完全重新初始化播放器
-                                        if (errorCount > 4) {
-                                            console.log("iOS: 尝试完全重新初始化播放器");
-                                            // 通知用户
-                                            showToast('正在尝试重新加载视频...', 'info');
-
-                                            // 销毁当前播放器并重新初始化
-                                            setTimeout(() => {
-                                                if (art) {
-                                                    art.destroy();
-                                                    art = null;
-                                                }
-                                                initPlayer(url);
-                                            }, 1000);
-                                        }
-                                    }
-                                    break;
-                            }
-                        } else {
-                            // 非iOS设备使用标准错误恢复
-                            switch (data.type) {
-                                case Hls.ErrorTypes.NETWORK_ERROR:
-                                    console.log("尝试恢复网络错误");
-                                    hls.startLoad();
-                                    break;
-                                case Hls.ErrorTypes.MEDIA_ERROR:
-                                    console.log("尝试恢复媒体错误");
-                                    hls.recoverMediaError();
-                                    break;
-                                default:
-                                    // 仅在多次恢复尝试后显示错误
-                                    if (errorCount > 3 && !errorDisplayed) {
-                                        errorDisplayed = true;
-                                        showError('视频加载失败，可能是格式不兼容或源不可用');
-                                    }
-                                    break;
-                            }
+                        // 尝试恢复错误
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log("尝试恢复网络错误");
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log("尝试恢复媒体错误");
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                // 仅在多次恢复尝试后显示错误
+                                if (errorCount > 3 && !errorDisplayed) {
+                                    errorDisplayed = true;
+                                    showError('视频加载失败，可能是格式不兼容或源不可用');
+                                }
+                                break;
                         }
                     }
                 });
@@ -1010,84 +870,16 @@ function playEpisode(index) {
     // 检查是否为iOS设备
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-    // 为iOS设备实现特殊的切换逻辑
+    // iOS设备使用完全重载的方式，其他设备使用art.switch
     if (isIOS) {
-        console.log('iOS设备检测到，使用优化的方式切换视频');
-
-        // 标记正在切换视频，避免错误处理
-        window.isSwitchingVideo = true;
-
-        try {
-            // 保存当前播放器状态
-            const wasPlaying = art && !art.video.paused;
-            const volume = art ? art.volume : 0.7;
-            const muted = art ? art.muted : false;
-
-            // 清理当前HLS实例
-            if (currentHls && currentHls.destroy) {
-                try {
-                    currentHls.stopLoad();
-                    currentHls.detachMedia();
-                    currentHls.destroy();
-                    currentHls = null;
-                } catch (e) {
-                    console.warn('销毁旧HLS实例出错:', e);
-                }
-            }
-
-            // 如果有现有的播放器实例，先暂停视频并移除事件监听器
-            if (art && art.video) {
-                // 暂停视频播放
-                try {
-                    art.pause();
-                } catch (e) {
-                    console.warn('暂停视频出错:', e);
-                }
-
-                // 移除所有视频事件监听器
-                const videoElement = art.video;
-                const clonedVideo = videoElement.cloneNode(false);
-                if (videoElement.parentNode) {
-                    videoElement.parentNode.replaceChild(clonedVideo, videoElement);
-                }
-            }
-
-            // 使用art.switch切换视频URL
-            if (art) {
-                // 设置新的URL
-                art.url = url;
-
-                // 恢复播放器状态
-                art.volume = volume;
-                art.muted = muted;
-
-                // 如果之前在播放，则继续播放
-                if (wasPlaying) {
-                    setTimeout(() => {
-                        art.play().catch(e => {
-                            console.warn('自动播放被阻止:', e);
-                        });
-                    }, 100);
-                }
-            } else {
-                console.error('播放器实例不存在');
-                // 尝试重新初始化剧集
-                initPlayer(url);
-            }
-        } catch (e) {
-            console.error('iOS切换视频出错:', e);
-            // 出错时回退到完全重载方式
-            if (art) {
-                art.destroy();
-                art = null;
-            }
-            initPlayer(url);
-        } finally {
-            // 重置切换标记
-            setTimeout(() => {
-                window.isSwitchingVideo = false;
-            }, 1000);
+        console.log('iOS设备检测到，使用完全重载方式切换视频');
+        // 销毁当前播放器实例
+        if (art) {
+            art.destroy();
+            art = null;
         }
+        // 重新初始化播放器
+        initPlayer(url);
     } else {
         // 非iOS设备使用art.switch切换视频源
         if (art) {
