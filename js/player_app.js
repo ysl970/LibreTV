@@ -78,15 +78,14 @@ function setupSkipControls() {
     const applyBtn = document.getElementById('apply-skip-settings');
     const resetBtn = document.getElementById('reset-skip-settings');
 
-    // 从 localStorage 加载数据
-    const savedIntroTime = parseInt(localStorage.getItem(SKIP_INTRO_KEY)) || 0;
-    const savedOutroTime = parseInt(localStorage.getItem(SKIP_OUTRO_KEY)) || 0;
-    skipIntroInput.value = savedIntroTime;
-    skipOutroInput.value = savedOutroTime;
+    if (!skipButton || !dropdown || !skipIntroInput || !skipOutroInput || !applyBtn || !resetBtn) {
+        console.error("跳过片头片尾功能的 HTML 元素未正确加载！");
+        return;
+    }
 
-    // 控制按钮 click
+    // 显示 / 隐藏菜单
     skipButton.addEventListener('click', () => {
-        dropdown.classList.toggle('active'); // 显示/隐藏菜单
+        dropdown.classList.toggle('active');
     });
 
     // 应用设置按钮
@@ -98,7 +97,7 @@ function setupSkipControls() {
         localStorage.setItem(SKIP_OUTRO_KEY, outroTime);
 
         if (typeof showToast === 'function') {
-            showToast('设置已保存', 'success');
+            showToast('跳过时间设置已保存', 'success');
         }
         dropdown.classList.remove('active'); // 收起设置框
     });
@@ -111,10 +110,18 @@ function setupSkipControls() {
         skipOutroInput.value = '';
 
         if (typeof showToast === 'function') {
-            showToast('跳过时间已重置', 'success');
+            showToast('跳过时间设置已重置', 'success');
         }
     });
+
+    // 从 localStorage 中加载初始值
+    const savedIntroTime = parseInt(localStorage.getItem(SKIP_INTRO_KEY)) || 0;
+    const savedOutroTime = parseInt(localStorage.getItem(SKIP_OUTRO_KEY)) || 0;
+
+    skipIntroInput.value = savedIntroTime;
+    skipOutroInput.value = savedOutroTime;
 }
+
 
 // 自动跳过片头和片尾
 function handleSkipIntroOutro(dpInstance) {
@@ -122,22 +129,31 @@ function handleSkipIntroOutro(dpInstance) {
     const skipIntroTime = parseInt(localStorage.getItem(SKIP_INTRO_KEY)) || 0;
     const skipOutroTime = parseInt(localStorage.getItem(SKIP_OUTRO_KEY)) || 0;
 
+    // 跳过片头
     if (skipIntroTime > 0) {
+        // 等待视频元数据加载完成
         dpInstance.on('loadedmetadata', () => {
             if (dpInstance.video.duration > skipIntroTime) {
                 dpInstance.seek(skipIntroTime);
-                if (typeof showToast === 'function') showToast(`已跳过 ${skipIntroTime} 秒片头`, 'info');
+                if (typeof showToast === 'function') {
+                    showToast(`已跳过 ${skipIntroTime} 秒片头`, 'info');
+                }
             }
         });
     }
 
+    // 跳过片尾
     if (skipOutroTime > 0) {
         dpInstance.on('timeupdate', () => {
+            if (!dpInstance.video) return; // 确保视频元素存在
             const remainingTime = dpInstance.video.duration - dpInstance.video.currentTime;
+
             if (remainingTime <= skipOutroTime) {
                 dpInstance.pause();
-                dpInstance.video.currentTime = dpInstance.video.duration; // 播放到结束
-                if (typeof showToast === 'function') showToast(`已跳过 ${skipOutroTime} 秒片尾`, 'info');
+                dpInstance.video.currentTime = dpInstance.video.duration; // 设置为结束时的时间
+                if (typeof showToast === 'function') {
+                    showToast(`已跳过 ${skipOutroTime} 秒片尾`, 'info');
+                }
             }
         });
     }
@@ -145,12 +161,32 @@ function handleSkipIntroOutro(dpInstance) {
 
 // 初始化跳过功能
 document.addEventListener('DOMContentLoaded', () => {
+    // 初始化 UI 控件
     setupSkipControls();
 
-    if (dp) {
+    // 初始化播放器实例
+    if (typeof dp !== 'undefined' && dp) {
         handleSkipIntroOutro(dp);
+    } else {
+        console.error("播放器实例未初始化，无法绑定跳过功能！");
     }
 });
+
+document.addEventListener('click', (event) => {
+    const dropdown = document.getElementById('skip-control-dropdown');
+    const skipButton = document.getElementById('skip-control-button');
+
+    if (!skipButton || !dropdown) return;
+
+    if (skipButton.contains(event.target)) {
+        // 点击按钮时显示切换
+        dropdown.classList.toggle('active');
+    } else if (!dropdown.contains(event.target)) {
+        // 点击其他地方时隐藏菜单
+        dropdown.classList.remove('active');
+    }
+});
+
 
 /**
  * 展示自定义的“记住进度恢复”弹窗，并Promise化回调
