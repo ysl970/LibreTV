@@ -564,8 +564,8 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
         // 构造播放器URL
         let playerUrl;
         const sourceNameForUrl = historyItem ? historyItem.sourceName : (new URLSearchParams(new URL(url, window.location.origin).search)).get('source');
-        const sourceCodeForUrl = historyItem ? historyItem.sourceCode || historyItem.sourceName : (new URLSearchParams(new URL(url, window.location.origin).search)).get('source_code'); // Fallback sourceCode to sourceName if not present
-        const vodIdForUrl = historyItem ? historyItem.vod_id : '';
+        const sourceCodeForUrl = historyItem ? historyItem.sourceCode || historyItem.sourceName : (new URLSearchParams(new URL(url, window.location.origin).search)).get('source_code');
+        const idForUrl = historyItem ? historyItem.vod_id : '';
 
 
         if (url.includes('player.html') || url.includes('watch.html')) {
@@ -578,7 +578,7 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
                 playerUrl = `player.html?url=${encodeURIComponent(realVideoUrl)}&title=${encodeURIComponent(title)}&index=${episodeIndex}&position=${Math.floor(playbackPosition || 0)}&returnUrl=${encodeURIComponent(currentPath)}`;
                 if (sourceNameForUrl) playerUrl += `&source=${encodeURIComponent(sourceNameForUrl)}`;
                 if (sourceCodeForUrl) playerUrl += `&source_code=${encodeURIComponent(sourceCodeForUrl)}`;
-                if (vodIdForUrl) playerUrl += `&vod_id=${encodeURIComponent(vodIdForUrl)}`;
+                if (idForUrl) playerUrl += `&id=${encodeURIComponent(idForUrl)}`;
 
 
             } catch (e) {
@@ -586,7 +586,7 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
                 playerUrl = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&index=${episodeIndex}&position=${Math.floor(playbackPosition || 0)}&returnUrl=${encodeURIComponent(currentPath)}`;
                 if (sourceNameForUrl) playerUrl += `&source=${encodeURIComponent(sourceNameForUrl)}`;
                 if (sourceCodeForUrl) playerUrl += `&source_code=${encodeURIComponent(sourceCodeForUrl)}`;
-                if (vodIdForUrl) playerUrl += `&vod_id=${encodeURIComponent(vodIdForUrl)}`;
+                if (idForUrl) playerUrl += `&id=${encodeURIComponent(idForUrl)}`;
             }
         } else {
              // This case should ideally not happen if 'url' is always a player.html link from history
@@ -599,7 +599,7 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
             playUrl.searchParams.set('returnUrl', encodeURIComponent(currentPath));
             if (sourceNameForUrl) playUrl.searchParams.set('source', sourceNameForUrl);
             if (sourceCodeForUrl) playUrl.searchParams.set('source_code', sourceCodeForUrl);
-            if (vodIdForUrl) playUrl.searchParams.set('vod_id', vodIdForUrl);
+            if (idForUrl) playUrl.searchParams.set('id', idForUrl);
             playerUrl = playUrl.toString();
         }
 
