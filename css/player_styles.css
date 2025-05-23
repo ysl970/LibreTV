@@ -383,6 +383,7 @@ input:checked+.slider:before {
     z-index: 2222;
     padding: 0.67em 0.8em 0.35em 0.8em;
 }
+
 @media (max-width: 480px) {
     #skip-control-dropdown {
         min-width: 105px;
@@ -390,14 +391,39 @@ input:checked+.slider:before {
         right: 0.6em;
         left: auto;
         padding: 0.6em 0.48em 0.25em 0.48em;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* 添加一个容器来包含label和input，使其在同一行 */
+    #skip-control-dropdown .input-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        margin-bottom: 0.25em;
+    }
+    
+    #skip-control-dropdown .input-row label {
+        margin-bottom: 0;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    
+    #skip-control-dropdown .input-row input[type="number"] {
+        margin-top: 0;
+        margin-bottom: 0;
+        flex: 1;
+        min-width: 0;
     }
 }
+
 #skip-control-dropdown label {
     margin-bottom: 0.3em;
     color: #c4e3fb;
     font-size: 0.96em;
     line-height: 1;
 }
+
 #skip-control-dropdown input[type="number"] {
     margin-top: 0.1em;
     margin-bottom: 0.25em;
@@ -408,6 +434,7 @@ input:checked+.slider:before {
     background: #22232c;
     color: #e1e6fa;
 }
+
 #skip-control-dropdown button {
     font-size: 1em;
     border-radius: 8px;
@@ -418,3 +445,4 @@ input:checked+.slider:before {
     min-height: 2.05em;
     transition: background .16s,color .12s;
 }
+
