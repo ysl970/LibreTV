@@ -68,6 +68,7 @@ function patchAndroidVideoHack() {
 
 // 跳过片头和片尾功能
 // 格式化时间显示 (只保留一个函数声明)
+(() => {
 const formatPlayerTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const secondsPart = Math.floor(seconds % 60);
@@ -180,6 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     introTimeInput.value = introTime; // 恢复片头设置
     outroTimeInput.value = outroTime; // 恢复片尾设置
 });
+})();
 
 /**
  * 展示自定义的“记住进度恢复”弹窗，并Promise化回调
