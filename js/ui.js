@@ -612,6 +612,9 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
 }
 
 // 添加观看历史 - 确保每个视频标题只有一条记录
+// IMPORTANT: videoInfo passed to this function should include a 'showIdentifier' property
+// (e.g., the URL of the first episode, or the video's own URL if it's a single movie/video)
+// to correctly group episodes of the same series.
 function addToViewingHistory(videoInfo) {
     // 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
@@ -623,64 +626,67 @@ function addToViewingHistory(videoInfo) {
     try {
         const history = getViewingHistory();
         
-        // 检查是否已经存在相同的视频记录 (基于标题、来源和直接视频URL)
+        // 检查是否已经存在相同的系列记录 (基于标题、来源和 showIdentifier)
+        // Fallback for items that might not have showIdentifier yet (older history)
         const existingIndex = history.findIndex(item => 
             item.title === videoInfo.title && 
             item.sourceName === videoInfo.sourceName &&
-            item.directVideoUrl === videoInfo.directVideoUrl
+            (item.showIdentifier ? item.showIdentifier === videoInfo.showIdentifier : true) // Check showIdentifier if present
         );
-        if (existingIndex !== -1) {
-            // 存在则更新现有记录的集数和时间戳
+
+        if (existingIndex !== -1 && videoInfo.showIdentifier && history[existingIndex].showIdentifier === videoInfo.showIdentifier) {
+            // Exact match with showIdentifier: Update existing series entry
             const existingItem = history[existingIndex];
             existingItem.episodeIndex = videoInfo.episodeIndex;
-            existingItem.timestamp = Date.now();
+            existingItem.timestamp = Date.now(); // Always update timestamp
             
-            // 确保来源信息保留
-            if (videoInfo.sourceName && !existingItem.sourceName) {
-                existingItem.sourceName = videoInfo.sourceName;
-            }
-            
-            // 更新播放进度信息，仅当新进度有效且大于10秒时
-            if (videoInfo.playbackPosition && videoInfo.playbackPosition > 10) {
-                existingItem.playbackPosition = videoInfo.playbackPosition;
-                existingItem.duration = videoInfo.duration || existingItem.duration;
-            }
-            
-            // 更新URL，确保能够跳转到正确的集数
-            existingItem.url = videoInfo.url;
-            
-            // 重要：确保episodes数据与当前视频匹配
-            // 只有当videoInfo中包含有效的episodes数据时才更新
+            // Ensure other relevant fields are updated from the new videoInfo
+            existingItem.sourceName = videoInfo.sourceName || existingItem.sourceName;
+            existingItem.sourceCode = videoInfo.sourceCode || existingItem.sourceCode;
+            existingItem.vod_id = videoInfo.vod_id || existingItem.vod_id;
+            existingItem.directVideoUrl = videoInfo.directVideoUrl || existingItem.directVideoUrl; // URL of current episode
+            existingItem.url = videoInfo.url || existingItem.url; // player.html link for current episode
+            existingItem.playbackPosition = videoInfo.playbackPosition > 10 ? videoInfo.playbackPosition : (existingItem.playbackPosition || 0);
+            existingItem.duration = videoInfo.duration || existingItem.duration;
+
+            // Update episodes list if the new one is different or more complete
             if (videoInfo.episodes && Array.isArray(videoInfo.episodes) && videoInfo.episodes.length > 0) {
-                // 如果传入的集数数据与当前保存的不同，则更新
                 if (!existingItem.episodes || 
                     !Array.isArray(existingItem.episodes) || 
-                    existingItem.episodes.length !== videoInfo.episodes.length) {
-                    console.log(`更新 "${videoInfo.title}" 的剧集数据: ${videoInfo.episodes.length}集`);
-                    existingItem.episodes = [...videoInfo.episodes]; // 使用深拷贝
+                    existingItem.episodes.length !== videoInfo.episodes.length ||
+                    !videoInfo.episodes.every((ep, i) => ep === existingItem.episodes[i])) {
+                    console.log(`更新 (addToViewingHistory) "${videoInfo.title}" 的剧集数据: ${videoInfo.episodes.length}集`);
+                    existingItem.episodes = [...videoInfo.episodes]; // Deep copy
                 }
             }
             
-            // 移到最前面
             history.splice(existingIndex, 1);
             history.unshift(existingItem);
+            console.log(`更新历史记录 (addToViewingHistory): "${videoInfo.title}", 第 ${videoInfo.episodeIndex + 1} 集`);
         } else {
-            // 添加新记录到最前面，确保包含剧集数据
+            // No exact match with showIdentifier, or it's missing: Add as a new entry
+            // This handles older history items or cases where showIdentifier isn't provided yet.
             const newItem = {
                 ...videoInfo,
                 timestamp: Date.now()
             };
             
-            // 确保episodes字段是一个数组
+            if (!newItem.showIdentifier) {
+                // If showIdentifier is missing from videoInfo, create a basic one.
+                // This is a fallback and ideally showIdentifier should be provided by the caller.
+                newItem.showIdentifier = (newItem.episodes && newItem.episodes.length > 0) ? newItem.episodes[0] : newItem.directVideoUrl;
+                console.warn(`addToViewingHistory: videoInfo for "${newItem.title}" was missing showIdentifier. Generated a fallback.`);
+            }
+
+            // Ensure episodes field is an array
             if (videoInfo.episodes && Array.isArray(videoInfo.episodes)) {
-                newItem.episodes = [...videoInfo.episodes]; // 使用深拷贝
-                console.log(`保存新视频 "${videoInfo.title}" 的剧集数据: ${videoInfo.episodes.length}集`);
+                newItem.episodes = [...videoInfo.episodes]; // Deep copy
             } else {
-                // 如果没有提供episodes，初始化为空数组
                 newItem.episodes = [];
             }
             
             history.unshift(newItem);
+            console.log(`创建新的历史记录 (addToViewingHistory): "${videoInfo.title}", Episode: ${videoInfo.episodeIndex !== undefined ? videoInfo.episodeIndex + 1 : 'N/A'}`);
         }
         
         // 限制历史记录数量为50条
