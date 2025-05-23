@@ -1055,7 +1055,7 @@ function saveToHistory() {
     const urlParams = new URLSearchParams(window.location.search);
     const sourceName = urlParams.get('source') || '';
     const sourceCode = urlParams.get('source_code') || '';
-    const vod_id_from_params = urlParams.get('vod_id'); // Get vod_id from player URL
+    const id_from_params = urlParams.get('id'); // Get video ID from player URL (passed as 'id')
 
     // 获取当前播放进度
     let currentPosition = 0;
@@ -1066,14 +1066,14 @@ function saveToHistory() {
         videoDuration = art.video.duration;
     }
 
-    // Define a show identifier: Prioritize sourceName_vodId, fallback to first episode URL or current video URL
+    // Define a show identifier: Prioritize sourceName_id, fallback to first episode URL or current video URL
     let show_identifier_for_video_info;
-    if (sourceName && vod_id_from_params) {
-        show_identifier_for_video_info = `${sourceName}_${vod_id_from_params}`;
+    if (sourceName && id_from_params) {
+        show_identifier_for_video_info = `${sourceName}_${id_from_params}`;
     } else {
         show_identifier_for_video_info = (currentEpisodes && currentEpisodes.length > 0) ? currentEpisodes[0] : currentVideoUrl;
-        if (!sourceName || !vod_id_from_params) {
-            console.warn(`saveToHistory: Missing sourceName or vod_id in URL params for "${currentVideoTitle}". Falling back to URL-based showIdentifier: ${show_identifier_for_video_info}`);
+        if (!sourceName || !id_from_params) {
+            console.warn(`saveToHistory: Missing sourceName or id in URL params for "${currentVideoTitle}". Falling back to URL-based showIdentifier: ${show_identifier_for_video_info}`);
         }
     }
 
@@ -1081,10 +1081,10 @@ function saveToHistory() {
     const videoInfo = {
         title: currentVideoTitle,
         directVideoUrl: currentVideoUrl, // Current episode's direct URL
-        url: `player.html?url=${encodeURIComponent(currentVideoUrl)}&title=${encodeURIComponent(currentVideoTitle)}&source=${encodeURIComponent(sourceName)}&source_code=${encodeURIComponent(sourceCode)}&vod_id=${encodeURIComponent(vod_id_from_params || '')}&index=${currentEpisodeIndex}&position=${Math.floor(currentPosition || 0)}`,
+        url: `player.html?url=${encodeURIComponent(currentVideoUrl)}&title=${encodeURIComponent(currentVideoTitle)}&source=${encodeURIComponent(sourceName)}&source_code=${encodeURIComponent(sourceCode)}&id=${encodeURIComponent(id_from_params || '')}&index=${currentEpisodeIndex}&position=${Math.floor(currentPosition || 0)}`,
         episodeIndex: currentEpisodeIndex,
         sourceName: sourceName,
-        vod_id: vod_id_from_params || '', // Store vod_id in history item
+        vod_id: id_from_params || '', // Store the ID from params as vod_id in history item
         sourceCode: sourceCode,
         showIdentifier: show_identifier_for_video_info, // Identifier for the show/series
         timestamp: Date.now(),
