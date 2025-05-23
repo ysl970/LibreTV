@@ -377,7 +377,6 @@ document.addEventListener('DOMContentLoaded', function () {
     } else {
         console.warn("Password functions (isPasswordProtected/isPasswordVerified) not found. Assuming no password protection.");
     }
-    setupSkipDropdownEvents();
     initializePageContent();
 });
 
