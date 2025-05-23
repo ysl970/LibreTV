@@ -276,7 +276,7 @@ async function handleApiRequest(url) {
 
             try {
                 // 特殊片源
-                if ((['ffzy', 'jisu', 'huangcang'].includes(sourceCode)) &&
+                if ((['ffzy', 'jisu', 'huangcang', 'dyttzy'].includes(sourceCode)) &&
                     API_SITES[sourceCode]?.detail) {
                     return await handleSpecialSourceDetail(id, sourceCode);
                 }
