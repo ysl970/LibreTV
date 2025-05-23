@@ -21,23 +21,23 @@ function showToast(message, type = 'error') {
     // 首先确保toast元素存在
     let toast = document.getElementById('toast');
     let toastMessage = document.getElementById('toastMessage');
-
+    
     // 如果toast元素不存在，创建它
     if (!toast) {
         toast = document.createElement('div');
         toast.id = 'toast';
         toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 z-50 opacity-0';
-
+        
         toastMessage = document.createElement('p');
         toastMessage.id = 'toastMessage';
         toast.appendChild(toastMessage);
-
+        
         document.body.appendChild(toast);
     }
-
+    
     // 将新的toast添加到队列
     toastQueue.push({ message, type });
-
+    
     // 如果当前没有显示中的toast，则开始显示
     if (!isShowingToast) {
         showNextToast();
@@ -49,33 +49,33 @@ function showNextToast() {
         isShowingToast = false;
         return;
     }
-
+    
     isShowingToast = true;
     const { message, type } = toastQueue.shift();
-
+    
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toastMessage');
-
+    
     const bgColors = {
         'error': 'bg-red-500',
         'success': 'bg-green-500',
         'info': 'bg-blue-500',
         'warning': 'bg-yellow-500'
     };
-
+    
     const bgColor = bgColors[type] || bgColors.error;
     toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${bgColor} text-white z-50`;
     toastMessage.textContent = message;
-
+    
     // 显示提示
     toast.style.opacity = '1';
     toast.style.transform = 'translateX(-50%) translateY(0)';
-
+    
     // 3秒后自动隐藏
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(-50%) translateY(-100%)';
-
+        
         // 等待动画完成后显示下一个toast
         setTimeout(() => {
             showNextToast();
@@ -91,12 +91,12 @@ function showLoading(message = '加载中...') {
     if (loadingTimeoutId) {
         clearTimeout(loadingTimeoutId);
     }
-
+    
     const loading = document.getElementById('loading');
     const messageEl = loading.querySelector('p');
     messageEl.textContent = message;
     loading.style.display = 'flex';
-
+    
     // 设置30秒后自动关闭loading，防止无限loading
     loadingTimeoutId = setTimeout(() => {
         hideLoading();
@@ -110,7 +110,7 @@ function hideLoading() {
         clearTimeout(loadingTimeoutId);
         loadingTimeoutId = null;
     }
-
+    
     const loading = document.getElementById('loading');
     loading.style.display = 'none';
 }
@@ -135,12 +135,12 @@ function getSearchHistory() {
     try {
         const data = localStorage.getItem(SEARCH_HISTORY_KEY);
         if (!data) return [];
-
+        
         const parsed = JSON.parse(data);
-
+        
         // 检查是否是数组
         if (!Array.isArray(parsed)) return [];
-
+        
         // 支持旧格式（字符串数组）和新格式（对象数组）
         return parsed.map(item => {
             if (typeof item === 'string') {
@@ -157,36 +157,36 @@ function getSearchHistory() {
 // 保存搜索历史的增强版本 - 添加时间戳和最大数量限制，现在缓存2个月
 function saveSearchHistory(query) {
     if (!query || !query.trim()) return;
-
+    
     // 清理输入，防止XSS
     query = query.trim().substring(0, 50).replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
+    
     let history = getSearchHistory();
-
+    
     // 获取当前时间
     const now = Date.now();
-
+    
     // 过滤掉超过2个月的记录（约60天，60*24*60*60*1000 = 5184000000毫秒）
-    history = history.filter(item =>
+    history = history.filter(item => 
         typeof item === 'object' && item.timestamp && (now - item.timestamp < 5184000000)
     );
-
+    
     // 删除已存在的相同项
-    history = history.filter(item =>
+    history = history.filter(item => 
         typeof item === 'object' ? item.text !== query : item !== query
     );
-
+    
     // 新项添加到开头，包含时间戳
     history.unshift({
         text: query,
         timestamp: now
     });
-
+    
     // 限制历史记录数量
     if (history.length > MAX_HISTORY_ITEMS) {
         history = history.slice(0, MAX_HISTORY_ITEMS);
     }
-
+    
     try {
         localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
     } catch (e) {
@@ -199,7 +199,7 @@ function saveSearchHistory(query) {
             console.error('再次保存搜索历史失败:', e2);
         }
     }
-
+    
     renderSearchHistory();
 }
 
@@ -207,25 +207,25 @@ function saveSearchHistory(query) {
 function renderSearchHistory() {
     const historyContainer = document.getElementById('recentSearches');
     if (!historyContainer) return;
-
+    
     const history = getSearchHistory();
-
+    
     if (history.length === 0) {
         historyContainer.innerHTML = '';
         return;
     }
-
+    
     // 创建一个包含标题和清除按钮的行
     historyContainer.innerHTML = `
         <div class="flex justify-between items-center w-full mb-2">
             <div class="text-gray-500">最近搜索:</div>
-            <button id="clearHistoryBtn" class="text-gray-500 hover:text-white transition-colors"
+            <button id="clearHistoryBtn" class="text-gray-500 hover:text-white transition-colors" 
                     onclick="clearSearchHistory()" aria-label="清除搜索历史">
                 清除搜索历史
             </button>
         </div>
     `;
-
+    
     history.forEach(item => {
         const tag = document.createElement('button');
         tag.className = 'search-tag flex items-center gap-1';
@@ -246,13 +246,13 @@ function renderSearchHistory() {
             renderSearchHistory();
         };
         tag.appendChild(deleteButton);
-
+        
         // 添加时间提示（如果有时间戳）
         if (item.timestamp) {
             const date = new Date(item.timestamp);
             tag.title = `搜索于: ${date.toLocaleString()}`;
         }
-
+        
         tag.onclick = function() {
             document.getElementById('searchInput').value = item.text;
             search();
@@ -305,16 +305,16 @@ function toggleHistory(e) {
         }
     }
     if (e) e.stopPropagation();
-
+    
     const panel = document.getElementById('historyPanel');
     if (panel) {
         panel.classList.toggle('show');
-
+        
         // 如果打开了历史记录面板，则加载历史数据
         if (panel.classList.contains('show')) {
             loadViewingHistory();
         }
-
+        
         // 如果设置面板是打开的，则关闭它
         const settingsPanel = document.getElementById('settingsPanel');
         if (settingsPanel && settingsPanel.classList.contains('show')) {
@@ -328,32 +328,32 @@ function formatTimestamp(timestamp) {
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now - date;
-
+    
     // 小于1小时，显示"X分钟前"
     if (diff < 3600000) {
         const minutes = Math.floor(diff / 60000);
         return minutes <= 0 ? '刚刚' : `${minutes}分钟前`;
     }
-
+    
     // 小于24小时，显示"X小时前"
     if (diff < 86400000) {
         const hours = Math.floor(diff / 3600000);
         return `${hours}小时前`;
     }
-
+    
     // 小于7天，显示"X天前"
     if (diff < 604800000) {
         const days = Math.floor(diff / 86400000);
         return `${days}天前`;
     }
-
+    
     // 其他情况，显示完整日期
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const day = date.getDate().toString().padStart(2, '0');
     const hour = date.getHours().toString().padStart(2, '0');
     const minute = date.getMinutes().toString().padStart(2, '0');
-
+    
     return `${year}-${month}-${day} ${hour}:${minute}`;
 }
 
@@ -372,14 +372,14 @@ function getViewingHistory() {
 function loadViewingHistory() {
     const historyList = document.getElementById('historyList');
     if (!historyList) return;
-
+    
     const history = getViewingHistory();
-
+    
     if (history.length === 0) {
         historyList.innerHTML = `<div class="text-center text-gray-500 py-8">暂无观看记录</div>`;
         return;
     }
-
+    
     // 渲染历史记录
     historyList.innerHTML = history.map(item => {
         // 防止XSS
@@ -387,21 +387,21 @@ function loadViewingHistory() {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
-
-        const safeSource = item.sourceName ?
-            item.sourceName.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') :
+        
+        const safeSource = item.sourceName ? 
+            item.sourceName.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') : 
             '未知来源';
-
-        const episodeText = item.episodeIndex !== undefined ?
+            
+        const episodeText = item.episodeIndex !== undefined ? 
             `第${item.episodeIndex + 1}集` : '';
-
+        
         // 格式化进度信息
         let progressHtml = '';
         if (item.playbackPosition && item.duration && item.playbackPosition > 10 && item.playbackPosition < item.duration * 0.95) {
             const percent = Math.round((item.playbackPosition / item.duration) * 100);
             const formattedTime = formatPlaybackTime(item.playbackPosition);
             const formattedDuration = formatPlaybackTime(item.duration);
-
+            
             progressHtml = `
                 <div class="history-progress">
                     <div class="progress-bar">
@@ -411,14 +411,14 @@ function loadViewingHistory() {
                 </div>
             `;
         }
-
+        
         // 为防止XSS，使用encodeURIComponent编码URL
         const safeURL = encodeURIComponent(item.url);
-
+        
         // 构建历史记录项HTML，添加删除按钮，需要放在position:relative的容器中
         return `
             <div class="history-item cursor-pointer relative group" onclick="playFromHistory('${item.url}', '${safeTitle}', ${item.episodeIndex || 0}, ${item.playbackPosition || 0})">
-                <button onclick="event.stopPropagation(); deleteHistoryItem('${safeURL}')"
+                <button onclick="event.stopPropagation(); deleteHistoryItem('${safeURL}')" 
                         class="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-400 p-1 rounded-full hover:bg-gray-800 z-10"
                         title="删除记录">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -438,7 +438,7 @@ function loadViewingHistory() {
             </div>
         `;
     }).join('');
-
+    
     // 检查是否存在较多历史记录，添加底部边距确保底部按钮不会挡住内容
     if (history.length > 5) {
         historyList.classList.add('pb-4');
@@ -448,10 +448,10 @@ function loadViewingHistory() {
 // 格式化播放时间为 mm:ss 格式
 function formatPlaybackTime(seconds) {
     if (!seconds || isNaN(seconds)) return '00:00';
-
+    
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = Math.floor(seconds % 60);
-
+    
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
@@ -460,19 +460,19 @@ function deleteHistoryItem(encodedUrl) {
     try {
         // 解码URL
         const url = decodeURIComponent(encodedUrl);
-
+        
         // 获取当前历史记录
         const history = getViewingHistory();
-
+        
         // 过滤掉要删除的项
         const newHistory = history.filter(item => item.url !== url);
-
+        
         // 保存回localStorage
         localStorage.setItem('viewingHistory', JSON.stringify(newHistory));
-
+        
         // 重新加载历史记录显示
         loadViewingHistory();
-
+        
         // 显示成功提示
         showToast('已删除该记录', 'success');
     } catch (e) {
@@ -486,21 +486,21 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     try {
         // 尝试从localStorage获取当前视频的集数信息
         let episodesList = [];
-
+        
         // 检查viewingHistory，查找匹配的项以获取其集数数据
         const historyRaw = localStorage.getItem('viewingHistory');
         if (historyRaw) {
             const history = JSON.parse(historyRaw);
             // 根据标题查找匹配的历史记录
             const historyItem = history.find(item => item.title === title);
-
+            
             // 如果找到了匹配的历史记录，尝试获取该条目的集数数据
             if (historyItem && historyItem.episodes && Array.isArray(historyItem.episodes)) {
                 episodesList = historyItem.episodes;
                 console.log(`从历史记录找到视频 ${title} 的集数数据:`, episodesList.length);
             }
         }
-
+        
         // 如果在历史记录中没找到，尝试使用上一个会话的集数数据
         if (episodesList.length === 0) {
             try {
@@ -513,13 +513,13 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
                 console.error('解析currentEpisodes失败:', e);
             }
         }
-
+        
         // 将剧集列表保存到localStorage，避免过长的URL
         if (episodesList.length > 0) {
             localStorage.setItem('currentEpisodes', JSON.stringify(episodesList));
             console.log(`已将剧集列表保存到localStorage，共 ${episodesList.length} 集`);
         }
-
+        
         // 保存当前页面URL作为返回地址
         // 优先使用 location.origin + location.pathname + location.search，避免 hash 干扰
         let currentPath;
@@ -530,10 +530,10 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
             currentPath = window.location.origin + window.location.pathname + window.location.search;
         }
         localStorage.setItem('lastPageUrl', currentPath);
-
+        
         // 构造播放器URL
         let playerUrl;
-
+        
         // 检查URL是否是嵌套的player.html链接
         if (url.includes('player.html') || url.includes('watch.html')) {
             console.log('检测到嵌套播放链接，解析真实URL');
@@ -541,10 +541,10 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
                 const nestedUrl = new URL(url, window.location.origin);
                 const nestedParams = nestedUrl.searchParams;
                 const realVideoUrl = nestedParams.get('url') || url;
-
+                
                 // 构造更干净的播放链接
                 playerUrl = `player.html?url=${encodeURIComponent(realVideoUrl)}&title=${encodeURIComponent(title)}&index=${episodeIndex}&position=${Math.floor(playbackPosition || 0)}&returnUrl=${encodeURIComponent(currentPath)}`;
-
+                
                 // 如果有source和source_code，也添加
                 const source = nestedParams.get('source');
                 const sourceCode = nestedParams.get('source_code');
@@ -579,7 +579,7 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     }
 }
 
-// 添加观看历史 - 使用唯一标识符确保不同视频有独立记录
+// 添加观看历史 - 确保每个视频标题只有一条记录
 function addToViewingHistory(videoInfo) {
     // 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
@@ -590,70 +590,45 @@ function addToViewingHistory(videoInfo) {
     }
     try {
         const history = getViewingHistory();
-
-        // 创建更唯一的标识符，结合标题和视频ID（如果有）
-        const getUniqueIdentifier = (item) => {
-            if (item.videoId) {
-                return `${item.title}_${item.videoId}`;
-            }
-            // 如果没有ID，尝试使用URL作为备用唯一标识
-            if (item.directVideoUrl) {
-                // 从URL中提取唯一部分，避免使用完整URL导致过长
-                const urlMatch = item.directVideoUrl.match(/\/([a-f0-9]{32}|[a-zA-Z0-9]{16,})\.m3u8$/);
-                if (urlMatch && urlMatch[1]) {
-                    return `${item.title}_${urlMatch[1]}`;
-                }
-            }
-            // 最后的备用方案：使用标题和来源名称
-            return `${item.title}_${item.sourceName || ''}`;
-        };
-
-        // 使用更唯一的标识符检查是否存在相同视频
-        const uniqueId = getUniqueIdentifier(videoInfo);
-        const existingIndex = history.findIndex(item => getUniqueIdentifier(item) === uniqueId);
-
+        
+        // 检查是否已经存在相同的视频记录 (基于标题、来源和直接视频URL)
+        const existingIndex = history.findIndex(item => 
+            item.title === videoInfo.title && 
+            item.sourceName === videoInfo.sourceName &&
+            item.directVideoUrl === videoInfo.directVideoUrl
+        );
         if (existingIndex !== -1) {
             // 存在则更新现有记录的集数和时间戳
             const existingItem = history[existingIndex];
             existingItem.episodeIndex = videoInfo.episodeIndex;
             existingItem.timestamp = Date.now();
-
+            
             // 确保来源信息保留
             if (videoInfo.sourceName && !existingItem.sourceName) {
                 existingItem.sourceName = videoInfo.sourceName;
             }
-
-            // 确保videoId字段存在
-            if (videoInfo.videoId && !existingItem.videoId) {
-                existingItem.videoId = videoInfo.videoId;
-            }
-
+            
             // 更新播放进度信息，仅当新进度有效且大于10秒时
             if (videoInfo.playbackPosition && videoInfo.playbackPosition > 10) {
                 existingItem.playbackPosition = videoInfo.playbackPosition;
                 existingItem.duration = videoInfo.duration || existingItem.duration;
             }
-
+            
             // 更新URL，确保能够跳转到正确的集数
             existingItem.url = videoInfo.url;
-
-            // 更新直接视频URL（如果有）
-            if (videoInfo.directVideoUrl) {
-                existingItem.directVideoUrl = videoInfo.directVideoUrl;
-            }
-
+            
             // 重要：确保episodes数据与当前视频匹配
             // 只有当videoInfo中包含有效的episodes数据时才更新
             if (videoInfo.episodes && Array.isArray(videoInfo.episodes) && videoInfo.episodes.length > 0) {
                 // 如果传入的集数数据与当前保存的不同，则更新
-                if (!existingItem.episodes ||
-                    !Array.isArray(existingItem.episodes) ||
+                if (!existingItem.episodes || 
+                    !Array.isArray(existingItem.episodes) || 
                     existingItem.episodes.length !== videoInfo.episodes.length) {
                     console.log(`更新 "${videoInfo.title}" 的剧集数据: ${videoInfo.episodes.length}集`);
                     existingItem.episodes = [...videoInfo.episodes]; // 使用深拷贝
                 }
             }
-
+            
             // 移到最前面
             history.splice(existingIndex, 1);
             history.unshift(existingItem);
@@ -663,25 +638,25 @@ function addToViewingHistory(videoInfo) {
                 ...videoInfo,
                 timestamp: Date.now()
             };
-
+            
             // 确保episodes字段是一个数组
             if (videoInfo.episodes && Array.isArray(videoInfo.episodes)) {
                 newItem.episodes = [...videoInfo.episodes]; // 使用深拷贝
-                console.log(`保存新视频 "${videoInfo.title}" 的剧集数据: ${videoInfo.episodes.length}集, ID: ${videoInfo.videoId || '无'}`);
+                console.log(`保存新视频 "${videoInfo.title}" 的剧集数据: ${videoInfo.episodes.length}集`);
             } else {
                 // 如果没有提供episodes，初始化为空数组
                 newItem.episodes = [];
             }
-
+            
             history.unshift(newItem);
         }
-
+        
         // 限制历史记录数量为50条
         const maxHistoryItems = 50;
         if (history.length > maxHistoryItems) {
             history.splice(maxHistoryItems);
         }
-
+        
         // 保存到本地存储
         localStorage.setItem('viewingHistory', JSON.stringify(history));
     } catch (e) {
@@ -705,10 +680,10 @@ function clearViewingHistory() {
 const originalToggleSettings = toggleSettings;
 toggleSettings = function(e) {
     if (e) e.stopPropagation();
-
+    
     // 原始设置面板切换逻辑
     originalToggleSettings(e);
-
+    
     // 如果历史记录面板是打开的，则关闭它
     const historyPanel = document.getElementById('historyPanel');
     if (historyPanel && historyPanel.classList.contains('show')) {
@@ -721,10 +696,10 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function(e) {
         const historyPanel = document.getElementById('historyPanel');
         const historyButton = document.querySelector('button[onclick="toggleHistory(event)"]');
-
-        if (historyPanel && historyButton &&
-            !historyPanel.contains(e.target) &&
-            !historyButton.contains(e.target) &&
+        
+        if (historyPanel && historyButton && 
+            !historyPanel.contains(e.target) && 
+            !historyButton.contains(e.target) && 
             historyPanel.classList.contains('show')) {
             historyPanel.classList.remove('show');
         }
@@ -747,9 +722,9 @@ function clearLocalStorage() {
     modal.innerHTML = `
         <div class="bg-[#191919] rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto relative">
             <button id="closeBoxModal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">&times;</button>
-
+            
             <h3 class="text-xl font-bold text-red-500 mb-4">警告</h3>
-
+            
             <div class="mb-0">
                 <div class="text-sm font-medium text-gray-300">确定要清除页面缓存吗？</div>
                 <div class="text-sm font-medium text-gray-300 mb-4">此功能会删除你的观看记录、自定义 API 接口和 Cookie，<scan class="text-red-500 font-bold">此操作不可恢复！</scan></div>
@@ -772,7 +747,7 @@ function clearLocalStorage() {
     document.getElementById('confirmBoxModal').addEventListener('click', function () {
         // 清除所有localStorage数据
         localStorage.clear();
-
+        
         // 清除所有cookie
         const cookies = document.cookie.split(";");
         for (let i = 0; i < cookies.length; i++) {
@@ -781,13 +756,13 @@ function clearLocalStorage() {
             const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
             document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
         }
-
+        
         modal.innerHTML = `
             <div class="bg-[#191919] rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto relative">
                 <button id="closeBoxModal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">&times;</button>
-
+                
                 <h3 class="text-xl font-bold text-white mb-4">提示</h3>
-
+                
                 <div class="mb-4">
                     <div class="text-sm font-medium text-gray-300 mb-4">页面缓存和Cookie已清除，<span id="countdown">3</span> 秒后自动刷新本页面。</div>
                 </div>
@@ -795,7 +770,7 @@ function clearLocalStorage() {
 
         let countdown = 3;
         const countdownElement = document.getElementById('countdown');
-
+        
         const countdownInterval = setInterval(() => {
             countdown--;
             if (countdown >= 0) {
@@ -836,7 +811,7 @@ function showImportBox(fun) {
     modal.innerHTML = `
         <div class="bg-[#191919] rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto relative">
             <button id="closeBoxModal" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">&times;</button>
-
+            
             <div class="m-4">
                 <div id="dropZone" class="w-full py-9 bg-[#111] rounded-2xl border border-gray-300 gap-3 grid border-dashed">
                     <div class="grid gap-1">
