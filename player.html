@@ -23,7 +23,7 @@
     <script src="libs/tailwindcss.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js" defer></script>
     <!--  <script src="libs/hls.min.js" defer></script> -->
-   <!--  <script src="libs/DPlayer.min.js" defer></script>  -->
+    <!--  <script src="libs/DPlayer.min.js" defer></script>  -->
     <script src="https://cdn.jsdelivr.net/npm/dplayer/dist/DPlayer.min.js" defer></script>
     <script src="libs/sha256.min.js" defer></script>
 
@@ -117,6 +117,7 @@
         </div>
 
         <!-- Position 3, 5: Controls and Lock Button -->
+
         <div class="p-4 bg-gray-900 rounded-lg mx-4 mb-4">
             <div class="player-control-bar">
                 <div class="flex items-center gap-2">
@@ -132,6 +133,40 @@
                         <input type="checkbox" id="remember-episode-progress-toggle" checked
                             aria-labelledby="remember-episode-progress-label"> <span class="slider"></span>
                     </label>
+                </div>
+
+                <!-- Skip Intro/Outro Control -->
+                <div class="relative skip-control-container">
+                    <button id="skip-control-button" title="跳过设置"
+                        class="icon-btn bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition-colors"
+                        aria-label="跳过片头片尾">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 3h18M3 21h18M3 7h18M3 14h18" />
+                        </svg>
+                    </button>
+                    <div id="skip-control-dropdown"
+                        class="hidden absolute top-10 left-0 bg-gray-900 rounded shadow-lg p-3 w-48">
+                        <label class="block text-gray-300 text-sm mb-2">
+                            跳片头(秒)
+                            <input id="skip-intro-input" type="number" min="0" step="1"
+                                class="w-full mt-1 bg-gray-800 rounded p-2 text-gray-300" placeholder="输入时间">
+                        </label>
+                        <label class="block text-gray-300 text-sm mb-2">
+                            跳片尾(秒)
+                            <input id="skip-outro-input" type="number" min="0" step="1"
+                                class="w-full mt-1 bg-gray-800 rounded p-2 text-gray-300" placeholder="输入时间">
+                        </label>
+                        <button id="apply-skip-settings"
+                            class="w-full bg-blue-600 rounded p-2 text-white hover:bg-blue-700 mt-2">
+                            应用
+                        </button>
+                        <button id="reset-skip-settings"
+                            class="w-full bg-red-600 rounded p-2 text-white hover:bg-red-700 mt-2">
+                            重置
+                        </button>
+                    </div>
                 </div>
 
                 <button onclick="copyLinks()" title="复制当前视频链接"
@@ -172,7 +207,8 @@
                 <span id="episodes-count" class="text-gray-400"></span>
 
             </div>
-            <div id="episode-grid" class="episode-grid grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2"></div>
+            <div id="episode-grid" class="episode-grid grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+            </div>
         </div>
 
         <!-- 快捷键提示 -->
@@ -182,7 +218,8 @@
         </div>
 
         <!-- 消息提示 -->
-        <div id="message" class="fixed top-4 right-4 p-4 rounded shadow-lg z-50 hidden" aria-live="polite"></div>
+        <div id="message" class="fixed top-4 right-4 p-4 rounded shadow-lg z-50 hidden" aria-live="polite">
+        </div>
     </div>
     <!-- toast 容器 -->
     <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 opacity-0

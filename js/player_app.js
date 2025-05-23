@@ -34,7 +34,6 @@ function testLocalStorageAvailable() {
     }
 }
 
-
 // 递归禁止contextmenu，防止安卓右半边长按出现系统菜单
 function disableContextMenuDeep(element) {
     if (!element) return;
@@ -47,6 +46,7 @@ function disableContextMenuDeep(element) {
         disableContextMenuDeep(child);
     }
 }
+
 // 自动加属性防止安卓video系统菜单
 function patchAndroidVideoHack() {
     if (!/Android/i.test(navigator.userAgent)) return;
@@ -65,6 +65,146 @@ function patchAndroidVideoHack() {
         }
     }, 800); // 确保DPlayer结构已渲染
 }
+
+const SKIP_INTRO_KEY = 'skipIntroTime';
+const SKIP_OUTRO_KEY = 'skipOutroTime';
+
+function setupSkipControls() {
+    // 初始化 UI 元素
+    const skipButton = document.getElementById('skip-control-button');
+    const dropdown = document.getElementById('skip-control-dropdown');
+    const skipIntroInput = document.getElementById('skip-intro-input');
+    const skipOutroInput = document.getElementById('skip-outro-input');
+    const applyBtn = document.getElementById('apply-skip-settings');
+    const resetBtn = document.getElementById('reset-skip-settings');
+
+    if (!skipButton || !dropdown || !skipIntroInput || !skipOutroInput || !applyBtn || !resetBtn) {
+        console.error("跳过片头片尾功能的 HTML 元素未正确加载！");
+        return;
+    }
+
+    // 显示 / 隐藏菜单
+    skipButton.addEventListener('click', () => {
+        if (dropdown.classList.contains('hidden')) {
+            dropdown.classList.remove('hidden');
+            dropdown.classList.add('block');
+        } else {
+            dropdown.classList.add('hidden');
+            dropdown.classList.remove('block');
+        }
+    });
+
+
+    // 应用设置按钮
+    applyBtn.addEventListener('click', () => {
+        const introTime = parseInt(skipIntroInput.value) || 0;
+        const outroTime = parseInt(skipOutroInput.value) || 0;
+
+        localStorage.setItem(SKIP_INTRO_KEY, introTime);
+        localStorage.setItem(SKIP_OUTRO_KEY, outroTime);
+
+        if (typeof showToast === 'function') {
+            showToast('跳过时间设置已保存', 'success');
+        }
+        dropdown.classList.remove('active'); // 收起设置框
+    });
+
+    // 重置时间
+    resetBtn.addEventListener('click', () => {
+        localStorage.removeItem(SKIP_INTRO_KEY);
+        localStorage.removeItem(SKIP_OUTRO_KEY);
+        skipIntroInput.value = '';
+        skipOutroInput.value = '';
+
+        if (typeof showToast === 'function') {
+            showToast('跳过时间设置已重置', 'success');
+        }
+    });
+
+    // 从 localStorage 中加载初始值
+    const savedIntroTime = parseInt(localStorage.getItem(SKIP_INTRO_KEY)) || 0;
+    const savedOutroTime = parseInt(localStorage.getItem(SKIP_OUTRO_KEY)) || 0;
+
+    skipIntroInput.value = savedIntroTime;
+    skipOutroInput.value = savedOutroTime;
+}
+
+function setupSkipDropdownEvents() {
+    document.addEventListener('click', (event) => {
+        const dropdown = document.getElementById('skip-control-dropdown');
+        const skipButton = document.getElementById('skip-control-button');
+        if (!skipButton || !dropdown) return;
+
+        if (skipButton.contains(event.target)) {
+            // 已由 setupSkipControls 单独处理
+        } else if (!dropdown.contains(event.target)) {
+            dropdown.classList.add('hidden');
+            dropdown.classList.remove('block');
+        }
+    });
+
+}
+
+// 自动跳过片头和片尾
+function handleSkipIntroOutro(dpInstance) {
+    if (!dpInstance || !dpInstance.video) return;
+    const video = dpInstance.video;
+
+    // 跳过片头
+    const skipIntroTime = parseInt(localStorage.getItem(SKIP_INTRO_KEY)) || 0;
+    // 解绑旧
+    if (video._skipIntroHandler) {
+        video.removeEventListener('loadedmetadata', video._skipIntroHandler);
+    }
+    if (skipIntroTime > 0) {
+        video._skipIntroHandler = function () {
+            if (video.duration > skipIntroTime && video.currentTime < skipIntroTime) {
+                video.currentTime = skipIntroTime;
+                if (typeof showToast === 'function') showToast(`已跳过${skipIntroTime}秒片头`, 'info');
+            }
+        };
+        video.addEventListener('loadedmetadata', video._skipIntroHandler);
+    } else {
+        video._skipIntroHandler = null;
+    }
+
+    // 跳过片尾
+    const skipOutroTime = parseInt(localStorage.getItem(SKIP_OUTRO_KEY)) || 0;
+    if (video._skipOutroHandler) {
+        video.removeEventListener('timeupdate', video._skipOutroHandler);
+    }
+    if (skipOutroTime > 0) {
+        video._skipOutroHandler = function () {
+            if (!video) return;
+            const remain = video.duration - video.currentTime;
+            if (remain <= skipOutroTime && !video.paused) {
+                if (autoplayEnabled && currentEpisodeIndex < currentEpisodes.length - 1) {
+                    playNextEpisode();
+                } else {
+                    video.pause();
+                    if (typeof showToast === 'function') showToast(`已跳过${skipOutroTime}秒片尾`, 'info');
+                }
+            }
+        };
+        video.addEventListener('timeupdate', video._skipOutroHandler);
+    } else {
+        video._skipOutroHandler = null;
+    }
+}
+
+
+// 初始化跳过功能
+document.addEventListener('DOMContentLoaded', () => {
+    // 初始化 UI 控件
+    setupSkipControls();
+
+    // 新增 Dropdown 菜单显示/隐藏的事件处理
+    setupSkipDropdownEvents();
+
+    // 初始化其他页面功能
+    initializePageContent();
+});
+
 
 /**
  * 展示自定义的“记住进度恢复”弹窗，并Promise化回调
@@ -231,7 +371,6 @@ function setupRememberEpisodeProgressToggle() {
     });
 }
 
-// In js/player_app.js
 document.addEventListener('DOMContentLoaded', function () {
     // Existing password check and initializePageContent call
     if (typeof window.isPasswordVerified === 'function' && typeof window.isPasswordProtected === 'function') {
@@ -408,29 +547,29 @@ function initializePageContent() {
                         } else if (typeof window.showToast === 'function') {
                             window.showToast(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
                         }
-            } else {
-                // 【关键插入 START】
-                // 用户选择“从头播放”，应立刻清除该集的 progress
-                try {
-                    const all = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || '{}');
-                    const vid = `${currentVideoTitle}_${sourceCodeFromUrl || 'unknown_source'}`;
-                    if (all[vid] && all[vid][indexForPlayer.toString()]) {
-                        delete all[vid][indexForPlayer.toString()];
-                        localStorage.setItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY, JSON.stringify(all));
+                    } else {
+                        // 【关键插入 START】
+                        // 用户选择“从头播放”，应立刻清除该集的 progress
+                        try {
+                            const all = JSON.parse(localStorage.getItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY) || '{}');
+                            const vid = `${currentVideoTitle}_${sourceCodeFromUrl || 'unknown_source'}`;
+                            if (all[vid] && all[vid][indexForPlayer.toString()]) {
+                                delete all[vid][indexForPlayer.toString()];
+                                localStorage.setItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY, JSON.stringify(all));
+                            }
+                        } catch (e) {
+                            console.warn('清除本集进度失败：', e);
+                        }
+                        // 【关键插入 END】
+                        episodeUrlForPlayer = currentEpisodes[indexForPlayer];
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.set('url', episodeUrlForPlayer);
+                        newUrl.searchParams.set('index', indexForPlayer.toString());
+                        newUrl.searchParams.delete('position');
+                        window.history.replaceState({}, '', newUrl.toString());
+                        if (typeof showMessage === 'function') showMessage('已从头开始播放', 'info');
+                        else if (typeof showToast === 'function') showToast('已从头开始播放', 'info');
                     }
-                } catch (e) {
-                    console.warn('清除本集进度失败：', e);
-               }
-                // 【关键插入 END】
-                episodeUrlForPlayer = currentEpisodes[indexForPlayer];
-                const newUrl = new URL(window.location.href);
-                newUrl.searchParams.set('url', episodeUrlForPlayer);
-                newUrl.searchParams.set('index', indexForPlayer.toString());
-                newUrl.searchParams.delete('position');
-                window.history.replaceState({}, '', newUrl.toString());
-                if (typeof showMessage === 'function') showMessage('已从头开始播放', 'info');
-                else if (typeof showToast === 'function') showToast('已从头开始播放', 'info');
-            }
                     // ★ 弹窗回调里，直接重新初始化（再次走此流程就不会再弹窗）
                     initializePageContent();
                 });
@@ -694,6 +833,8 @@ function initPlayer(videoUrl, sourceCode) {
 
         // 安卓特殊hack，防止右半屏菜单
         patchAndroidVideoHack();
+        // 添加跳过功能
+        handleSkipIntroOutro(dp);
 
     } catch (playerError) {
         console.error("Failed to initialize DPlayer:", playerError);
@@ -1664,6 +1805,7 @@ function doEpisodeSwitch(index, url) {
     dp.video.pause();
     dp.switchVideo({ url: newEpisodeUrl, type: 'hls' });
     patchAndroidVideoHack();
+    if (typeof handleSkipIntroOutro === 'function' && dp) handleSkipIntroOutro(dp);
     videoHasEnded = false;
 
     // 更新url
