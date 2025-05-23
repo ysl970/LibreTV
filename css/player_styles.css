@@ -1,5 +1,3 @@
-/* 移除重复的滚动条样式，使用全局样式 */
-/* Player-specific styles */
 /* 基本布局和播放器相关样式 */
 .player-container {
   width: 100%;
@@ -369,6 +367,8 @@ input:checked+.slider:before {
   }
 }
 
+/* 跳过片头和片尾下拉菜单样式*/
+
 /* 父容器：用于相对定位 */
 .skip-control-container {
   position: relative;
@@ -535,4 +535,20 @@ input:checked+.slider:before {
 #skip-control-dropdown .inline-fields input {
   width: 100%;
   /* 填满各自的 label 宽度 */
+
+/* 锁屏时也允许全屏按钮交互 */
+.allow-when-locked {
+  z-index: 10003 !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  position: absolute;
+  /* 如需 */
+  top: 10px;
+  right: 20px;
+  /* 取决于页面 */
+}
+
+.player-locked .allow-when-locked {
+  z-index: 10003 !important;
+  pointer-events: auto !important;
 }
