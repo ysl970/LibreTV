@@ -25,23 +25,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 渲染搜索历史
     renderSearchHistory();
     
-    // 设置默认API选择（如果是第一次加载）
-    if (!localStorage.getItem('hasInitializedDefaults')) {
-        // 默认选中资源
-        selectedAPIs = ["tyyszy","bfzy","dyttzy", "ruyi"];
-        localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
-        
-        // 默认选中过滤开关
-        localStorage.setItem('yellowFilterEnabled', 'true');
-        localStorage.setItem(PLAYER_CONFIG.adFilteringStorage, 'true');
-        
-        // 默认启用豆瓣功能
-        localStorage.setItem('doubanEnabled', 'true');
-
-        // 标记已初始化默认值
-        localStorage.setItem('hasInitializedDefaults', 'true');
-    }
-    
     // 设置黄色内容过滤开关初始状态
     const yellowFilterToggle = document.getElementById('yellowFilterToggle');
     if (yellowFilterToggle) {
@@ -59,6 +42,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 初始检查成人API选中状态
     setTimeout(checkAdultAPIsSelected, 100);
+
+    // 初始化默认设置（仅首次加载时）
+    if (localStorage.getItem('hasInitializedDefaults') !== 'true') {
+        localStorage.setItem('yellowFilterEnabled', DEFAULT_YELLOW_FILTER ? 'true' : 'false');
+        localStorage.setItem('doubanEnabled', DEFAULT_DOUBAN_ENABLED ? 'true' : 'false');
+        localStorage.setItem('hasInitializedDefaults', 'true');
+    }
 });
 
 // 初始化API复选框
