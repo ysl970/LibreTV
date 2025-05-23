@@ -85,8 +85,15 @@ function setupSkipControls() {
 
     // 显示 / 隐藏菜单
     skipButton.addEventListener('click', () => {
-        dropdown.classList.toggle('active');
+        if (dropdown.classList.contains('hidden')) {
+            dropdown.classList.remove('hidden');
+            dropdown.classList.add('block');
+        } else {
+            dropdown.classList.add('hidden');
+            dropdown.classList.remove('block');
+        }
     });
+
 
     // 应用设置按钮
     applyBtn.addEventListener('click', () => {
@@ -126,55 +133,65 @@ function setupSkipDropdownEvents() {
     document.addEventListener('click', (event) => {
         const dropdown = document.getElementById('skip-control-dropdown');
         const skipButton = document.getElementById('skip-control-button');
-
         if (!skipButton || !dropdown) return;
 
         if (skipButton.contains(event.target)) {
-            dropdown.classList.toggle('active');
+            // 已由 setupSkipControls 单独处理
         } else if (!dropdown.contains(event.target)) {
-            dropdown.classList.remove('active');
+            dropdown.classList.add('hidden');
+            dropdown.classList.remove('block');
         }
     });
+
 }
 
 // 自动跳过片头和片尾
 function handleSkipIntroOutro(dpInstance) {
     if (!dpInstance || !dpInstance.video) return;
-    // 防多绑：如已有旧的 handler，先 off（DPlayer 1.x 没命名空间，需要变量记住 handler）
-    if (dpInstance.__skipIntroHandler) dpInstance.off('loadedmetadata', dpInstance.__skipIntroHandler);
-    if (dpInstance.__skipOutroHandler) dpInstance.off('timeupdate', dpInstance.__skipOutroHandler);
+    const video = dpInstance.video;
 
+    // 跳过片头
     const skipIntroTime = parseInt(localStorage.getItem(SKIP_INTRO_KEY)) || 0;
+    // 解绑旧
+    if (video._skipIntroHandler) {
+        video.removeEventListener('loadedmetadata', video._skipIntroHandler);
+    }
     if (skipIntroTime > 0) {
-        dpInstance.__skipIntroHandler = function () {
-            if (dpInstance.video && dpInstance.video.duration > skipIntroTime && dpInstance.video.currentTime < skipIntroTime) {
-                dpInstance.seek(skipIntroTime);
+        video._skipIntroHandler = function () {
+            if (video.duration > skipIntroTime && video.currentTime < skipIntroTime) {
+                video.currentTime = skipIntroTime;
                 if (typeof showToast === 'function') showToast(`已跳过${skipIntroTime}秒片头`, 'info');
             }
         };
-        dpInstance.on('loadedmetadata', dpInstance.__skipIntroHandler);
+        video.addEventListener('loadedmetadata', video._skipIntroHandler);
     } else {
-        dpInstance.__skipIntroHandler = null;
+        video._skipIntroHandler = null;
     }
+
+    // 跳过片尾
     const skipOutroTime = parseInt(localStorage.getItem(SKIP_OUTRO_KEY)) || 0;
+    if (video._skipOutroHandler) {
+        video.removeEventListener('timeupdate', video._skipOutroHandler);
+    }
     if (skipOutroTime > 0) {
-        dpInstance.__skipOutroHandler = function () {
-            if (!dpInstance.video) return;
-            const remain = dpInstance.video.duration - dpInstance.video.currentTime;
-            if (remain <= skipOutroTime && !dpInstance.video.paused) {
+        video._skipOutroHandler = function () {
+            if (!video) return;
+            const remain = video.duration - video.currentTime;
+            if (remain <= skipOutroTime && !video.paused) {
                 if (autoplayEnabled && currentEpisodeIndex < currentEpisodes.length - 1) {
                     playNextEpisode();
                 } else {
-                    dpInstance.pause();
+                    video.pause();
                     if (typeof showToast === 'function') showToast(`已跳过${skipOutroTime}秒片尾`, 'info');
                 }
             }
         };
-        dpInstance.on('timeupdate', dpInstance.__skipOutroHandler);
+        video.addEventListener('timeupdate', video._skipOutroHandler);
     } else {
-        dpInstance.__skipOutroHandler = null;
+        video._skipOutroHandler = null;
     }
 }
+
 
 // 初始化跳过功能
 document.addEventListener('DOMContentLoaded', () => {
