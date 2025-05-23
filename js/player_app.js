@@ -66,6 +66,88 @@ function patchAndroidVideoHack() {
     }, 800); // 确保DPlayer结构已渲染
 }
 
+// 默认片头和片尾时间点配置（如果 API 调用失败或未定义）
+const DEFAULT_INTRO_END_TIME = 60; // 默认片头结束时间（秒）
+const DEFAULT_OUTRO_START_TIME = 120; // 默认片尾开始时间倒数秒
+
+// Helper: 动态获取片头/片尾时间点
+const getSkipTimes = async () => {
+    try {
+        // 假设通过 `/api/skip-times` 获取时间点
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('id') || '';
+        const response = await fetch(`/api/skip-times?id=${videoId}`);
+        if (!response.ok) throw new Error('Failed to fetch skip times');
+        const data = await response.json();
+        return {
+            introEndTime: data.introEndTime || DEFAULT_INTRO_END_TIME,
+            outroStartTime: data.outroStartTime || dp.video.duration - DEFAULT_OUTRO_START_TIME
+        };
+    } catch (error) {
+        console.warn('跳过时间获取失败:', error);
+        return {
+            introEndTime: DEFAULT_INTRO_END_TIME,
+            outroStartTime: dp.video.duration - DEFAULT_OUTRO_START_TIME
+        };
+    }
+};
+
+// 跳过片头逻辑
+const skipIntro = async () => {
+    if (!dp || !dp.video) return;
+    const { introEndTime } = await getSkipTimes();
+    if (dp.video.currentTime < introEndTime) {
+        dp.seek(introEndTime);
+        showToast(`已跳过片头，跳到 ${formatPlayerTime(introEndTime)}`, 'success');
+    } else {
+        showToast('已超过片头时间，无需跳过', 'info');
+    }
+};
+
+// 跳过片尾逻辑
+const skipOutro = async () => {
+    if (!dp || !dp.video) return;
+    const { outroStartTime } = await getSkipTimes();
+    if (dp.video.currentTime < outroStartTime) {
+        dp.seek(outroStartTime);
+        showToast(`已跳过片尾，跳到 ${formatPlayerTime(outroStartTime)}`, 'success');
+    } else {
+        showToast('已接近片尾，无需跳过', 'info');
+    }
+};
+
+// 绑定菜单事件
+document.addEventListener('DOMContentLoaded', () => {
+    const skipMenuButton = document.getElementById('skip-menu-button');
+    const skipMenu = document.getElementById('skip-menu');
+    const skipIntroButton = document.getElementById('skip-intro');
+    const skipOutroButton = document.getElementById('skip-outro');
+
+    // 显示或隐藏下拉菜单
+    skipMenuButton.addEventListener('click', () => {
+        skipMenu.classList.toggle('hidden');
+    });
+
+    // 跳过片头
+    skipIntroButton.addEventListener('click', async () => {
+        skipMenu.classList.add('hidden'); // 隐藏菜单
+        await skipIntro();
+    });
+
+    // 跳过片尾
+    skipOutroButton.addEventListener('click', async () => {
+        skipMenu.classList.add('hidden'); // 隐藏菜单
+        await skipOutro();
+    });
+
+    // 点击菜单外部隐藏
+    document.addEventListener('click', (e) => {
+        if (!skipMenu.contains(e.target) && !skipMenuButton.contains(e.target)) {
+            skipMenu.classList.add('hidden');
+        }
+    });
+});
+
 /**
  * 展示自定义的“记住进度恢复”弹窗，并Promise化回调
  * @param {Object} opts 配置对象：title,content,confirmText,cancelText

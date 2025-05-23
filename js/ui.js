@@ -111,8 +111,36 @@ let isShowingToast = false;
  * @param {string} type 消息类型 (error|success|info|warning)
  */
 function showToast(message, type = 'error') {
+    const toastQueue = [];
+    let isShowingToast = false;
+    const TOAST_BG_COLORS = {
+        error: 'bg-red-500',
+        success: 'bg-green-500',
+        info: 'bg-blue-500',
+        warning: 'bg-yellow-500'
+    };
+
     toastQueue.push({ message, type });
     if (!isShowingToast) showNextToast();
+
+    function showNextToast() {
+        if (!toastQueue.length) return (isShowingToast = false);
+        isShowingToast = true;
+        const { message, type } = toastQueue.shift();
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        if (!toast || !toastMessage) return;
+
+        const bg = TOAST_BG_COLORS[type] || TOAST_BG_COLORS.error;
+        toast.className = `fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${bg} text-white z-50`;
+        toastMessage.textContent = message;
+
+        toast.style.opacity = '1';
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(showNextToast, 300); // 清理后显示下一个 Toast
+        }, 3000); // 保持时间
+    }
 }
 
 /**

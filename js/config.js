@@ -83,6 +83,11 @@ const DEFAULTS = {
     debugMode: false      // 调试模式
 };
 
+window.config = {
+    introEndTime: 60, // 默认片头结束时间
+    outroStartTime: 120 // 默认片尾开始时间倒数秒
+};
+
 // 播放器配置
 const PLAYER_CONFIG = {
     autoplay: true,
