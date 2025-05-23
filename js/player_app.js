@@ -198,12 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初始化 UI 控件
     setupSkipControls();
 
-    // 初始化播放器实例
-    if (typeof dp !== 'undefined' && dp) {
-        handleSkipIntroOutro(dp);
-    } else {
-        console.error("播放器实例未初始化，无法绑定跳过功能！");
-    }
     // 新增 Dropdown 菜单显示/隐藏的事件处理
     setupSkipDropdownEvents();
 
