@@ -1055,6 +1055,7 @@ function saveToHistory() {
     const urlParams = new URLSearchParams(window.location.search);
     const sourceName = urlParams.get('source') || '';
     const sourceCode = urlParams.get('source_code') || '';
+    const vod_id_from_params = urlParams.get('vod_id'); // Get vod_id from player URL
 
     // 获取当前播放进度
     let currentPosition = 0;
@@ -1065,27 +1066,30 @@ function saveToHistory() {
         videoDuration = art.video.duration;
     }
 
-    // Define a show identifier: first episode URL if available, otherwise current video URL
-    const showIdentifier = (currentEpisodes && currentEpisodes.length > 0) ? currentEpisodes[0] : currentVideoUrl;
+    // Define a show identifier: Prioritize sourceName_vodId, fallback to first episode URL or current video URL
+    let show_identifier_for_video_info;
+    if (sourceName && vod_id_from_params) {
+        show_identifier_for_video_info = `${sourceName}_${vod_id_from_params}`;
+    } else {
+        show_identifier_for_video_info = (currentEpisodes && currentEpisodes.length > 0) ? currentEpisodes[0] : currentVideoUrl;
+        if (!sourceName || !vod_id_from_params) {
+            console.warn(`saveToHistory: Missing sourceName or vod_id in URL params for "${currentVideoTitle}". Falling back to URL-based showIdentifier: ${show_identifier_for_video_info}`);
+        }
+    }
 
     // 构建要保存的视频信息对象
     const videoInfo = {
         title: currentVideoTitle,
-        // 直接保存原始视频链接 (current episode's URL)
-        directVideoUrl: currentVideoUrl,
-        // 完整的播放器URL for the current episode
-        url: `player.html?url=${encodeURIComponent(currentVideoUrl)}&title=${encodeURIComponent(currentVideoTitle)}&source=${encodeURIComponent(sourceName)}&source_code=${encodeURIComponent(sourceCode)}&index=${currentEpisodeIndex}&position=${Math.floor(currentPosition || 0)}`,
+        directVideoUrl: currentVideoUrl, // Current episode's direct URL
+        url: `player.html?url=${encodeURIComponent(currentVideoUrl)}&title=${encodeURIComponent(currentVideoTitle)}&source=${encodeURIComponent(sourceName)}&source_code=${encodeURIComponent(sourceCode)}&vod_id=${encodeURIComponent(vod_id_from_params || '')}&index=${currentEpisodeIndex}&position=${Math.floor(currentPosition || 0)}`,
         episodeIndex: currentEpisodeIndex,
         sourceName: sourceName,
-        // vod_id and sourceCode might be useful for refreshing episode lists later
-        vod_id: urlParams.get('vod_id') || '', // Assuming vod_id is passed in player URL
+        vod_id: vod_id_from_params || '', // Store vod_id in history item
         sourceCode: sourceCode,
-        showIdentifier: showIdentifier, // Identifier for the show/series
+        showIdentifier: show_identifier_for_video_info, // Identifier for the show/series
         timestamp: Date.now(),
-        // 添加播放进度信息
         playbackPosition: currentPosition,
         duration: videoDuration,
-        // 重要：保存完整的集数列表，确保进行深拷贝
         episodes: currentEpisodes && currentEpisodes.length > 0 ? [...currentEpisodes] : []
     };
 
@@ -1123,14 +1127,14 @@ function saveToHistory() {
                     existingItem.episodes.length !== videoInfo.episodes.length || 
                     !videoInfo.episodes.every((ep, i) => ep === existingItem.episodes[i])) { // Basic check for content change
                     existingItem.episodes = [...videoInfo.episodes]; // Deep copy
-                    console.log(`更新 \"${videoInfo.title}\" 的剧集数据: ${videoInfo.episodes.length}集`);
+                    console.log(`更新 "${videoInfo.title}" 的剧集数据: ${videoInfo.episodes.length}集`);
                 }
             }
             
             // 移到最前面
             const updatedItem = history.splice(existingIndex, 1)[0];
             history.unshift(updatedItem);
-            console.log(`更新历史记录: \"${videoInfo.title}\", 第 ${videoInfo.episodeIndex + 1} 集`);
+            console.log(`更新历史记录: "${videoInfo.title}", 第 ${videoInfo.episodeIndex + 1} 集`);
         } else {
             // 添加新记录到最前面
             console.log(`创建新的历史记录: "${currentVideoTitle}", ${currentEpisodes.length}集`);
