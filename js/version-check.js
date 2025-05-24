@@ -37,8 +37,8 @@ async function checkForUpdates() {
         // 获取最新版本
         let latestVersion;
         const VERSION_URL = {
-            PROXY: 'https://raw.ihtw.moe/raw.githubusercontent.com/LibreSpark/LibreTV/main/VERSION.txt',
-            DIRECT: 'https://raw.githubusercontent.com/LibreSpark/LibreTV/main/VERSION.txt'
+            PROXY: 'https://github.com/TLS-802/YTPPTV/blob/f16967d71289e763cd898eddf963f0d1a89bb04a/VERSION.txt',
+            DIRECT: 'https://github.com/TLS-802/YTPPTV/blob/f16967d71289e763cd898eddf963f0d1a89bb04a/VERSION.txt'
         };
         const FETCH_TIMEOUT = 1500;
         
@@ -148,7 +148,7 @@ function addVersionInfoToFooter() {
                 const updateBtn = versionElement.querySelector('span');
                 if (updateBtn) {
                     updateBtn.addEventListener('click', () => {
-                        window.open('https://github.com/LibreSpark/LibreTV', '_blank');
+                        window.open('https://github.com/TLS-802/YTPPTV', '_blank');
                     });
                 }
             }, 100);
