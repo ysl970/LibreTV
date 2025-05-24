@@ -907,18 +907,9 @@ window.handleResultClick = handleResultClick;
 window.copyLinks = copyLinks;
 window.toggleEpisodeOrderUI = toggleEpisodeOrderUI;
 
-/**
- * 显示视频剧集模态框
- * @param {string} id - 视频ID
- * @param {string} title - 视频标题
- * @param {string} sourceCode - 来源代码
- */
-// 在 app.js 中
 
-async function showVideoEpisodesModal(id, title, sourceCode) {
+async function showVideoEpisodesModal(id, title, sourceCode) { 
     showLoading('加载剧集信息...');
-
-    // 确保 APISourceManager 和 getSelectedApi 方法可用
     if (typeof APISourceManager === 'undefined' || typeof APISourceManager.getSelectedApi !== 'function') {
         hideLoading();
         showToast('数据源管理器不可用', 'error');
@@ -926,7 +917,6 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
         return;
     }
     const selectedApi = APISourceManager.getSelectedApi(sourceCode);
-
     if (!selectedApi) {
         hideLoading();
         showToast('未找到有效的数据源', 'error');
@@ -935,9 +925,14 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
     }
 
     try {
-        let detailApiUrl = `/api/detail?id=${encodeURIComponent(id)}&source=${encodeURIComponent(sourceCode)}`;
+        let detailApiUrl = `/api/detail?id=<span class="math-inline">\{encodeURIComponent\(id\)\}&source\=</span>{encodeURIComponent(sourceCode)}`;
         if (selectedApi.isCustom && selectedApi.url) {
+
             detailApiUrl += `&customApi=${encodeURIComponent(selectedApi.url)}`;
+
+            if (APISourceManager.getCustomApiInfo(parseInt(sourceCode.replace('custom_', '')))?.detail) {
+                detailApiUrl += `&useDetail=true`;
+            }
         }
 
         const response = await fetch(detailApiUrl);
@@ -947,7 +942,6 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
         const data = await response.json();
 
         hideLoading();
-
         if (data.code !== 200 || !data.episodes || data.episodes.length === 0) {
             let errorMessage = data.msg || (data.videoInfo && data.videoInfo.msg) || (data.list && data.list.length > 0 && data.list[0] && data.list[0].msg) || '未找到剧集信息';
             showToast(errorMessage, 'warning');
@@ -960,13 +954,12 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
         AppState.set('currentSourceName', selectedApi.name);
         AppState.set('currentSourceCode', sourceCode);
 
-        // ← 在这里，紧接着写入 localStorage，player.html 会读取这两项
         localStorage.setItem('currentEpisodes', JSON.stringify(data.episodes));
         localStorage.setItem('currentVideoTitle', title);
 
-        const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode, selectedApi.name);
-        showModal(episodeButtonsHtml, `${title} (${selectedApi.name})`);
-
+        // 调用 renderEpisodeButtons 时传递 id (作为 vodId)
+        const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode, selectedApi.name, id); // <--- 添加 id
+        showModal(episodeButtonsHtml, `<span class="math-inline">\{title\} \(</span>{selectedApi.name})`);
     } catch (error) {
         hideLoading();
         console.error('获取剧集信息失败 (catch block):', error, `Requested URL: ${detailApiUrl}`);
