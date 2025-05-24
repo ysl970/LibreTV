@@ -64,12 +64,15 @@ function showDetails(element) {
     // 潜在地使用这些数据属性获取并显示详情
 }
 
-/**
- * 文本净化函数
- * 重要：这是一个基本的存根。真实实现需要强大的XSS保护。
- * @param {string} text - 需要净化的文本
- * @returns {string} - 净化后的文本
- */
+function escapeJsString(str) {
+    if (typeof str !== 'string') return '';
+    return str
+        .replace(/\\/g, '\\\\') // 1. 转义反斜杠
+        .replace(/'/g, '\\\'') // 2. 转义单引号
+        .replace(/\n/g, '\\n') // 3. 转义换行符
+        .replace(/\r/g, '\\r'); // 4. 转义回车符
+}
+
 function sanitizeText(text) {
     if (typeof text !== 'string') return '';
     return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -176,9 +179,9 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0 /*, sour
     let episodesList = [];
     try {
         const history = JSON.parse(localStorage.getItem('viewingHistory') || '[]');
-        historyItem = history.find(item => 
-            item.url === url && 
-            item.title === title && 
+        historyItem = history.find(item =>
+            item.url === url &&
+            item.title === title &&
             item.episodeIndex === episodeIndex
         );
 
@@ -196,7 +199,7 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0 /*, sour
         console.error("Error accessing or parsing viewingHistory:", e);
         episodesList = AppState.get('currentEpisodes') || JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
     }
-    
+
     // 更新 AppState 和 localStorage 以反映即将播放的剧集信息
     AppState.set('currentEpisodeIndex', episodeIndex);
     AppState.set('currentVideoTitle', title);
@@ -220,7 +223,7 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0 /*, sour
     const playerUrl = new URL('player.html', window.location.origin);
     playerUrl.searchParams.set('url', url); // 这是特定集的URL
     playerUrl.searchParams.set('title', title);
-    playerUrl.searchParams.set('index', episodeIndex.toString()); 
+    playerUrl.searchParams.set('index', episodeIndex.toString());
 
     if (vodId) {
         playerUrl.searchParams.set('id', vodId); // 传递 vod_id
@@ -237,8 +240,8 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0 /*, sour
     }
 
     // 添加广告过滤参数 (PLAYER_CONFIG 和 getBoolConfig 应在 app.js 或其引用的 config.js 中可用)
-    const adOn = typeof getBoolConfig !== 'undefined' && typeof PLAYER_CONFIG !== 'undefined' ? 
-                 getBoolConfig(PLAYER_CONFIG.adFilteringStorage, false) : false;
+    const adOn = typeof getBoolConfig !== 'undefined' && typeof PLAYER_CONFIG !== 'undefined' ?
+        getBoolConfig(PLAYER_CONFIG.adFilteringStorage, false) : false;
     playerUrl.searchParams.set('af', adOn ? '1' : '0');
 
     console.log(`[App - playFromHistory] Navigating to player: ${playerUrl.toString()}`);
@@ -971,31 +974,27 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
     }
 }
 
-/**
- * 渲染剧集按钮HTML
- * @param {Array} episodes - 剧集列表
- * @param {string} videoTitle - 视频标题
- * @param {string} sourceCode - 来源代码
- * @param {string} sourceName - 来源名称
- * @returns {string} - 剧集按钮HTML
- */
-
-function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
+function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName, vodId) { // 新增 vodId 参数
     if (!episodes || episodes.length === 0) return '<p class="text-center text-gray-500">暂无剧集信息</p>';
     const currentReversedState = AppState.get('episodesReversed') || false;
 
+    const escapedVideoTitle = escapeJsString(videoTitle);
+    const escapedSourceName = escapeJsString(sourceName);
+    const escapedSourceCode = escapeJsString(sourceCode);
+    const escapedVodId = escapeJsString(vodId);
+
     let html = `
     <div class="mb-4 flex justify-end items-center space-x-2">
-        <div class="text-sm text-gray-400 mr-auto">共 ${episodes.length} 集</div>
-        <button onclick="copyLinks()"
-                title="复制所有剧集链接"
-                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-            </svg>
-        </button>
-        <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" 
-                title="${currentReversedState ? '切换为正序排列' : '切换为倒序排列'}" /* 添加 title 提示 */
+        <div class="text-sm text-gray-400 mr-auto">共 <span class="math-inline">\{episodes\.length\} 集</div\>
+<button onclick\="copyLinks\(\)"
+title\="复制所有剧集链接"
+class\="p\-2 bg\-gray\-700 hover\:bg\-gray\-600 text\-white rounded\-lg transition\-colors flex items\-center justify\-center"\>
+<svg xmlns\="http\://www\.w3\.org/2000/svg" class\="h\-5 w\-5" fill\="none" viewBox\="0 0 24 24" stroke\="currentColor"\>
+<path stroke\-linecap\="round" stroke\-linejoin\="round" stroke\-width\="2" d\="M8 5H6a2 2 0 00\-2 2v12a2 2 0 002 2h10a2 2 0 002\-2v\-1M8 5a2 2 0 002 2h2a2 2 0 002\-2M8 5a2 2 0 012\-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3\-3m\-3 3l3 3" /\>
+</svg\>
+</button\>
+<button id\="toggleEpisodeOrderBtn" onclick\="toggleEpisodeOrderUI\(\)" 
+title\="</span>{currentReversedState ? '切换为正序排列' : '切换为倒序排列'}"
                 class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
             <svg id="orderIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transition: transform 0.3s ease;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -1008,12 +1007,12 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
 
     displayEpisodes.forEach((episodeUrl, displayIndex) => {
         const originalIndex = currentReversedState ? (episodes.length - 1 - displayIndex) : displayIndex;
-        const safeVideoTitle = encodeURIComponent(videoTitle);
-        const safeSourceName = encodeURIComponent(sourceName);
+        const escapedEpisodeUrl = escapeJsString(episodeUrl); // 转义 episodeUrl
 
+        // onclick 调用 playVideo 时，字符串参数需要被正确包裹和转义
         html += `
         <button 
-            onclick="playVideo('<span class="math-inline">\{episodeUrl\}', decodeURIComponent\('</span>{safeVideoTitle}'), <span class="math-inline">\{originalIndex\}, decodeURIComponent\('</span>{safeSourceName}'), '<span class="math-inline">\{sourceCode\}', '</span>{vodId}')" 
+            onclick="playVideo('<span class="math-inline">\{escapedEpisodeUrl\}', decodeURIComponent\('</span>{escapedVideoTitle}'), <span class="math-inline">\{originalIndex\}, decodeURIComponent\('</span>{escapedSourceName}'), '<span class="math-inline">\{escapedSourceCode\}', '</span>{escapedVodId}')" 
             class="episode-btn px-2 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs sm:text-sm transition-colors truncate"
             data-index="${originalIndex}"
             title="第 ${originalIndex + 1} 集" 
@@ -1028,7 +1027,6 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
         if (orderIcon) {
             orderIcon.style.transform = currentReversedState ? 'rotate(180deg)' : 'rotate(0deg)';
         }
-        // 更新 title 提示
         const toggleBtn = document.getElementById('toggleEpisodeOrderBtn');
         if (toggleBtn) {
             const currentReversed = AppState.get('episodesReversed') || false;
@@ -1037,6 +1035,7 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
     });
     return html;
 }
+
 // 复制视频链接到剪贴板
 function copyLinks() {
     const reversed = AppState.get('episodesReversed') || false;
