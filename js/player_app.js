@@ -534,7 +534,7 @@ function initializePageContent() {
             }
 
             if (positionToResume > 5 && currentEpisodes[resumeIndex]) {
-                showProgressRestoreModal({ 
+                showProgressRestoreModal({
                     title: "继续播放？",
                     content: `发现《${currentVideoTitle}》第 ${resumeIndex + 1} 集的播放记录，<br>是否从 <span style="color:#00ccff">${formatPlayerTime(positionToResume)}</span> 继续播放？`,
                     confirmText: "继续播放",
@@ -543,9 +543,20 @@ function initializePageContent() {
                     if (wantsToResume) {
                         episodeUrlForPlayer = currentEpisodes[resumeIndex];
                         indexForPlayer = resumeIndex;
-                        // ... 更新URL参数 ...
+
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.set('url', episodeUrlForPlayer);
+                        newUrl.searchParams.set('index', indexForPlayer.toString());
+                        newUrl.searchParams.set('position', positionToResume.toString());
                         newUrl.searchParams.set('id', vodIdForPlayer); // <--- 确保 id 也存在
-                        // ...
+
+                        window.history.replaceState({}, '', newUrl.toString());
+
+                        if (typeof window.showMessage === 'function') {
+                            window.showMessage(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
+                        } else if (typeof window.showToast === 'function') {
+                            window.showToast(`将从 ${formatPlayerTime(positionToResume)} 继续播放`, 'info');
+                        }
                     } else {
                         // 用户选择从头播放，清除该集的特定进度
                         try {
@@ -556,10 +567,16 @@ function initializePageContent() {
                                 // (可选) 检查是否清空了所有集数的进度，如果是，也可以删除 lastPlayedEpisodeIndex
                                 localStorage.setItem(VIDEO_SPECIFIC_EPISODE_PROGRESSES_KEY, JSON.stringify(all_prog));
                             }
-                        } catch (e) { console.warn('清除本集特定进度失败：', e); }
-                        // ...
-                        newUrl.searchParams.set('id', vodIdForPlayer); // <--- 确保 id 也存在
-                        // ...
+                        } catch (e) { console.warn('清除本集特定进度失败：', e); }   
+                        episodeUrlForPlayer = currentEpisodes[indexForPlayer];
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.set('url', episodeUrlForPlayer);
+                        newUrl.searchParams.set('index', indexForPlayer.toString());
+                        newUrl.searchParams.delete('position');
+                        newUrl.searchParams.set('id', vodIdForPlayer);  
+                        window.history.replaceState({}, '', newUrl.toString());
+                        if (typeof showMessage === 'function') showMessage('已从头开始播放', 'info');
+                        else if (typeof showToast === 'function') showToast('已从头开始播放', 'info');                                                
                     }
                     initializePageContent(); // 重新初始化以应用选择
                 });
