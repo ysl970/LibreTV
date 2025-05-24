@@ -1,0 +1,94 @@
+pick 66d988ebe9427a70f853e525393a0772875b0624 feat: Add initial implementation of LibreTV platform with video search and playback features
+pick d74396e4d09d83b9fe448b6a852eb4277636f263 chore: Update last modified dates in sitemap.xml
+pick f41fc5f52e55f2a4c7cde20886c84caf3ab08446 chore: Remove logo image from README.md
+pick a906ff0dcb88f39ce97a3af4076ed3a9751187a9 fix: Update description meta tag
+pick d4db8bac43a499444e52613ac0ed842fbde65a17 feat: Add footer section with responsive styles and ensure proper display
+pick 6034edbc7eac70a8cdc9d7933649bff5c07b0d81 feat: Enhance styles with new color variables and gradients for improved UI
+pick 08a94deb88d239334d9a1ff7e92ae38475811493 fix: Remove URL encoding in playVideo function to prevent double encoding issues
+pick 8156e581593b91d87d4af63bf01f16f2c8561fd8 feat: Add about and privacy pages with structured content and responsive design
+pick 5e5f604966635025074fe6a28320c552c0747600 docs: update readme
+pick 9cd61085a6f753ef3ca103da81499b9dd05e5dae feat: Implement horizontal scrolling for episode selection with navigation buttons
+pick d236867cbf4b1cd50eb6ff7f0c554e96ee931612 feat: Add auto-play feature for next episode with toggle and navigation controls
+pick c4cbd5ac44a4e7f2834012e91d0a0bb3a429db27 refactor: Update auto-play feature and improve search history caching duration
+pick 0b214ed40d73ae415afd7486bccd64e979e301eb refactor: Remove deprecated API source and update related documentation
+pick 4932378c0afc0324b7929ef5cc152b5d36e70f3e docs: fix
+pick 754a8101b5951f524769e203c0e0f2df6e8fa71b fix: correct the name of the video source from 黑莓影视 to 黑木耳影视 in the settings panel
+pick 1a6f8b85729846a20c0d1661d781f398e2fa1c65 feat(播放器): 添加自定义播放器并启用广告过滤功能
+pick 6cd4b982fff794d363ddcd1852f71cacefdd5aa4 feat: enhance player functionality with ad filtering and support for HLS streaming
+pick 29e8f01066df40eb81eace03ad14acb4157fdb84 feat: 改进广告检测逻辑并优化HLS播放器配置
+pick c0fd6ca304d384faec1d4ee06f6aa5a70da7db30 refactor(播放器): 优化广告检测逻辑和HLS配置参数
+pick e81dda66ebc1fc8bb0ddee2a1a4969783ba75ae8 docs fixup: update readme
+pick 19998f63a1897691385adfee0ae227a284af42fd refactor(player): 移除广告片段检测逻辑，仅过滤#EXT-X-DISCONTINUITY标识
+pick f96a3e6aa87a18c9eb7956969a78eefa22765d4e perf(播放器): 调整缓冲区配置以优化性能
+pick 640c856cc10848ba24254b73594673f32edbbcb2 feat: add Dockerfile and GitHub Actions workflow for Docker image build and push
+pick 6347bcc5028708dec721154ec5daab8511689fd3 docs: add Docker deployment instructions and GitHub Actions setup
+pick 7da7bcb8881e4e664f114477cbb3550bf15baa50 feat: add new video sources (天涯资源 and CK资源) to the API configuration and update the source selection in the UI
+pick 83017ad692c59ee1711c116d3037e97ef01426dc refactor(config): 修改搜索接口路径以返回更多详细数据
+pick 56ea2bcbc6f3632bba26f27e17649beea0684ede fix(player): adjust height to 100vh for better iPad mini compatibility
+pick 3464dbd0cf4982b658ecd8e5539c59add5350442 Dev (#18)
+pick 35a656a9b9ca264b3558465969eabe8c66f6c41a Update player.html (#19)
+pick a16961cdd0cedde623143767e9a8a3cd4c949cfb adjust container build process (#22)
+pick 0ddd9aef5bc13df2cfcfc4635a100759798b9345 Dev (#23)
+pick 367a62085238b768cccbaeb188a9057dac45f9f4 Dev (#24) # empty
+pick 10fb199b5de9d2b89d47101e8446398b59e10722 Dev (#27)
+pick 6875a34c16ce0de2442ac4a838d079d2820c7f94 Add autoplay feature and improve progress bar interaction in player
+pick 65752621c62b129814b16532cdc38bdc6c4b8cbf Update readme.md
+pick 16d241bf3e96d610a13626a32246d100059cfb96 Add aggregated search feature and update API source handling
+pick 4c20581efbc3aee08c4f0af84981344f0a266113 fix: 兼容旧浏览器正则引擎
+pick 839b8d05b14c00ebf412ea41231f47fb79e28e3e Update api.js
+pick 1c84c834d8eee7a8c5dbeb730c39c07b54f716e8 Refactor Dockerfile and enhance search result layout in app.js
+pick fa4bed9d8460bfbdc1007f5e3719e711355f2466 Add keyboard shortcut hints and styles to player.html and update README
+pick 029e4219a9375f477e5bcf0cc018d7d4f519ad39 add 黄色内容过滤开关
+pick 8e9638ac940c77627e50548b99d87b1dfbeb9953 允许多个自定义源；Enhance custom API support: allow multiple API sources, update input handling, and improve search functionality
+pick dc815896cce2ef93263e37c2499f155fc10262ca Update player.html
+pick d7d2a84a723f99231e060499c2bbe642eb892baa 增加一个极速资源源
+pick 3e23923ed5244c31abd05a459aa54fb863fba7ce Refactor card layout for desktop: reduce card size and padding for improved display (#52)
+pick 75b4e223c54a1a2ec2298a92c77fb02d59b3ad1a Create LICENSE (#53)
+pick 40a60b9d9bbb1bc6a154baa11a36217bb3d62750 Dev (#54)
+pick 01ed9c1fb2ec076bbc053756150e7e26f43b2ce8 Remove proxy URL configuration temporarily (#59)
+pick 7884018e406938ce8b02cf8b173f6878f252c1cf Dev (#60) 换了一个 proxy url
+pick 97c370471ca13d743022612f15dd532da8437ace add sync.yml for repo sync automatically (#61)
+pick 07666bca038e6eef1efc099f4cd3f7dca7d22270 Revert "add sync.yml for repo sync automatically (#61)" (#66)
+pick 3c99e72eb4829870f159c7ff1fd27353ccfd71b7 Reapply "add sync.yml for repo sync automatically (#61)" (#66)
+pick eab0767c7efefe42e13f846a4fb4e5a50ce7d50a 微调UI，恢复 sync 文件 (add sync.yml for repo sync automatically (https://github.com/bestZwei/LibreTV/pull/61) 增加同步工作流文件) (#69)
+pick 6c465cb9711ed98cbdfe89704e4ef4c7eca72242 Dev (#72)
+pick 3bc324ce48bfef53fdfd7ecca1ffd8443d663d6b Dev (#73)
+pick f838c50b1a99e8e0ec7563eac94462b79c69f205 Dev (#74)
+pick 25d02c4451cea3e96a8cfea913168d4ff3b94cce Enhance API source options and filtering; add new sources and update handling for special sources
+pick a4cad032f6cec43382cbd481b1c59a3d537afe00 #fix
+pick 942f7cf1310c288be38d431ee3a97dce3feba50c 重构应用程序接口处理，增强对自定义应用程序接口的支持
+pick 1eedb04feec0b2ccaf902aa86663c35d0fd7fb21 Update button labels for clarity and enhance README with version 1.0.3 details
+pick 881280f95a398e821b1e20c2ab4225aacd84d1f9 Add option to hide built-in adult APIs and update related UI logic
+pick 0c660e924bbd7bf31a9366d44a118fd50f33e63d Add configuration option to hide built-in adult APIs in settings
+pick 28a58512d47a438dc4db56027c972f0a90f8a5e0 Add viewing history feature with UI panel and local storage support
+pick b645c1b85c5976f62f130999641b677a8cdd65e8 更新了多个文件以改进用户界面和播放器功能：
+pick 8e0d510af336ab087f7606204ed909e95b9be250 Enhance playback history feature with progress tracking and restore hint
+pick 6a5c9d09c913d9d4ddf67f236fe7c98fe5042a9d 手机端点击全屏播放时自动触发横屏
+pick 6a9de45e30a1adfadb7bc379fe7f293bfbb49749 Update app.js
+pick 1f0c9a2d9b9181a23c02ef387b8aa646d1deb4dc 增加一个采集站源
+pick 34c88f04b78c2a1a7ee7c089265a8cdb27a67a1f fix about.html
+pick 4f7ad33b7e0baa4578fcf69fe67bc091e95671bf add disclaimer modal and check on page load
+pick ffb8012b85434754ea636d8b2c1c3402a54c8d5c fix
+pick bd4faffb20ffa59cf88deed0ca7cd1b98eb319ab 移动悬浮按钮位置
+pick dc59e8780605af87f21fd12b6fa9308c716bc10e Update api.js
+pick 4e2102e8616d1afba0e41e1ce168561dde985c17 Update repository references to LibreSpark in workflows and README
+pick 9443b2c2f65b1d9918d7360f8d4080c498afa574 修改仓库链接
+pick 2ae9f6139e420eefe79bf16f1f17aff32e22d4a1 修复与优化：历史记录卡片播放进度实时同步
+pick d36dba202f6d4454a80ee6b8b989a9ba5ed13297 fix: update proxy URL to use the correct API endpoint
+pick 6038e0aad2f5ef815b0c40fb78b9dcd9251d5a51 fix: add commented-out alternative proxy URLs for reference
+pick 5f60f2afa96bd3295bbe0fa53d730b48205b8567 增加内置代理相关的functions函数文件
+pick 4818f87d5b214a523294b035f20c380f03711a86 将代理改为内置函数实现
+pick 7833cd3059f6f30f2d54247f5d2f0c958437b523 feat: implement password protection feature with environment variable injection
+pick 72261bbdf88c0fdc9e25cc6bf08d4b951658628b 修复vercel部署问题
+pick d791757357e7c049afc6a816e86e4072f1868372 fix: update port mapping from 8080 to 8899 in docker-compose.yml
+pick baa2f25e3534fdb7431f42eb154427e34d99e648 fix: update password verification TTL from 7 days to 90 days in config and README
+pick 2440931d4235944abefd04cf8f875220bc9fc314 fix: update README to reflect backend proxy functionality and deployment instructions
+pick 4b492987cc5f39a7ee4c36e6a61039933d283110 fix: enhance playback functionality by adding episode data handling from URL and localStorage
+pick a2d8b2f6fbffb70024e616aa2d95124494b3a772 fix
+pick ee9bd9133b40830bd8c0b7baeadde4dce2957272 fix: validate episode index and add toast notifications for errors
+pick 9dd6f353c4f5e9d44afb35390c43528c08753507 确保从主页中点击不同视频时的剧集数据正确保存
+pick 0c69c22ad68883e3461bc9a5dd90a70c1eb41713 fix: implement password protection checks to prevent unauthorized access
+pick 8c1186e0ac44db697fe6d92a76d3331a7c73dc98 fix: add password protection checks to prevent unauthorized access in various functions
+pick 4e1cbeed87d172d9d639cae466df0728ee47e7bd fix: remove redundant password protection checks in toggleSettings function
+pick e39ce17d567b843e653e335b57cb098372f9dd27 feat: add control locking feature to player for improved user experience
+pick 8b599c016547fe5a8f56d58e2f989fb43c2edff8 增强密码保护功能，绕过密码仍然无法使用核心功能 (#139)

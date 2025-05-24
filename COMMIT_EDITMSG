@@ -1,0 +1,11 @@
+增强密码保护功能，绕过密码仍然无法使用核心功能 (#139)
+
+* fix: implement password protection checks to prevent unauthorized access
+
+* fix: add password protection checks to prevent unauthorized access in various functions
+
+* fix: remove redundant password protection checks in toggleSettings function
+
+---------
+
+Co-authored-by: developer <noreply@null.org>

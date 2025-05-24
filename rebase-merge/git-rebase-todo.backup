@@ -1,0 +1,427 @@
+pick 66d988ebe9427a70f853e525393a0772875b0624 feat: Add initial implementation of LibreTV platform with video search and playback features
+pick d74396e4d09d83b9fe448b6a852eb4277636f263 chore: Update last modified dates in sitemap.xml
+pick f41fc5f52e55f2a4c7cde20886c84caf3ab08446 chore: Remove logo image from README.md
+pick a906ff0dcb88f39ce97a3af4076ed3a9751187a9 fix: Update description meta tag
+pick d4db8bac43a499444e52613ac0ed842fbde65a17 feat: Add footer section with responsive styles and ensure proper display
+pick 6034edbc7eac70a8cdc9d7933649bff5c07b0d81 feat: Enhance styles with new color variables and gradients for improved UI
+pick 08a94deb88d239334d9a1ff7e92ae38475811493 fix: Remove URL encoding in playVideo function to prevent double encoding issues
+pick 8156e581593b91d87d4af63bf01f16f2c8561fd8 feat: Add about and privacy pages with structured content and responsive design
+pick 5e5f604966635025074fe6a28320c552c0747600 docs: update readme
+pick 9cd61085a6f753ef3ca103da81499b9dd05e5dae feat: Implement horizontal scrolling for episode selection with navigation buttons
+pick d236867cbf4b1cd50eb6ff7f0c554e96ee931612 feat: Add auto-play feature for next episode with toggle and navigation controls
+pick c4cbd5ac44a4e7f2834012e91d0a0bb3a429db27 refactor: Update auto-play feature and improve search history caching duration
+pick 0b214ed40d73ae415afd7486bccd64e979e301eb refactor: Remove deprecated API source and update related documentation
+pick 4932378c0afc0324b7929ef5cc152b5d36e70f3e docs: fix
+pick 754a8101b5951f524769e203c0e0f2df6e8fa71b fix: correct the name of the video source from 黑莓影视 to 黑木耳影视 in the settings panel
+pick 1a6f8b85729846a20c0d1661d781f398e2fa1c65 feat(播放器): 添加自定义播放器并启用广告过滤功能
+pick 6cd4b982fff794d363ddcd1852f71cacefdd5aa4 feat: enhance player functionality with ad filtering and support for HLS streaming
+pick 29e8f01066df40eb81eace03ad14acb4157fdb84 feat: 改进广告检测逻辑并优化HLS播放器配置
+pick c0fd6ca304d384faec1d4ee06f6aa5a70da7db30 refactor(播放器): 优化广告检测逻辑和HLS配置参数
+pick e81dda66ebc1fc8bb0ddee2a1a4969783ba75ae8 docs fixup: update readme
+pick 19998f63a1897691385adfee0ae227a284af42fd refactor(player): 移除广告片段检测逻辑，仅过滤#EXT-X-DISCONTINUITY标识
+pick f96a3e6aa87a18c9eb7956969a78eefa22765d4e perf(播放器): 调整缓冲区配置以优化性能
+pick 640c856cc10848ba24254b73594673f32edbbcb2 feat: add Dockerfile and GitHub Actions workflow for Docker image build and push
+pick 6347bcc5028708dec721154ec5daab8511689fd3 docs: add Docker deployment instructions and GitHub Actions setup
+pick 7da7bcb8881e4e664f114477cbb3550bf15baa50 feat: add new video sources (天涯资源 and CK资源) to the API configuration and update the source selection in the UI
+pick 83017ad692c59ee1711c116d3037e97ef01426dc refactor(config): 修改搜索接口路径以返回更多详细数据
+pick 56ea2bcbc6f3632bba26f27e17649beea0684ede fix(player): adjust height to 100vh for better iPad mini compatibility
+pick 3464dbd0cf4982b658ecd8e5539c59add5350442 Dev (#18)
+pick 35a656a9b9ca264b3558465969eabe8c66f6c41a Update player.html (#19)
+pick a16961cdd0cedde623143767e9a8a3cd4c949cfb adjust container build process (#22)
+pick 0ddd9aef5bc13df2cfcfc4635a100759798b9345 Dev (#23)
+pick 367a62085238b768cccbaeb188a9057dac45f9f4 Dev (#24) # empty
+pick 10fb199b5de9d2b89d47101e8446398b59e10722 Dev (#27)
+pick 6875a34c16ce0de2442ac4a838d079d2820c7f94 Add autoplay feature and improve progress bar interaction in player
+pick 65752621c62b129814b16532cdc38bdc6c4b8cbf Update readme.md
+pick 16d241bf3e96d610a13626a32246d100059cfb96 Add aggregated search feature and update API source handling
+pick 4c20581efbc3aee08c4f0af84981344f0a266113 fix: 兼容旧浏览器正则引擎
+pick 839b8d05b14c00ebf412ea41231f47fb79e28e3e Update api.js
+pick 1c84c834d8eee7a8c5dbeb730c39c07b54f716e8 Refactor Dockerfile and enhance search result layout in app.js
+pick fa4bed9d8460bfbdc1007f5e3719e711355f2466 Add keyboard shortcut hints and styles to player.html and update README
+pick 029e4219a9375f477e5bcf0cc018d7d4f519ad39 add 黄色内容过滤开关
+pick 8e9638ac940c77627e50548b99d87b1dfbeb9953 允许多个自定义源；Enhance custom API support: allow multiple API sources, update input handling, and improve search functionality
+pick dc815896cce2ef93263e37c2499f155fc10262ca Update player.html
+pick d7d2a84a723f99231e060499c2bbe642eb892baa 增加一个极速资源源
+pick 3e23923ed5244c31abd05a459aa54fb863fba7ce Refactor card layout for desktop: reduce card size and padding for improved display (#52)
+pick 75b4e223c54a1a2ec2298a92c77fb02d59b3ad1a Create LICENSE (#53)
+pick 40a60b9d9bbb1bc6a154baa11a36217bb3d62750 Dev (#54)
+pick 01ed9c1fb2ec076bbc053756150e7e26f43b2ce8 Remove proxy URL configuration temporarily (#59)
+pick 7884018e406938ce8b02cf8b173f6878f252c1cf Dev (#60) 换了一个 proxy url
+pick 97c370471ca13d743022612f15dd532da8437ace add sync.yml for repo sync automatically (#61)
+pick 07666bca038e6eef1efc099f4cd3f7dca7d22270 Revert "add sync.yml for repo sync automatically (#61)" (#66)
+pick 3c99e72eb4829870f159c7ff1fd27353ccfd71b7 Reapply "add sync.yml for repo sync automatically (#61)" (#66)
+pick eab0767c7efefe42e13f846a4fb4e5a50ce7d50a 微调UI，恢复 sync 文件 (add sync.yml for repo sync automatically (https://github.com/bestZwei/LibreTV/pull/61) 增加同步工作流文件) (#69)
+pick 6c465cb9711ed98cbdfe89704e4ef4c7eca72242 Dev (#72)
+pick 3bc324ce48bfef53fdfd7ecca1ffd8443d663d6b Dev (#73)
+pick f838c50b1a99e8e0ec7563eac94462b79c69f205 Dev (#74)
+pick 25d02c4451cea3e96a8cfea913168d4ff3b94cce Enhance API source options and filtering; add new sources and update handling for special sources
+pick a4cad032f6cec43382cbd481b1c59a3d537afe00 #fix
+pick 942f7cf1310c288be38d431ee3a97dce3feba50c 重构应用程序接口处理，增强对自定义应用程序接口的支持
+pick 1eedb04feec0b2ccaf902aa86663c35d0fd7fb21 Update button labels for clarity and enhance README with version 1.0.3 details
+pick 881280f95a398e821b1e20c2ab4225aacd84d1f9 Add option to hide built-in adult APIs and update related UI logic
+pick 0c660e924bbd7bf31a9366d44a118fd50f33e63d Add configuration option to hide built-in adult APIs in settings
+pick 28a58512d47a438dc4db56027c972f0a90f8a5e0 Add viewing history feature with UI panel and local storage support
+pick b645c1b85c5976f62f130999641b677a8cdd65e8 更新了多个文件以改进用户界面和播放器功能：
+pick 8e0d510af336ab087f7606204ed909e95b9be250 Enhance playback history feature with progress tracking and restore hint
+pick 6a5c9d09c913d9d4ddf67f236fe7c98fe5042a9d 手机端点击全屏播放时自动触发横屏
+pick 6a9de45e30a1adfadb7bc379fe7f293bfbb49749 Update app.js
+pick 1f0c9a2d9b9181a23c02ef387b8aa646d1deb4dc 增加一个采集站源
+pick 34c88f04b78c2a1a7ee7c089265a8cdb27a67a1f fix about.html
+pick 4f7ad33b7e0baa4578fcf69fe67bc091e95671bf add disclaimer modal and check on page load
+pick ffb8012b85434754ea636d8b2c1c3402a54c8d5c fix
+pick bd4faffb20ffa59cf88deed0ca7cd1b98eb319ab 移动悬浮按钮位置
+pick dc59e8780605af87f21fd12b6fa9308c716bc10e Update api.js
+pick 4e2102e8616d1afba0e41e1ce168561dde985c17 Update repository references to LibreSpark in workflows and README
+pick 9443b2c2f65b1d9918d7360f8d4080c498afa574 修改仓库链接
+pick 2ae9f6139e420eefe79bf16f1f17aff32e22d4a1 修复与优化：历史记录卡片播放进度实时同步
+pick d36dba202f6d4454a80ee6b8b989a9ba5ed13297 fix: update proxy URL to use the correct API endpoint
+pick 6038e0aad2f5ef815b0c40fb78b9dcd9251d5a51 fix: add commented-out alternative proxy URLs for reference
+pick 5f60f2afa96bd3295bbe0fa53d730b48205b8567 增加内置代理相关的functions函数文件
+pick 4818f87d5b214a523294b035f20c380f03711a86 将代理改为内置函数实现
+pick 7833cd3059f6f30f2d54247f5d2f0c958437b523 feat: implement password protection feature with environment variable injection
+pick 72261bbdf88c0fdc9e25cc6bf08d4b951658628b 修复vercel部署问题
+pick d791757357e7c049afc6a816e86e4072f1868372 fix: update port mapping from 8080 to 8899 in docker-compose.yml
+pick baa2f25e3534fdb7431f42eb154427e34d99e648 fix: update password verification TTL from 7 days to 90 days in config and README
+pick 2440931d4235944abefd04cf8f875220bc9fc314 fix: update README to reflect backend proxy functionality and deployment instructions
+pick 4b492987cc5f39a7ee4c36e6a61039933d283110 fix: enhance playback functionality by adding episode data handling from URL and localStorage
+pick a2d8b2f6fbffb70024e616aa2d95124494b3a772 fix
+pick ee9bd9133b40830bd8c0b7baeadde4dce2957272 fix: validate episode index and add toast notifications for errors
+pick 9dd6f353c4f5e9d44afb35390c43528c08753507 确保从主页中点击不同视频时的剧集数据正确保存
+pick 0c69c22ad68883e3461bc9a5dd90a70c1eb41713 fix: implement password protection checks to prevent unauthorized access
+pick 8c1186e0ac44db697fe6d92a76d3331a7c73dc98 fix: add password protection checks to prevent unauthorized access in various functions
+pick 4e1cbeed87d172d9d639cae466df0728ee47e7bd fix: remove redundant password protection checks in toggleSettings function
+pick e39ce17d567b843e653e335b57cb098372f9dd27 feat: add control locking feature to player for improved user experience
+pick 8b599c016547fe5a8f56d58e2f989fb43c2edff8 增强密码保护功能，绕过密码仍然无法使用核心功能 (#139)
+pick 1b80017635a7545f73915627606e92afeeaa3883 feat: add native fullscreen support for player container
+pick 83253ced689ceee1ef29e328a269c08e878a8fc6 feat: enhance user experience with ad-skip functionality in video player 参考 https://linux.do/t/topic/539176/93，解决“资源有问题，过滤失败，卡住了”
+pick a2252bafa43f5be56a54d325b9d06909db2467a9 feat: 提高安全性
+pick fc3b583dc948756a6d200b85b10985b5007cedbc feat: update password handling to inject raw password for client-side hashing
+pick 1467bbdb6ec9ff3f3eeec3321413880c8eb9c3e8 sha256
+pick 15d363c1735495fdebda2348f5c29083a27025f3 feat: enhance password protection check to validate SHA-256 hash length
+pick 16f062130ebff731030673940e362e7d0ee77cfb feat: 增加Docker部署的内置代理支持
+pick 36ce5e68f3bc78b8515b93c7e6071200b62adc46 feat: update Dockerfile to use OpenResty instead of Nginx
+pick e3e6cebb22421dbcb9c84ea0e0c44473bb11d4cd feat: update base image in Dockerfile to use alpine-fat variant
+pick 647aabd1e4a3307024a3d94c9c7f87dce67cb249 test: feat: add Docker workflow for build and push, update Dockerfile for OpenResty, enhance entrypoint script, and configure Nginx for API proxy
+pick ad4341d9260e84f1104f3dbcabd0d7015e891149 test
+pick 468d08f7ca6cfdd9b81103414c13b0b20e9bbff9 修改说明文档
+pick 70746d8a1c53a2f97291eecd4573ad246833e068 修改说明文档2
+pick af2c99044613b3c3ff12c82cb92194b73989749e update readme
+pick 42fbb41d0f92c1631fd880d69ee27c5747bbc1a2 修复错误信息
+pick 43b58e566291c734d492a181f874260da810c314 改正错误信息2
+pick 6324a7d670388954536f5433145140e226cf923a 增强密码处理：将密码哈希化并替换HTML文件中的占位符
+pick 2876f089b54b8e62a15c5dc6f7b702a8a480517d 更新文档：添加关于Docker部署后需开启HTTPS的注意事项
+pick bd8fb7f101a1cbce1aa982386de431a35a161d56 引入js-sha256库以支持HTTP环境下的SHA-256哈希计算，并增强密码验证功能的兼容性
+pick 901471c1757314273188075a3a5152dcd6fabb91 保存原始 js‑sha256 实现以避免被 password.js 覆盖，并在 HTTP 环境下调用该实现
+pick 3f90a8f69cd8d2b724070355d594a56753cedf02 Enhance Docker build workflow to support multiple repositories and dynamic image tagging
+pick 3850f091d275e4b940ca53a4ae2b8df32b5809d2 Enhance password verification logic to include password hash comparison
+pick 012aa6c2d4613ed119d28dacd12e593270f9665a update readme
+pick a01676f787edb4bdf7a798c1a4b95a456f38b178 添加三个视频源
+pick 20f3c8d5e1b1f3a25326a5818d7b4485fd66f209 Add Douban recommendations feature and update UI elements
+pick 6bbf7587ed868b6bc26ab6bfdbd02624b1ddfc75 fix
+pick 1a0d322e1f2ba05d4d49015ebd2143af0141c399 Fix image loading issue by using proxy for Douban cover URLs to prevent cross-origin problems
+pick 6ccde4aeb958df5b36aef492de0ad67e00ac2c74 1
+pick 4532bfc26033d735f4c66f9f886dbb715dc322b5 fix
+pick a2cfb459bf02f5bd716466c6e18d2c46ded5f3fb 2
+pick a47089b0915590d775fa41aa5a2d2b320ceb1cb6 优化
+pick 48ff36bd68ae9f5c89553c9179ed05a19d58528b 优化显示效果2
+pick 58d2b8a6560c1bb9b4cd4543dff9e03aa9cdaf04 优化豆瓣热门推荐区域的标题和标签布局，增强移动设备的滚动支持
+pick 4c74782ee53e7e408cd1105dc1096ea3e01efcab 优化显示效果、清除不兼容api
+pick 2b13abe5a5e8f99a966fa0dffab654dbf4b65a48 优化搜索区域布局，添加返回首页按钮，清理旧代码
+pick 8c3fd6c61f2aacb48809b81350744d8b9b2fc2c5 优化首页按钮样式，调整搜索框布局，增强用户体验
+pick b8f8d06a627d7a955d7e52ff03bfcf4a2a35c39d fix
+pick 243b9fe24c4da729a3184a9553802e30ead7d40e fix
+pick d85bcfd0bd95426ae32b652bb23ba16cb24c242f 添加豆瓣卡片链接，允许用户在新标签页中查看详细信息
+pick e98bc9bfe512cfa525cdfe2845f366ddf858fd85 移除视频搜索标题，简化搜索区域布局
+pick 6468340d1a5d8dc4bd04b10eea75babc051679a2 一些优化和文档更新
+pick 8c5013c162eb0e437105d23da3c2b8256ddccb10 优化搜索区域布局，调整按钮和输入框样式
+pick 714597cb307b803229d4822a53d05d71c9ff6792 调整首页和搜索按钮的样式，统一宽度以提升布局一致性
+pick ff367c5cb7a4eaaddb33906dcf7c80fb2d778e69 添加填充搜索框并自动选择豆瓣资源API的功能，优化搜索体验
+pick 4994346a153cf87ccdad7b20b2da438dc37c5c80 自动选择豆瓣资源API并更新UI状态，优化搜索体验
+pick e1c90930b407bfbd17e5a2b97e6e79788a070957 优化UI
+pick 08e4dea7a874891a79eec3e4f8d2d58c781d6c00 Test: 优化卡片布局和标题显示，提升用户体验
+pick 4c3720da20d342e912ede9f8ef2a39d9d34964fb 优化搜索结果展示，调整布局以提升可读性和用户体验
+pick 47f4b7c65b0d4de34af1f8137a3c4787d75daef2 优化搜索结果标题居中显示，提升可读性
+pick 807bf2614434deaa158ee924437f5e422d8f114a docs update
+pick 12e6fd6a143bd2c6dd11de4a26f92515c6176407 优化搜索框，禁用自动完成功能以提升用户体验
+pick 47baa47699c4bb7585affd04c03554f3289664ad 优化卡片内容高度和标题显示，添加悬停提示效果以提升用户体验
+pick e242bd93ec784ca99dbf5cfcac3f96f720f0eeb4 优化卡片内容高度和标题显示
+pick d6d6eeb17e04dffe1b4244d4152f820f1649bdd9 fix
+pick e0ec77de6f7f0a0e5c0293f3ec578d513f5c1226 优化播放历史功能，保存剧集列表到localStorage，简化URL参数构造
+pick 6046e2668fa7e916644111882c58cc2070d1e0d6 test
+pick 6dc826eab74a73fa26282f6d2b9727c459659333 test
+pick 351d786e71e19eeb1c699cdc9ec1b6000bc0adf1 test
+pick 36192835d4af411b59cc5a29f813640afd78b3e1 优化自定义API表单和密码输入框，添加autocomplete属性以提升用户体验
+pick 092ccca81e052db16942c270f4d1199ffa7cc7e6 重构密码输入框，添加表单提交功能以提升用户体验
+pick 95366048c6d6e76cc93c614b8942f034851bdd5c fix
+pick 9aee764a1a0d032f032643a6f22b2f3a3b3ce717 fix2
+pick 2f9efedeaaf0af88635fe18bc534d445b7aac55a feat(豆瓣): 添加电影/电视剧切换功能
+pick ff46a6cfee3d84ffac69394814230a38731770b8 refactor(douban.js): 重构豆瓣数据获取逻辑并提取通用函数
+pick eb856021cc2fc2daf43ac87e1d7255af6e8f6153 fix(douban.js): 根据当前切换状态渲染豆瓣标签
+pick 771c2e69a404265f2e188d7c7c573e4715d7081f style(douban): 优化加载中状态的样式
+pick e8a4dbe3ce960a3227b45ba221d048e69ca29e9e feat(player): 添加密码验证功能
+pick 2ca19edf85035c4c4622d82a0c05c1239cd9a0fd feat: Implement loading overlay for improved UI responsiveness
+pick 65398f97b9bd16e6246639460e9e2bdeaf7daf72 feat(password): 优化密码验证流程并提升页面加载体验
+pick c754d89e884b476dafe239c7f5c53df91187a604 Update readme.md
+pick b620cb0e1132991ad93ffe115f92310ba08718f7 fix: Fixed the issue of duplicated position parameters on the playback page and inconsistent names of historical card sources
+pick b13e5d77cc98cc3097d5cba08804b12d6adf3996 refactor(player): 移除黑屏快进跳广告功能并优化M3U8广告过滤逻辑
+pick 14acdee15f3684a9f7023b1d6edf0605c9be145a feat(播放器): 添加sourceCode参数以支持不同站点的广告过滤配置
+pick 0d596de3eae21e21cdb76d9c3c9bd697a3924604 fix sourceCode
+pick 8d2884423a2b16659a5c608847e249c7cccacd3e fix
+pick 6032408a1924a10f9f3caaa1f2ff1ac0ab471cb7 refactor(广告过滤): 优化M3U8广告过滤逻辑
+pick a54f6451c4edbc1cb9a8563ef888e6d16a314ccf fix(config): 修正非凡影视广告过滤规则的正则表达式
+pick 9de1f64d2d91947be88529cb9fb59bafbe7bbb9b refactor(player): 更新hls.js版本，修复 airplay
+pick a6f132d2cab6a106fbe697204c42916234bdf571 perf: 优化页面加载速度 (https://github.com/LibreSpark/LibreTV/issues/261#issuecomment-2840596535)
+pick 84b091610f280c8a7b64757265f43146db460a0c chore: 将 lib 目录重命名为 libs
+pick c087e999cb93403d895623aded07707f2ec49d8e refactor: 更新 HTML 中的脚本路径
+pick 0620d077a67728d199e9976b865789822a78c623 删除搜索接口异常的新华为
+pick b357eab09558b9a460cd5fe9fcd754941ec70fd2 fix no filter ad rule
+pick 162d698bc208230ac30dfb80d75817e83e77deab fix
+pick d331bac6de515f0b58764492439d840926f79c58 优化player.html顶栏
+pick 726b6aa8c256766c2bf2252b33b02ff6830d68dc 更新首页链接图标路径
+pick fd3cc23b661171c73314b544e2f14c86f1c57678 fix
+pick c5be36fafb17903025674daf04a1a92f50ea8c77 优化卡片布局为横向显示，调整响应式网格布局，移除不必要的最小高度限制
+pick 324a60b9629f750d905e75b5bb3412da8200e157 优化
+pick e489a132e7d3a4a62fd8600f4ac8d52392bf6304 修复按钮点击事件中的 sourceCode 参数传递方式
+pick 640fa246142aaa92a168e75d3a687fef285770ea refactor(player): 移除广告过滤规则依赖，简化M3U8广告过滤逻辑
+pick a37f7dc875d4e00245beefc31187a6b26c892408 feat(player): 添加移动端长按三倍速播放功能
+pick 1c1edaee7d2405331e2a3ab63c0dd7541eae35f2 feat: 添加自定义标签管理功能，支持加载和保存自定义标签
+pick 1e299655c263f2bcbd5202516827cb0b2fe0f767 refactor: 重构标签管理功能，使用默认标签替代自定义标签，优化加载和保存逻辑
+pick 56e9be2f94bb50b6beafbc3961345561a9d89b37 增加若干资源站
+pick e3835107880ad5970cf4870362bfd208b1e6ebba fix
+pick 2f023a6ad0c3ca48662293c993ebd0a6b7d57d86 fix: 增加日志记录以改善URL解码和错误处理
+pick f1c5c16d04230f00f2442096932b25ac339ddf3d feat(播放器): 在移动设备上禁用右键菜单
+pick e49502c939df87dd83f4097ff6050034c6ce2d91 增加黄色屏蔽分类关键词
+pick 924fe1437b6b43324d90e11e79eddaa52311bca8 为上游贡献代码
+pick ebe0033b17a85a0202ec2258e977c3eff293f72a Update config.js
+pick d762763d940f1b02ca6211d738d6f8e1f0c18036 fix(dplayer): 恢复 dplayer 版本到 1.26.0
+pick 9220ca8eef98d5c22838d20987217c626d2e358d feat: add PWA support Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick 54adc334fe35aecc76ab0fb2b6236772cf8ae15c 添加配置文件导入导出功能
+pick 5ccc3d0dfa6cfc4c89d7da8dc38f98acc6ffdd7c 调整部分元素的层次，解决移动端关闭按钮被遮挡的问题
+pick aeec04ae8f4963077db92f0b24f6ddd8a4a77da6 新的播放器封面
+pick 0a3e976c07d3a847d23e0a1f69e4a4f33591a8a4 调整缓存清除提示框的样式
+pick bd39c872ca358768f0b1d4cc80d53a60dfe4fd5d 新的开发服务器，在本地实现转发代理
+pick dc5139ca9984b5388a891362987c4f4ee4903366 恢复 player.html
+pick 56189623e77156454daa174f4eeb5c59b3a2fd03 新增电影天堂资源API配置
+pick 70f2afe3329b6eac161ffce3d7e6604f8de6bd66 test
+pick 95ce1938d6bfe15698802f88303a1f22ba771da8 Refactor API handling: remove specific detail functions
+pick 93b173800f1d0c6f13421b77677d38d3b56f5e14 默认勾选电影天堂资源
+pick 54ef903159a96ad3567213fef0d555ebabadabee Add commit user configuration for GitHub Actions in sync workflow
+pick 83ccd5c481352c1c33bc552fb6710609eaf0c0d8 fix
+pick 11d2650c4d7e7017ac579fcd3b78384f9bdc8d6a Update GitHub Actions sync workflow: standardize commit author information
+pick ea83d7ecbd53159a0a1b93945e3116cd4c9ecd85 豆瓣热门标签添加边框颜色
+pick 1f0dbecf31b54e2071ee2bba6fd4ac5f752ccb39 fix: 阻止豆瓣卡片链接点击事件冒泡
+pick 2bd2db4b2612cdecc62c5998c0b081a98b51a60b refactor(douban.js): 优化加载动画的渲染方式
+pick 3567346114f34b34f85e7b16c583b8d2df883fc7 feat(douban): 优化移动端搜索体验
+pick 290754e13907290146018c8878a6ab508ab5c5f1 Update config.js
+pick 30ed2824fe89402607725dcc0ab848e35bd71ac8 加入复制视频链接的功能
+pick 1bf556bb5ceaab83032888e3ef1465f9c7c1dab9 Configure Git to disable email notifications in sync workflow
+pick b4b4027076f054f77cda6451bc82d8481afcf981 新增 detail 地址输入框和处理逻辑，支持自定义API的详细信息
+pick 035da794c73f1b8ff95acaabda70e14853018937 优化功能区域
+pick a0a7aba6e33ab2e6cc850f0ed766a6b09e8965d3 优化视频链接复制按钮样式，增加图标并调整布局
+pick 8e2aef5d615727930d402bd494db1ca0c23fcc1e fix
+pick 4ddd080f80ace96667b88ee2511bc36e06496172 优化移动端样式，增加响应式设计和按钮布局调整
+pick 0546fa12bd8422e1670709719bfade95395ee09e 增加一个采集站
+pick 256174a54aff738ad3df969eb610a280109c67de 新增广告警告提示，提醒用户谨防诈骗
+pick e12db49a57be648ef0d50389c36179dd905382d5 回滚：移除广告警告提示
+pick de885fceea7a4a41b5145d9d5f8c6ac0b51d3ae6 fix
+pick 74b432f85486652ff8483ada358ab275327ce758 fix: 修复和优化Toast消息提示功能，确保其显示在顶层并添加适当的转换效果
+pick 777027266bdbfca525a77ca004ad7638305d3b8f fix: add wakelock to avoid doze Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick 8e10fb19eae4dff93519da73521bac24c5e200c3 优化复制链接按钮的样式
+pick 09d4ac3f1524236d7ece9faf3aaa23bbedee4132 修正播放页找不到showToast函数的问题
+pick 8c7b9181a08cba994a98eec3e62bfb05459e028b feat: 添加测试源API并更新成人内容API隐藏设置，提供警告以提高用户意识
+pick a95e23023312909e930c3b90d9308696c8e66d2a 统一锁定按钮图标尺寸
+pick 9ac9dbfc68c202c10039420eb90d4a55bde8796a 本地开发服务器支持通过PASSWORD环境变量设置访问密码
+pick 9f01da13fa52c64ab8ccdd69ebf992715d37a004 优化播放器页面复制播放链接按钮的逻辑
+pick 1047d78b454409201dccaa6e897988aa60b30495 为播放器页面加入页脚
+pick 916cd54741d846a6ab59118eded1278ad7c17525 Merge pull request #360 from bestZwei/main
+pick e868282080f098b7def973683333c0a4ceb42bb5 feat: add version check (#367)
+pick 2a02a39c6dac522cfbcffe60c97f709db5a915f8 Auto Update 2025-05-12 17:35
+pick d9f04ffca69befdae33fb3658822fb9ddf4b7875 fix: dont't bump version on other repos Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick cc9ebd17466a3b0e649b77f960912dd0047bbd22 Merge pull request #369 from bestZwei/main
+pick 35dff29c171df9dab2d10121fddab6bc19dc08ab Auto Update 2025-05-12 17:52
+pick f9a9f60c6da0ca60979e7b1cd2754ee4360fceb5 Update docker-compose.yml
+pick 0297af582104dceff8e86b79abdaf2c411b34318 Auto Update 2025-05-12 17:56
+pick 842db147bada3da7bef4682bc5817f22e6c94836 fix: update workflow triggers for Docker build (#370)
+pick 376ac6d4acdada9d19a3ac27ad885b9b2993d351 Auto Update 2025-05-12 20:23
+pick ca6061f0bf42e59f7c3ca87eee3cb1414487755c Merge pull request #371 from bestZwei/main
+pick 956a915c9cec02118afbd35b5af1c6ac25fb3099 Auto Update 2025-05-12 20:33
+pick 0c390a67356f72f344ba17c904bd9876f0516649 默认选中小猫咪
+pick b8b287421360b3bcb569fa1e3e8d644192aceeb6 feat: enhance search functionality to support multi-select APIs and pagination
+pick c010ab24a63c81dcf7e60590ae5a4544f694462d maxPages: 50, // 最大获取页数
+pick b9e0ae064745cf4369b8ea37e25da4a6dfc532dc Auto Update 2025-05-12 22:41
+pick b9e4c30c6198dc5151d2958da80b5f86c704175b 添加播放器双击全屏功能
+pick 2e59d9be88a8d04a817daeedc547e68730e8e7f5 Auto Update 2025-05-12 22:46
+pick e200296c6b7fa623f04b87678ccf1df5b46bad6a ci: simplify workflow Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick 056cb73053148c34b26684ddd14b378ea14f2038 chore: add issue template Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick b770c87550ac69c9c48ce1c0ef0f9f32f6df07bb Auto Update 2025-05-13 11:35
+pick 979a644a0e343387ebe88de5143e241ea3eef4d3 feat: enhance video URL handling and history saving logic
+pick d5e3921450d5e288ed05eccda5cd3107981776cb feat: improve video playback progress restoration from local storage
+pick 323d7565932866d25d9d9da2c1a42829c85cbaf9 feat: add position restore hint and improve playback position handling
+pick 1d5794bc1559b9ac351c7a8dbd20c5b79c94d267 Auto Update 2025-05-13 11:36
+pick 5b421e3e05b7199e8d11e7b945d16b3063b79ec6 feat: add github proxy Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick 4e6eef9ddfd013ccc7e98fbde3bcfac1269b84d2 Auto Update 2025-05-13 13:24
+pick 40549e8bb783ce6ef1ce81f2c0ef351fe394e8ff refactor: update clearLocalStorage function to also clear cookies and adjust related UI messages
+pick a661628ee1496d9fa8737dec45d8dacc1d054137 Auto Update 2025-05-13 14:11
+pick 853aff73490accd6d0048375f8d1e35f36daf64a Merge pull request #391 from bestZwei/main
+pick 00e66ac7d85d9d2083826ab20128462ff5b08242 Auto Update 2025-05-13 18:32
+pick e6f38ca7790b32bff2cd855e69b85ce55d0c4659 chore: rm SEO stuff Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick 851615fe3bf38e74d6d8392242de728589e10f08 Auto Update 2025-05-13 23:07
+pick be3f63b819fe48cff454abf539340472232d656e 将返回首页改为返回上一页
+pick 6e4f79e10649896f9e1fadd772b3d8605fb586dc Auto Update 2025-05-13 23:53
+pick 0af75c5ffdf4b54cfc045fabe387cc9bce01f201 修复通过历史记录打开视频无法返回上一页的问题
+pick c105fa663d7c7b2953763fee542937b09ecd6e2b fix: close history or settings panel when click elsewhere
+pick 059f130d43c1ad8d7a6952d0939ac4168d06d96b feat: adjust close button Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick 13b239771fd7f64aeb22a96e70afdde18c2c279c Auto Update 2025-05-14 00:21
+pick 7da4d32fbe88fc6d03ad8ad0f002a78e93c5ef57 Auto Update 2025-05-14 00:40
+pick 5ac4522fc08ee34aa940aea1de2d843455074dba feat: export necessary configs only Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick c9d6960fd9b334e5e0f8f1d151caeadcc580db1d Auto Update 2025-05-14 01:03
+pick ef2948549b2b85aedaebb2afb260db1b91bf10aa feat: import from URL Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick e36b552792e50dedfe3804f55abf22ba65082eeb Auto Update 2025-05-14 12:22
+pick b785a0a573eb6c07e64c7c1a71bded48eb5c1259 fix: play from history Signed-off-by: JohnsonRan <me@ihtw.moe>
+pick 16ca1dd0c4e5df0e63dc9087a1a1e1283a3f594a Auto Update 2025-05-14 13:09
+pick 2a6a7ed2396acb0baf3f168dc63e8edb410ee0b3 feat: add URL search parameter handling and improve navigation between pages
+pick 74c3bef115c0943af945246673eb87b9fe39a6d7 feat: enhance URL handling and page redirection logic
+pick 07ce38aaced32106922e16e22c0a0511ff7b8f04 fix: comment out unused API site configuration for xiaomaomi
+pick 782996aeeafdb2714e1a87658c1148363a4ac26a fix:b update go back button visibility logic
+pick e95b9b2cc7c9587131c35a607f922463fc5688cf Auto Update 2025-05-14 13:39
+pick b160fc95e178023540e11da430b7077192581eb9 回滚
+pick 2d02c3f048e2e367f3d49f1843d86d13f2a19bba fix: hide detail modal when opening and closing video player
+pick 1b76d9b04913c3aec4877eea8dc2f520f81ee6f4 Auto Update 2025-05-14 21:20
+pick 5a10b05b632354e04403773e5d34781c78131725 修复从历史记录打开视频出现多余滚动条的问题
+pick 8cb523b0995f1c807e934dbc4b78dec1b1e00914 修复开发服务器
+pick fc958d6e6626c87fe9caca2a84fba46070c6a02a 修复密码框会出现滚动条的问题
+pick 3bfdb9687059a0b38941fc495272aebdf1968060 fix: add redirects for search path handling in netlify.toml and vercel.json
+pick b13f545f70f8116adcdf3dd9b09fcd99f2e17b01 Auto Update 2025-05-14 23:06
+pick 8637e1c38289e09fc05f8b4cfce59d307d555580 fix: update nginx configuration to add /s= path handling
+pick f70968065f41f3f2222ad7a37a95d6d219562011 Auto Update 2025-05-15 00:02
+pick d6b5ef085930d131f3e5f6b227624ca5cb24ee5d 紧急回滚
+pick dd7b3447b798fc8474f610f6d2dc8169760466d1 Auto Update 2025-05-15 00:07
+pick ae187a033ec3b66819b027e54ee88f64ae9ef5e7 fix docker-build yml
+pick 4c4cd71ac3ad9e1e5ccb5a3699f6b5326386a46c test
+pick e7230a2733f27a69b155bf2be867ba867722be74 Enhance navigation by saving last page URL and improving return URL handling refactor: improve video playback and search URL handling
+pick a6e11c629e2037a70af1d3f2d95110fb48bf0f48 Improve back navigation functionality and enhance return URL handling
+pick 31c29264575c80e0e8cc37b5b3fc6f59718ed6df fix
+pick 87efd4fbe542b4327e23c24549025052e91c3b11 Enhance back navigation logic to prioritize returning from search page and improve URL handling
+pick d8388b7b6fe41a29ba3072118cff173aca2ff2ac Enhance goBack function to prioritize returnUrl and lastPageUrl for improved navigation
+pick e3ecc78774def7e97945a091c93cec0d7a542c56 从HTML分离出CSS 文件
+pick b1a7039e9d6b70f2198de0058f5df8f7e07392f2 拆JS，watch 和 index
+pick 88a5df9b0def274f4e756bbd046573300416e23d Enhance redirect page with improved styles and loading animations; update JavaScript for better status handling and manual redirect link
+pick 1d8919926c6d2cea1b3a9736315b0a6af787ae8b Auto Update 2025-05-15 19:04
+pick acc37e9b7798b44005d30483688fc091fba1ec14 Auto Update 2025-05-15 22:45
+pick bc91731d22b5bbc0c058d8a005a27bdd8a81c2a5 Auto Update 2025-05-16 01:31
+pick d8d950c8d001e65a15426f97e2057e1f34d80a6e Implement code changes to enhance functionality and improve performance
+pick ec2a3fd45e44f60859a0cb7f0346ef14a209f686 Auto Update 2025-05-16 13:40
+pick c8336ecc5d1817d90b48a585c49f5d57847aef35 修复 /s=xxx
+pick 347be9e152084c7aae04372b60c0b5e944cd93eb Auto Update 2025-05-16 14:23
+pick 4edd6a9c48959dfc049cd03d452a76aaa09bd9c5 feat: 添加项目配置文件和开发工具
+pick 8e1730ebbdc53a58c91ea0773e5bf4caaaa0b6dd Auto Update 2025-05-17 20:29
+pick 87e53c002e8f454d0ee60e635667a22670f47b50 fix
+pick 987615856559b4e3f2af7e1c9b474d4e8e4158cf Auto Update 2025-05-17 21:14
+pick caca2981312fbf62aa57d202acbae7197265c7bd Update API endpoints to include '/api.php/provide/vod' for consistency
+pick b5fc8a6f838b77413942ab421b86c3ebf3eafdd6 fix detail url
+pick e625e1bc48bddc3b530df062191dda76a77e1ac6 Update selected APIs and add new API sources in configuration
+pick 057ec08af6d5bd860671fd7a668645a8164aee03 Remove 'subo' API from selected APIs and configuration for improved resource reliability
+pick 3a7b9992e23035f92a498b8df4fa85426be2180b Auto Update 2025-05-18 11:06
+pick 159749794e1180df2fb27001bf5acbb0f1deab28 build(deps): 添加 node-fetch 依赖
+pick 5ea229bcaeb5f393fae85388db5337fb141bb03b Auto Update 2025-05-18 11:07
+pick e9c552eca9dfde6a3e440f3d314690797d762a24 添加搜索框清空按钮
+pick 547b30d01be5cf691a5f972d464039e5c636b0fc 添加单个搜索历史标签删除功能
+pick 79e394b987b4a45ddb39d37d45e350fd401c4d83 Auto Update 2025-05-18 16:11
+pick 907d291c7c45ea40785bd86f5695015d0f96cf47 修复清空按钮某些情况不显示的问题
+pick e67f10c44493a3a3ea8ee062ca4243923e65e099 Auto Update 2025-05-18 17:36
+pick a77c0ecc2189412f891063a3a2cca1714ea8b043 fix(播放器): 处理切换视频失败的情况
+pick 4899ac3cb601ca1ec7ab64c0f35cd74c232126f9 add log
+pick d7dfa8e440ae78cb7edd4c21163bdf36511ba669 refactor(player.js): 优化视频源元素的更新逻辑
+pick 509579c0003551b21e70a6bf31a670c7223f4504 Auto Update 2025-05-19 01:24
+pick e5b68b1497a65937a66cbaadf1de1c9a1f2a2fac fix(player): 修复视频源更新问题，确保在iOS上正确加载
+pick 7fde12078c0ebf50a7b90fe9431276e32abd8cb2 fix(播放器): 修复Safari和iOS设备上的视频播放问题
+pick f60549a8c447b0f54f3d0cb9d01e5a163e3643db fix(播放器): 忽略切换视频时的错误处理
+pick b2609bc53320e585045e8f71985370583b234c6d refactor(player.js): 移除重复的播放器初始化逻辑
+pick 414a32d68953ed49f59c5d32937fd0180bdc54c5 Auto Update 2025-05-19 15:29
+pick f6c85b02bdfb841f6e3e51fffa2d13dca6ef49bf fix(player): 保留视频ID和返回URL参数，优化嵌套播放链接处理
+pick 232a8f25fbcc108fd76fa9c610cbc31081c83235 Auto Update 2025-05-19 21:53
+pick 6c89a41a018641f04a15e1b77b8493aba6d0f8b2 fix(播放器): 清除播放位置记录以确保切换选集后从头开始播放
+pick 15be52c1d8c96f2393c920c0ad7ee415a9a6c86b Auto Update 2025-05-20 14:07
+pick a00d0b9fadf2664de4ae9207537dd2cceaf0d7cd chore: update icons (#502)
+pick 7e597ea8851dbebde758fc6c3fdce529251bbeeb Auto Update 2025-05-21 23:43
+pick 20d913b927a275993dbd63e81b0c5a53197b6ade dplayer替换成artplayer (#507)
+pick 07656f926e4101cc8f0819a758b1ce86c20e058c refactor code
+pick 04aa34145dc2a2c0b3262c71463d1c3ec6588fb0 Auto Update 2025-05-22 22:50
+pick 96d4741951a328b5df458ded8dbb438b3493549a feat(player): 添加全屏切换快捷键并调整播放器配置
+pick 4298ec8cb999c2462ccb5023a1d94dcaebf3a51d Auto Update 2025-05-22 23:57
+pick 58eeffdfc1a564774697aa05cda49962a299cd82 feat(player): 修复双击全屏功能，并保证全屏后继续播放
+pick 3122ab40a4c5aba67e82b9bd7d075314779e8dee Auto Update 2025-05-23 00:08
+pick 50e717b69eb4d87f3d5b2c24facd8b739857e1c8 feat(播放器): 改进关闭播放器逻辑并简化返回功能
+pick e6076814b1cd83ce446f3bff8c1dcf56c7d0b407 Auto Update 2025-05-23 00:54
+pick 644ad5433b1393ee6e9fe55e95c25ddb5eea98b9 fix ios switch play
+pick 76560c0d0e33be87f0bfbfda17b77b83027735ad Auto Update 2025-05-23 10:22
+pick eccd597dd0f829f2b37427e3522f8093080e9b84 feat(播放器): 添加全局键盘快捷键支持并优化视频播放器行为
+pick 1b4519b35414ab3a89aac4e1a2d76f4e9d42456a Auto Update 2025-05-23 12:50
+pick c5f5d6432fa57c4d42c592e02ffd1b77367377b4 Update player.js
+pick f0288c4af2ec64bac4464fd23372a93ad0127e22 Update ui.js
+pick b8309e396f3141d6be9a25c891ab1d02c08f4eee Update player.js
+pick 19af3fe8da2ac356573bce698007bbe47f2f7691 Update ui.js
+pick 718980e8d362ce796894ea481d097a00fea8d1d0 Update ui.js
+pick 29062bce17dc22f07a8fce1fc55c8407cd065087 Update player.js # empty
+pick 49b55d1b3bd1472a899e6438fbe9754fea091171 Update player.js
+pick 4b2acd6f2d644e407b5ccea2275ffe3a4d2a4d60 Update ui.js
+pick 54ecc49a357b12a096dd98eb986409921d6c265f Update ui.js
+pick 11678c71c8db02d77e47140fe4a40ba7a259ce22 Update player.js
+pick 18260d164de9aa1de5b43e616013ff4cc090450d Update player.js
+pick a2861c329cc9645d564afa9cfe76df14029f6bff Update ui.js
+pick 9b1d01692556d22a99a5a9e0090dad2e88d52bed Add files via upload
+pick ab17784774c13d65d8aac07eb5e579abae89ec5c Add files via upload # empty
+pick fe07e7dc8ba5472d61365792935a6ca5f3118e6c Update player.js
+pick 633a77a59220ec25e22495275d2afdc3192ab2dc Add files via upload
+pick 9ac5adc5ecc307be209559d9ed37c97895ad8612 Add files via upload
+pick 32d3477ecfae89cb707d05b704cb56e6093f65de Add files via upload
+pick 18909777fc94b32a029137fa3d8522b4d9467e60 Add files via upload
+pick bca432ca0906f0c5942a76ac12a25854883352ea Add files via upload
+pick 803698c3df778c9f55f1ccf592c7639a4cea6a87 Update player.js
+pick 18de3506e2ac178ab49540c6f2615b2b3fa9bc5a Update player.js # empty
+pick 43de9ee5d13d173d353b35ca219402b28adc91c2 feat: 播放页面设置 meta 标签的 referrer 策略为 same-origin (#525)
+pick c57c2fcc7eade3d01aaf127373a77c12b9fbf126 Auto Update 2025-05-23 15:53
+pick c316c71a747aba6b12421416c27dc0d416d2cd74 fix(player): 同名剧不会被替代 & 实时刷新剧集列表 (#528)
+pick 6656087e84ce21c3c2805d15cd7110d2c5f2bb06 Auto Update 2025-05-23 18:22
+pick 77323fc86bd5d0ae58bbf4ec266aeb93b7ca162c fix(player): 调整z-index值并添加全屏状态恢复逻辑
+pick b93686679fdbfc0a2c3ee93dc4c625d93c989161 Auto Update 2025-05-23 20:13
+pick 4f168cddc3d330534aefe1f953b99445f94ec26b refactor(播放器): 移除无法使用的全屏状态恢复逻辑并添加Webkit检测
+pick 67fc3bb39d8155f9c2a0809198c00badff401544 Auto Update 2025-05-24 14:30
+pick b0947181df42a6aa8a9fa47a0b69d4ec57c69302 集数显示修改
+pick 4362038bbe11fcd0b9ec2d97e341957bcaf9c27a refactor(模态框): 优化详情展示样式和集数处理逻辑
+pick a24bb71005d4b3d839484b5e3f6c388ea6acdc2b fix(showDetails): validate description existence before rendering
+pick 8b3b37613d30aaf55fb65964dd89b836f6ef69f6 refactor(showDetails): improve detail rendering and description handling
+pick 85dd3a4aeb6cb61eeb114afd2200f562614f30ae fix
+pick 335936914c3498642266f8ff440ea36c935fc967 Auto Update 2025-05-24 16:11
+pick 6a6fabcf20d6a5a4fad2c12c8e195607d17cadfc 修复了实时剧集列表更新
+
+# Rebase 6a6fabc onto 1341cda (396 commands)
+#
+# Commands:
+# p, pick <commit> = use commit
+# r, reword <commit> = use commit, but edit the commit message
+# e, edit <commit> = use commit, but stop for amending
+# s, squash <commit> = use commit, but meld into previous commit
+# f, fixup [-C | -c] <commit> = like "squash" but keep only the previous
+#                    commit's log message, unless -C is used, in which case
+#                    keep only this commit's message; -c is same as -C but
+#                    opens the editor
+# x, exec <command> = run command (the rest of the line) using shell
+# b, break = stop here (continue rebase later with 'git rebase --continue')
+# d, drop <commit> = remove commit
+# l, label <label> = label current HEAD with a name
+# t, reset <label> = reset HEAD to a label
+# m, merge [-C <commit> | -c <commit>] <label> [# <oneline>]
+#         create a merge commit using the original merge commit's
+#         message (or the oneline, if no original merge commit was
+#         specified); use -c <commit> to reword the commit message
+# u, update-ref <ref> = track a placeholder for the <ref> to be updated
+#                       to this position in the new commits. The <ref> is
+#                       updated at the end of the rebase
+#
+# These lines can be re-ordered; they are executed from top to bottom.
+#
+# If you remove a line here THAT COMMIT WILL BE LOST.
+#
+# However, if you remove everything, the rebase will be aborted.
+#
