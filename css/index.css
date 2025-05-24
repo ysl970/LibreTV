@@ -1,209 +1,209 @@
-/* 主页特定样式 */
+/* 主页特定样式 - HomePage Style: Otaku Edition! */
 
-/* 历史记录和设置按钮定位样式 */
+/* 历史记录和设置按钮定位样式 - Archive & Config Buttons: Guild Hall's Corner! */
 .top-corner-button {
     position: fixed;
-    z-index: 10;
-    background: #222;
-    border: 1px solid #333;
-    border-radius: 0.5rem;
-    padding: 0.375rem 0.75rem;
-    transition: all 0.2s ease;
+    z-index: 10; /* Z-index: Over 9000! (Just kidding, it's 10) */
+    background: #222; /* Dark like the void of space before a mecha battle */
+    border: 1px solid #333; /* A faint outline, like an uncolored manga panel */
+    border-radius: 0.5rem; /* Soft edges, like a cute chibi character */
+    padding: 0.375rem 0.75rem; /* Just enough space for your hero's thumb */
+    transition: all 0.2s ease; /* A smooth transition, like an anime scene change */
 }
 
 .top-corner-button:hover {
-    background: #333;
-    border-color: white;
+    background: #333; /* A slightly darker shadow, hinting at untold power */
+    border-color: white; /* Glows with the promise of adventure! */
 }
 
-/* 搜索区域样式 */
+/* 搜索区域样式 - Search Zone: The Grand Quest Initiator! */
 .search-box {
-    height: 3.5rem;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
-    border-radius: 0.5rem;
-    overflow: hidden;
-    display: flex;
-    align-items: stretch;
+    height: 3.5rem; /* A perfect height for your legendary search scroll */
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.4); /* A subtle aura, like a hidden artifact */
+    border-radius: 0.5rem; /* Encased in a mystical barrier */
+    overflow: hidden; /* No peeking at the secrets within! */
+    display: flex; /* Arranged perfectly, like a team of adventurers */
+    align-items: stretch; /* Stretching for that ultimate combo! */
 }
 
 .search-button {
-    width: 5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: white;
-    color: black;
-    font-weight: 500;
-    transition: background-color 0.2s;
+    width: 5rem; /* The width of a hero's determined stance */
+    display: flex; /* Always ready for action */
+    align-items: center; /* Centered, like your unwavering resolve */
+    justify-content: center; /* In the heart of the action! */
+    background: white; /* Pure as a newly drawn magical circle */
+    color: black; /* The ink on your sacred quest scroll */
+    font-weight: 500; /* Bold as a main character's declaration */
+    transition: background-color 0.2s; /* A quick flash, like a sword unsheathed */
 }
 
 .search-button:hover {
-    background: #f0f0f0;
+    background: #f0f0f0; /* A shimmer of light, before the attack */
 }
 
 .search-input {
-    flex: 1;
-    background: #111;
-    border-top: 1px solid #333;
-    border-bottom: 1px solid #333;
-    color: white;
-    padding: 0 1.5rem;
-    font-size: 1rem;
-    outline: none;
-    transition: background-color 0.2s;
+    flex: 1; /* Expansive, like a hero's limitless potential */
+    background: #111; /* Dark as a dungeon, waiting for discovery */
+    border-top: 1px solid #333; /* A faint line, marking the path */
+    border-bottom: 1px solid #333; /* And another, sealing the quest */
+    color: white; /* The glow of your inner mana */
+    padding: 0 1.5rem; /* Spaced out, like panels in a manga */
+    font-size: 1rem; /* Clear as a spoken incantation */
+    outline: none; /* No distractions, focus on the mission! */
+    transition: background-color 0.2s; /* A subtle shift, as your powers awaken */
 }
 
 .search-input:focus {
-    background: #191919;
+    background: #191919; /* Deeper shadows, as you delve into knowledge */
 }
 
-/* 最近搜索记录样式 */
+/* 最近搜索记录样式 - Recent Scrolls: Echoes of Past Adventures! */
 .recent-search-tag {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    margin: 0.25rem;
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    border-radius: 0.5rem;
-    color: #e5e7eb;
-    font-size: 0.875rem;
-    transition: all 0.2s;
+    display: inline-block; /* A single, precious artifact */
+    padding: 0.25rem 0.75rem; /* Just enough space for a powerful rune */
+    margin: 0.25rem; /* Spaced out, like scattered treasure */
+    background: rgba(59, 130, 246, 0.1); /* A hint of azure magic */
+    border: 1px solid rgba(59, 130, 246, 0.2); /* A faint magical seal */
+    border-radius: 0.5rem; /* Smoothed by time, like ancient relics */
+    color: #e5e7eb; /* The glimmer of forgotten wisdom */
+    font-size: 0.875rem; /* A tiny whisper of the past */
+    transition: all 0.2s; /* A quick flash, like a memory returning */
 }
 
 .recent-search-tag:hover {
-    background: rgba(59, 130, 246, 0.2);
-    border-color: rgba(59, 130, 246, 0.4);
+    background: rgba(59, 130, 246, 0.2); /* The magic becomes stronger! */
+    border-color: rgba(59, 130, 246, 0.4); /* The seal glows brighter! */
 }
 
-/* 豆瓣区域样式 */
+/* 豆瓣区域样式 - Douban Dimension: Your Portal to Culture! */
 .douban-container {
-    margin: 2rem auto;
-    max-width: 1280px;
-    padding: 0 0.5rem;
+    margin: 2rem auto; /* Centered, like a powerful summoning circle */
+    max-width: 1280px; /* As vast as a fantasy world map */
+    padding: 0 0.5rem; /* A slight border, protecting the realm */
 }
 
 .douban-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
+    display: flex; /* A gathering of wise elders and adventurers */
+    align-items: center; /* All in sync, for a common goal */
+    justify-content: space-between; /* Strategically placed, like battle units */
+    margin-bottom: 1rem; /* A small gap before the next revelation */
 }
 
 .douban-toggle {
-    display: flex;
-    align-items: center;
-    background: #222;
-    border-radius: 9999px;
-    padding: 0.25rem;
+    display: flex; /* A duo of destiny, linked by fate */
+    align-items: center; /* Perfectly aligned, like twin stars */
+    background: #222; /* The darkness before the light of choice */
+    border-radius: 9999px; /* A perfectly round orb of decision */
+    padding: 0.25rem; /* A soft cushion for your inner voice */
 }
 
 .douban-toggle-button {
-    padding: 0.25rem 0.75rem;
-    font-size: 0.875rem;
-    border-radius: 9999px;
+    padding: 0.25rem 0.75rem; /* A button worthy of a hero's press */
+    font-size: 0.875rem; /* The size of a well-crafted inscription */
+    border-radius: 9999px; /* A perfectly smooth crystal */
 }
 
 .douban-toggle-button.active {
-    background: #db2777;
-    color: white;
+    background: #db2777; /* The vibrant pink of a magical girl transformation! */
+    color: white; /* Pure light, radiating power! */
 }
 
 .douban-toggle-button:not(.active) {
-    color: #9ca3af;
+    color: #9ca3af; /* A muted tone, waiting for its turn in the spotlight */
 }
 
 .douban-toggle-button:not(.active):hover {
-    color: white;
+    color: white; /* A flicker of potential, ready to ignite! */
 }
 
 .douban-refresh-button {
-    font-size: 0.875rem;
-    padding: 0.25rem 0.75rem;
-    background: #db2777;
-    color: white;
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
+    font-size: 0.875rem; /* A small but mighty command */
+    padding: 0.25rem 0.75rem; /* Enough room for a powerful incantation */
+    background: #db2777; /* The passionate glow of a determined heart! */
+    color: white; /* The pure essence of renewed energy */
+    border-radius: 0.5rem; /* A protective charm, ensuring smooth refreshes */
+    display: flex; /* Teamwork makes the dream work! */
+    align-items: center; /* All components in perfect harmony */
+    gap: 0.25rem; /* A small gap, like a breath between spells */
 }
 
 .douban-refresh-button:hover {
-    background: #be185d;
+    background: #be185d; /* A deeper, more intense surge of power! */
 }
 
 .douban-tags-container {
-    overflow-x: auto;
-    padding-bottom: 0.5rem;
+    overflow-x: auto; /* Scroll through your spell book of tags! */
+    padding-bottom: 0.5rem; /* A little space, so your magic doesn't get cut off */
 }
 
 .douban-tags {
-    display: flex;
-    gap: 0.5rem;
-    min-width: max-content;
+    display: flex; /* A collection of enchanted artifacts */
+    gap: 0.5rem; /* Spaced out, like treasures in a dungeon */
+    min-width: max-content; /* Wide as the universe of anime genres! */
 }
 
 .douban-tag {
-    padding: 0.25rem 0.75rem;
-    background: rgba(219, 39, 119, 0.1);
-    border: 1px solid rgba(219, 39, 119, 0.2);
-    border-radius: 0.5rem;
-    color: #f9a8d4;
-    font-size: 0.875rem;
-    transition: all 0.2s;
+    padding: 0.25rem 0.75rem; /* A protective barrier around the tag's essence */
+    background: rgba(219, 39, 119, 0.1); /* A hint of magical energy */
+    border: 1px solid rgba(219, 39, 119, 0.2); /* A faint magical seal */
+    border-radius: 0.5rem; /* Smooth as a polished gem */
+    color: #f9a8d4; /* A delicate pink, like cherry blossoms in spring */
+    font-size: 0.875rem; /* The subtle hum of magical knowledge */
+    transition: all 0.2s; /* A quick pulse, like a beating heart */
 }
 
 .douban-tag:hover {
-    background: rgba(219, 39, 119, 0.2);
-    border-color: rgba(219, 39, 119, 0.4);
+    background: rgba(219, 39, 119, 0.2); /* The magic intensifies! */
+    border-color: rgba(219, 39, 119, 0.4); /* The seal glows brighter! */
 }
 
 .douban-tag.active {
-    background: #db2777;
-    border-color: #db2777;
-    color: white;
+    background: #db2777; /* Fully charged with magical girl power! */
+    border-color: #db2777; /* The magic is overflowing! */
+    color: white; /* Shines with pure, unadulterated light! */
 }
 
-/* 搜索结果样式 */
+/* 搜索结果样式 - Search Results: The Unveiled Lore! */
 .search-results-container {
-    width: 100%;
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0 0.5rem;
+    width: 100%; /* Spanning the entire realm of your screen */
+    max-width: 1280px; /* A grand stage for your discoveries */
+    margin: 0 auto; /* Centered, like the heart of the kingdom */
+    padding: 0 0.5rem; /* A protective border, keeping the lore safe */
 }
 
 .search-result-stats {
-    text-align: right;
-    font-size: 0.875rem;
-    color: #9ca3af;
-    margin-bottom: 1rem;
+    text-align: right; /* Aligned with destiny! */
+    font-size: 0.875rem; /* A small whisper of information */
+    color: #9ca3af; /* The faded ink of ancient texts */
+    margin-bottom: 1rem; /* A moment of reflection before the next chapter */
 }
 
-/* 响应式网格布局 */
+/* 响应式网格布局 - Responsive Grid: Dynamic Battle Formations! */
 .search-results-grid {
-    display: grid;
-    gap: 1rem;
+    display: grid; /* Organized like a perfectly formed squad */
+    gap: 1rem; /* A strategic distance between each unit */
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px) { /* When the screen shrinks like a compressed file */
     .search-results-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* A single-column assault! */
     }
 }
 
-@media (min-width: 641px) and (max-width: 768px) {
+@media (min-width: 641px) and (max-width: 768px) { /* When the screen expands a bit, like a new area unlocked */
     .search-results-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr); /* A two-person patrol! */
     }
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1024px) { /* Stepping into a larger battlefield */
     .search-results-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(3, 1fr); /* A three-man strike team! */
     }
 }
 
-@media (min-width: 1025px) {
+@media (min-width: 1025px) { /* Entering the vast open world! */
     .search-results-grid {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, 1fr); /* A full party, ready for any challenge! */
     }
 }
