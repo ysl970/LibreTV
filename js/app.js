@@ -971,32 +971,31 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
 function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
     if (!episodes || episodes.length === 0) return '<p class="text-center text-gray-500">暂无剧集信息</p>';
     const currentReversedState = AppState.get('episodesReversed') || false;
-    // 设置当前视频ID（最好统一存一下）
-    // AppState.set('currentVideoId', vodId); // 如果你有vodId参数
     const vodId = AppState.get('currentVideoId') || '';
+    const safeVideoTitle = encodeURIComponent(videoTitle);
+    const safeSourceName = encodeURIComponent(sourceName);
 
     let html = `
-    <div class="mb-4 flex justify-end items-center space-x-2">
-        <div class="text-sm text-gray-400 mr-auto">共 ${episodes.length} 集</div>
-        <button onclick="copyLinks()"
-                title="复制所有剧集链接"
-                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" ...></svg>
-        </button>
-        <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" 
-                title="${currentReversedState ? '切换为正序排列' : '切换为倒序排列'}"
-                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
-            <svg id="orderIcon" ...></svg>
-        </button>
+    <div class="mb-4 flex items-center w-full">
+        <div class="text-sm text-gray-400">共 ${episodes.length} 集</div>
+        <div class="flex ml-auto gap-2">
+            <button onclick="copyLinks()"
+                    title="复制所有剧集链接"
+                    class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" ...></svg>
+            </button>
+            <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" 
+                    title="${currentReversedState ? '切换为正序排列' : '切换为倒序排列'}"
+                    class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
+                <svg id="orderIcon" ...></svg>
+            </button>
+        </div>
     </div>
     <div id="episodeButtonsContainer" class="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">`;
 
     const displayEpisodes = currentReversedState ? [...episodes].reverse() : [...episodes];
     displayEpisodes.forEach((episodeUrl, displayIndex) => {
         const originalIndex = currentReversedState ? (episodes.length - 1 - displayIndex) : displayIndex;
-        const safeVideoTitle = encodeURIComponent(videoTitle);
-        const safeSourceName = encodeURIComponent(sourceName);
-
         html += `
         <button 
             onclick="playVideo('${episodeUrl}', decodeURIComponent('${safeVideoTitle}'), ${originalIndex}, decodeURIComponent('${safeSourceName}'), '${sourceCode}', '${vodId}')" 
@@ -1014,7 +1013,6 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
         if (orderIcon) {
             orderIcon.style.transform = currentReversedState ? 'rotate(180deg)' : 'rotate(0deg)';
         }
-        // 更新 title 提示
         const toggleBtn = document.getElementById('toggleEpisodeOrderBtn');
         if (toggleBtn) {
             const currentReversed = AppState.get('episodesReversed') || false;
@@ -1023,6 +1021,7 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
     });
     return html;
 }
+
 // 复制视频链接到剪贴板
 function copyLinks() {
     const reversed = AppState.get('episodesReversed') || false;
