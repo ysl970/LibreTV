@@ -64,15 +64,12 @@ function showDetails(element) {
     // 潜在地使用这些数据属性获取并显示详情
 }
 
-function escapeJsString(str) {
-    if (typeof str !== 'string') return '';
-    return str
-        .replace(/\\/g, '\\\\') // 1. 转义反斜杠
-        .replace(/'/g, '\\\'') // 2. 转义单引号
-        .replace(/\n/g, '\\n') // 3. 转义换行符
-        .replace(/\r/g, '\\r'); // 4. 转义回车符
-}
-
+/**
+ * 文本净化函数
+ * 重要：这是一个基本的存根。真实实现需要强大的XSS保护。
+ * @param {string} text - 需要净化的文本
+ * @returns {string} - 净化后的文本
+ */
 function sanitizeText(text) {
     if (typeof text !== 'string') return '';
     return text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -170,11 +167,9 @@ function playNextEpisode() {
     }
 }
 
-
-function playFromHistory(url, title, episodeIndex, playbackPosition = 0 /*, sourceName and sourceCode are now less critical here as we fetch full item */) {
+function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     console.log(`[App - playFromHistory] Called with: url=${url}, title=${title}, epIndex=${episodeIndex}, pos=${playbackPosition}`);
 
-    // 从 localStorage 获取完整的历史记录项，以获取 vod_id, sourceCode, sourceName, episodes 列表
     let historyItem = null;
     let episodesList = [];
     try {
@@ -192,7 +187,6 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0 /*, sour
             }
         } else {
             console.warn("[App - playFromHistory] Could not find exact match in viewingHistory. Will try with currentEpisodes.");
-
             episodesList = AppState.get('currentEpisodes') || JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
         }
     } catch (e) {
@@ -907,9 +901,18 @@ window.handleResultClick = handleResultClick;
 window.copyLinks = copyLinks;
 window.toggleEpisodeOrderUI = toggleEpisodeOrderUI;
 
+/**
+ * 显示视频剧集模态框
+ * @param {string} id - 视频ID
+ * @param {string} title - 视频标题
+ * @param {string} sourceCode - 来源代码
+ */
+// 在 app.js 中
 
-async function showVideoEpisodesModal(id, title, sourceCode) { 
+async function showVideoEpisodesModal(id, title, sourceCode) {
     showLoading('加载剧集信息...');
+
+    // 确保 APISourceManager 和 getSelectedApi 方法可用
     if (typeof APISourceManager === 'undefined' || typeof APISourceManager.getSelectedApi !== 'function') {
         hideLoading();
         showToast('数据源管理器不可用', 'error');
@@ -917,6 +920,7 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
         return;
     }
     const selectedApi = APISourceManager.getSelectedApi(sourceCode);
+
     if (!selectedApi) {
         hideLoading();
         showToast('未找到有效的数据源', 'error');
@@ -925,14 +929,9 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
     }
 
     try {
-        let detailApiUrl = `/api/detail?id=<span class="math-inline">\{encodeURIComponent\(id\)\}&source\=</span>{encodeURIComponent(sourceCode)}`;
+        let detailApiUrl = `/api/detail?id=${encodeURIComponent(id)}&source=${encodeURIComponent(sourceCode)}`;
         if (selectedApi.isCustom && selectedApi.url) {
-
             detailApiUrl += `&customApi=${encodeURIComponent(selectedApi.url)}`;
-
-            if (APISourceManager.getCustomApiInfo(parseInt(sourceCode.replace('custom_', '')))?.detail) {
-                detailApiUrl += `&useDetail=true`;
-            }
         }
 
         const response = await fetch(detailApiUrl);
@@ -942,6 +941,7 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
         const data = await response.json();
 
         hideLoading();
+
         if (data.code !== 200 || !data.episodes || data.episodes.length === 0) {
             let errorMessage = data.msg || (data.videoInfo && data.videoInfo.msg) || (data.list && data.list.length > 0 && data.list[0] && data.list[0].msg) || '未找到剧集信息';
             showToast(errorMessage, 'warning');
@@ -954,12 +954,13 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
         AppState.set('currentSourceName', selectedApi.name);
         AppState.set('currentSourceCode', sourceCode);
 
+        // ← 在这里，紧接着写入 localStorage，player.html 会读取这两项
         localStorage.setItem('currentEpisodes', JSON.stringify(data.episodes));
         localStorage.setItem('currentVideoTitle', title);
 
-        // 调用 renderEpisodeButtons 时传递 id (作为 vodId)
-        const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode, selectedApi.name, id); // <--- 添加 id
-        showModal(episodeButtonsHtml, `<span class="math-inline">\{title\} \(</span>{selectedApi.name})`);
+        const episodeButtonsHtml = renderEpisodeButtons(data.episodes, title, sourceCode, selectedApi.name);
+        showModal(episodeButtonsHtml, `${title} (${selectedApi.name})`);
+
     } catch (error) {
         hideLoading();
         console.error('获取剧集信息失败 (catch block):', error, `Requested URL: ${detailApiUrl}`);
@@ -967,27 +968,31 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
     }
 }
 
-function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName, vodId) { // 新增 vodId 参数
+/**
+ * 渲染剧集按钮HTML
+ * @param {Array} episodes - 剧集列表
+ * @param {string} videoTitle - 视频标题
+ * @param {string} sourceCode - 来源代码
+ * @param {string} sourceName - 来源名称
+ * @returns {string} - 剧集按钮HTML
+ */
+
+function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
     if (!episodes || episodes.length === 0) return '<p class="text-center text-gray-500">暂无剧集信息</p>';
     const currentReversedState = AppState.get('episodesReversed') || false;
 
-    const escapedVideoTitle = escapeJsString(videoTitle);
-    const escapedSourceName = escapeJsString(sourceName);
-    const escapedSourceCode = escapeJsString(sourceCode);
-    const escapedVodId = escapeJsString(vodId);
-
     let html = `
     <div class="mb-4 flex justify-end items-center space-x-2">
-        <div class="text-sm text-gray-400 mr-auto">共 <span class="math-inline">\{episodes\.length\} 集</div\>
-<button onclick\="copyLinks\(\)"
-title\="复制所有剧集链接"
-class\="p\-2 bg\-gray\-700 hover\:bg\-gray\-600 text\-white rounded\-lg transition\-colors flex items\-center justify\-center"\>
-<svg xmlns\="http\://www\.w3\.org/2000/svg" class\="h\-5 w\-5" fill\="none" viewBox\="0 0 24 24" stroke\="currentColor"\>
-<path stroke\-linecap\="round" stroke\-linejoin\="round" stroke\-width\="2" d\="M8 5H6a2 2 0 00\-2 2v12a2 2 0 002 2h10a2 2 0 002\-2v\-1M8 5a2 2 0 002 2h2a2 2 0 002\-2M8 5a2 2 0 012\-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3\-3m\-3 3l3 3" /\>
-</svg\>
-</button\>
-<button id\="toggleEpisodeOrderBtn" onclick\="toggleEpisodeOrderUI\(\)" 
-title\="</span>{currentReversedState ? '切换为正序排列' : '切换为倒序排列'}"
+        <div class="text-sm text-gray-400 mr-auto">共 ${episodes.length} 集</div>
+        <button onclick="copyLinks()"
+                title="复制所有剧集链接"
+                class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+        </button>
+        <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" 
+                title="${currentReversedState ? '切换为正序排列' : '切换为倒序排列'}" /* 添加 title 提示 */
                 class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
             <svg id="orderIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transition: transform 0.3s ease;">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -1000,12 +1005,12 @@ title\="</span>{currentReversedState ? '切换为正序排列' : '切换为倒�
 
     displayEpisodes.forEach((episodeUrl, displayIndex) => {
         const originalIndex = currentReversedState ? (episodes.length - 1 - displayIndex) : displayIndex;
-        const escapedEpisodeUrl = escapeJsString(episodeUrl); // 转义 episodeUrl
+        const safeVideoTitle = encodeURIComponent(videoTitle);
+        const safeSourceName = encodeURIComponent(sourceName);
 
-        // onclick 调用 playVideo 时，字符串参数需要被正确包裹和转义
         html += `
         <button 
-            onclick="playVideo('<span class="math-inline">\{escapedEpisodeUrl\}', decodeURIComponent\('</span>{escapedVideoTitle}'), <span class="math-inline">\{originalIndex\}, decodeURIComponent\('</span>{escapedSourceName}'), '<span class="math-inline">\{escapedSourceCode\}', '</span>{escapedVodId}')" 
+            onclick="playVideo('<span class="math-inline">\{episodeUrl\}', decodeURIComponent\('</span>{safeVideoTitle}'), <span class="math-inline">\{originalIndex\}, decodeURIComponent\('</span>{safeSourceName}'), '<span class="math-inline">\{sourceCode\}', '</span>{vodId}')" 
             class="episode-btn px-2 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs sm:text-sm transition-colors truncate"
             data-index="${originalIndex}"
             title="第 ${originalIndex + 1} 集" 
@@ -1020,6 +1025,7 @@ title\="</span>{currentReversedState ? '切换为正序排列' : '切换为倒�
         if (orderIcon) {
             orderIcon.style.transform = currentReversedState ? 'rotate(180deg)' : 'rotate(0deg)';
         }
+        // 更新 title 提示
         const toggleBtn = document.getElementById('toggleEpisodeOrderBtn');
         if (toggleBtn) {
             const currentReversed = AppState.get('episodesReversed') || false;
@@ -1028,7 +1034,6 @@ title\="</span>{currentReversedState ? '切换为正序排列' : '切换为倒�
     });
     return html;
 }
-
 // 复制视频链接到剪贴板
 function copyLinks() {
     const reversed = AppState.get('episodesReversed') || false;
