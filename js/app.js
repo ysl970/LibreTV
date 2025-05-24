@@ -167,16 +167,18 @@ function playNextEpisode() {
     }
 }
 
-function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
+
+function playFromHistory(url, title, episodeIndex, playbackPosition = 0 /*, sourceName and sourceCode are now less critical here as we fetch full item */) {
     console.log(`[App - playFromHistory] Called with: url=${url}, title=${title}, epIndex=${episodeIndex}, pos=${playbackPosition}`);
 
+    // 从 localStorage 获取完整的历史记录项，以获取 vod_id, sourceCode, sourceName, episodes 列表
     let historyItem = null;
     let episodesList = [];
     try {
         const history = JSON.parse(localStorage.getItem('viewingHistory') || '[]');
-        historyItem = history.find(item =>
-            item.url === url &&
-            item.title === title &&
+        historyItem = history.find(item => 
+            item.url === url && 
+            item.title === title && 
             item.episodeIndex === episodeIndex
         );
 
@@ -187,13 +189,14 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
             }
         } else {
             console.warn("[App - playFromHistory] Could not find exact match in viewingHistory. Will try with currentEpisodes.");
+
             episodesList = AppState.get('currentEpisodes') || JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
         }
     } catch (e) {
         console.error("Error accessing or parsing viewingHistory:", e);
         episodesList = AppState.get('currentEpisodes') || JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
     }
-
+    
     // 更新 AppState 和 localStorage 以反映即将播放的剧集信息
     AppState.set('currentEpisodeIndex', episodeIndex);
     AppState.set('currentVideoTitle', title);
@@ -217,7 +220,7 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     const playerUrl = new URL('player.html', window.location.origin);
     playerUrl.searchParams.set('url', url); // 这是特定集的URL
     playerUrl.searchParams.set('title', title);
-    playerUrl.searchParams.set('index', episodeIndex.toString());
+    playerUrl.searchParams.set('index', episodeIndex.toString()); 
 
     if (vodId) {
         playerUrl.searchParams.set('id', vodId); // 传递 vod_id
@@ -234,8 +237,8 @@ function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
     }
 
     // 添加广告过滤参数 (PLAYER_CONFIG 和 getBoolConfig 应在 app.js 或其引用的 config.js 中可用)
-    const adOn = typeof getBoolConfig !== 'undefined' && typeof PLAYER_CONFIG !== 'undefined' ?
-        getBoolConfig(PLAYER_CONFIG.adFilteringStorage, false) : false;
+    const adOn = typeof getBoolConfig !== 'undefined' && typeof PLAYER_CONFIG !== 'undefined' ? 
+                 getBoolConfig(PLAYER_CONFIG.adFilteringStorage, false) : false;
     playerUrl.searchParams.set('af', adOn ? '1' : '0');
 
     console.log(`[App - playFromHistory] Navigating to player: ${playerUrl.toString()}`);
