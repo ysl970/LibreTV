@@ -617,7 +617,13 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
             try {
                 const storedData = localStorage.getItem('currentEpisodes');
                 if (storedData) {
-                    const parsedData = JSON.parse(storedData);
+                    let parsedData;
+                    try {
+                        parsedData = JSON.parse(storedData);
+                    } catch (parseError) {
+                        console.error('Failed to parse stored episode data:', parseError);
+                        return; // Skip this fallback if parsing fails
+                    }
 
                     // Handle both old format (array) and new format (object with metadata)
                     if (Array.isArray(parsedData)) {

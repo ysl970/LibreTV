@@ -186,23 +186,29 @@ function initializePageContent() {
             // 否则从localStorage获取
             const storedData = localStorage.getItem('currentEpisodes');
             if (storedData) {
-                const parsedData = JSON.parse(storedData);
+                try {
+                    const parsedData = JSON.parse(storedData);
 
-                // Handle both old format (array) and new format (object with metadata)
-                if (Array.isArray(parsedData)) {
-                    // Old format - just an array of episodes
-                    currentEpisodes = parsedData;
-                    window.episodeDataSource = 'localStorage_legacy';
-                } else if (parsedData && parsedData.episodes && Array.isArray(parsedData.episodes)) {
-                    // New format - object with metadata
-                    currentEpisodes = parsedData.episodes;
-                    window.episodeDataSource = parsedData.source || 'localStorage';
-                    window.episodeCacheTime = parsedData.cacheTime;
-                    window.episodeVodId = parsedData.vodId;
-                    window.episodeSourceName = parsedData.sourceName;
-                } else {
+                    // Handle both old format (array) and new format (object with metadata)
+                    if (Array.isArray(parsedData)) {
+                        // Old format - just an array of episodes
+                        currentEpisodes = parsedData;
+                        window.episodeDataSource = 'localStorage_legacy';
+                    } else if (parsedData && parsedData.episodes && Array.isArray(parsedData.episodes)) {
+                        // New format - object with metadata
+                        currentEpisodes = parsedData.episodes;
+                        window.episodeDataSource = parsedData.source || 'localStorage';
+                        window.episodeCacheTime = parsedData.cacheTime;
+                        window.episodeVodId = parsedData.vodId;
+                        window.episodeSourceName = parsedData.sourceName;
+                    } else {
+                        currentEpisodes = [];
+                        window.episodeDataSource = 'empty';
+                    }
+                } catch (e) {
+                    console.error('Failed to parse currentEpisodes from localStorage:', e);
                     currentEpisodes = [];
-                    window.episodeDataSource = 'empty';
+                    window.episodeDataSource = 'parse_error';
                 }
             } else {
                 currentEpisodes = [];
@@ -264,7 +270,10 @@ function initializePageContent() {
     }, 1000);
 
     // 启动自动刷新剧集列表（每10分钟检查一次）
-    startAutoRefreshInterval();
+    // 延迟启动，确保所有数据都已加载
+    setTimeout(() => {
+        startAutoRefreshInterval();
+    }, 1000);
 
     // 添加键盘快捷键事件监听
     document.addEventListener('keydown', handleKeyboardShortcuts);
@@ -794,7 +803,7 @@ function updateEpisodeInfo() {
         }
 
         episodeInfo.innerHTML = infoText;
-    } else {
+    } else if (episodeInfo) {
         episodeInfo.textContent = '无集数信息';
     }
 }
@@ -803,6 +812,11 @@ function updateEpisodeInfo() {
 function updateButtonStates() {
     const prevButton = document.getElementById('prevButton');
     const nextButton = document.getElementById('nextButton');
+
+    if (!prevButton || !nextButton) {
+        console.warn('Navigation buttons not found');
+        return;
+    }
 
     // 处理上一集按钮
     if (currentEpisodeIndex > 0) {
@@ -982,6 +996,14 @@ async function autoRefreshEpisodeList() {
         return;
     }
 
+    // 防止并发刷新
+    if (window.isAutoRefreshing) {
+        console.log('Auto refresh already in progress, skipping...');
+        return;
+    }
+
+    window.isAutoRefreshing = true;
+
     try {
         // 构造API URL强制获取最新数据
         const timestamp = new Date().getTime();
@@ -1064,6 +1086,9 @@ async function autoRefreshEpisodeList() {
     } catch (error) {
         // 静默处理错误，不显示给用户
         console.log('自动刷新剧集列表失败:', error);
+    } finally {
+        // 确保清除刷新标志
+        window.isAutoRefreshing = false;
     }
 }
 
@@ -1072,16 +1097,34 @@ function startAutoRefreshInterval() {
     // 清除可能存在的旧间隔
     if (window.autoRefreshInterval) {
         clearInterval(window.autoRefreshInterval);
+        window.autoRefreshInterval = null;
+    }
+
+    // 清除可能存在的旧超时
+    if (window.autoRefreshTimeout) {
+        clearTimeout(window.autoRefreshTimeout);
+        window.autoRefreshTimeout = null;
+    }
+
+    // 只有在有必要信息时才启动自动刷新
+    if (!window.episodeVodId || !window.episodeSourceName) {
+        console.log('缺少必要信息，跳过自动刷新设置');
+        return;
     }
 
     // 立即执行一次检查（延迟5秒，让页面完全加载）
-    setTimeout(() => {
+    window.autoRefreshTimeout = setTimeout(() => {
         autoRefreshEpisodeList();
     }, 5000);
 
     // 设置定期检查（每10分钟）
     window.autoRefreshInterval = setInterval(() => {
-        autoRefreshEpisodeList();
+        // 再次检查是否还有必要信息
+        if (window.episodeVodId && window.episodeSourceName) {
+            autoRefreshEpisodeList();
+        } else {
+            stopAutoRefreshInterval();
+        }
     }, 600000); // 10 minutes
 }
 
@@ -1090,6 +1133,10 @@ function stopAutoRefreshInterval() {
     if (window.autoRefreshInterval) {
         clearInterval(window.autoRefreshInterval);
         window.autoRefreshInterval = null;
+    }
+    if (window.autoRefreshTimeout) {
+        clearTimeout(window.autoRefreshTimeout);
+        window.autoRefreshTimeout = null;
     }
 }
 
