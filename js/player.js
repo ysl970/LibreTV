@@ -2,34 +2,34 @@
 function goBack(event) {
     // 防止默认链接行为
     if (event) event.preventDefault();
-    
+
     // 1. 优先检查URL参数中的returnUrl
     const urlParams = new URLSearchParams(window.location.search);
     const returnUrl = urlParams.get('returnUrl');
-    
+
     if (returnUrl) {
         // 如果URL中有returnUrl参数，优先使用
         window.location.href = decodeURIComponent(returnUrl);
         return;
     }
-    
+
     // 2. 检查localStorage中保存的lastPageUrl
     const lastPageUrl = localStorage.getItem('lastPageUrl');
     if (lastPageUrl && lastPageUrl !== window.location.href) {
         window.location.href = lastPageUrl;
         return;
     }
-    
+
     // 3. 检查是否是从搜索页面进入的播放器
     const referrer = document.referrer;
-    
+
     // 检查 referrer 是否包含搜索参数
     if (referrer && (referrer.includes('/s=') || referrer.includes('?s='))) {
         // 如果是从搜索页面来的，返回到搜索页面
         window.location.href = referrer;
         return;
     }
-    
+
     // 4. 如果是在iframe中打开的，尝试关闭iframe
     if (window.self !== window.top) {
         try {
@@ -40,13 +40,13 @@ function goBack(event) {
             console.error('调用父窗口closeVideoPlayer失败:', e);
         }
     }
-    
+
     // 5. 无法确定上一页，则返回首页
     if (!referrer || referrer === '') {
         window.location.href = '/';
         return;
     }
-    
+
     // 6. 以上都不满足，使用默认行为：返回上一页
     window.history.back();
 }
@@ -184,8 +184,30 @@ function initializePageContent() {
 
         } else {
             // 否则从localStorage获取
-            currentEpisodes = JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
+            const storedData = localStorage.getItem('currentEpisodes');
+            if (storedData) {
+                const parsedData = JSON.parse(storedData);
 
+                // Handle both old format (array) and new format (object with metadata)
+                if (Array.isArray(parsedData)) {
+                    // Old format - just an array of episodes
+                    currentEpisodes = parsedData;
+                    window.episodeDataSource = 'localStorage_legacy';
+                } else if (parsedData && parsedData.episodes && Array.isArray(parsedData.episodes)) {
+                    // New format - object with metadata
+                    currentEpisodes = parsedData.episodes;
+                    window.episodeDataSource = parsedData.source || 'localStorage';
+                    window.episodeCacheTime = parsedData.cacheTime;
+                    window.episodeVodId = parsedData.vodId;
+                    window.episodeSourceName = parsedData.sourceName;
+                } else {
+                    currentEpisodes = [];
+                    window.episodeDataSource = 'empty';
+                }
+            } else {
+                currentEpisodes = [];
+                window.episodeDataSource = 'none';
+            }
         }
 
         // 检查集数索引是否有效，如果无效则调整为0
@@ -240,6 +262,9 @@ function initializePageContent() {
     setTimeout(() => {
         setupProgressBarPreciseClicks();
     }, 1000);
+
+    // 启动自动刷新剧集列表（每10分钟检查一次）
+    startAutoRefreshInterval();
 
     // 添加键盘快捷键事件监听
     document.addEventListener('keydown', handleKeyboardShortcuts);
@@ -757,10 +782,20 @@ function showError(message) {
 
 // 更新集数信息
 function updateEpisodeInfo() {
+    const episodeInfo = document.getElementById('episodeInfo');
+    if (!episodeInfo) return;
+
     if (currentEpisodes.length > 0) {
-        document.getElementById('episodeInfo').textContent = `第 ${currentEpisodeIndex + 1}/${currentEpisodes.length} 集`;
+        let infoText = `第 ${currentEpisodeIndex + 1}/${currentEpisodes.length} 集`;
+
+        // Add simple freshness indicator (only show if data is fresh)
+        if (window.episodeDataSource && window.episodeDataSource.includes('fresh')) {
+            infoText += ' 🟢';
+        }
+
+        episodeInfo.innerHTML = infoText;
     } else {
-        document.getElementById('episodeInfo').textContent = '无集数信息';
+        episodeInfo.textContent = '无集数信息';
     }
 }
 
@@ -811,8 +846,8 @@ function renderEpisodes() {
         const isActive = realIndex === currentEpisodeIndex;
 
         html += `
-            <button id="episode-${realIndex}" 
-                    onclick="playEpisode(${realIndex})" 
+            <button id="episode-${realIndex}"
+                    onclick="playEpisode(${realIndex})"
                     class="px-4 py-2 ${isActive ? 'episode-active' : '!bg-[#222] hover:!bg-[#333] hover:!shadow-none'} !border ${isActive ? '!border-blue-500' : '!border-[#333]'} rounded-lg transition-colors text-center episode-btn">
                 ${realIndex + 1}
             </button>
@@ -886,6 +921,17 @@ function playEpisode(index) {
 
     // 三秒后保存到历史记录
     setTimeout(() => saveToHistory(), 3000);
+
+    // 在切换剧集时也检查是否需要刷新剧集列表
+    setTimeout(() => {
+        if (window.episodeDataSource && window.episodeCacheTime) {
+            const cacheAge = Date.now() - window.episodeCacheTime;
+            // 如果缓存超过5分钟，在切换剧集时自动刷新
+            if (cacheAge > 300000) { // 5 minutes
+                autoRefreshEpisodeList();
+            }
+        }
+    }, 2000);
 }
 
 // 播放上一集
@@ -929,6 +975,128 @@ function toggleEpisodeOrder() {
     // 更新排序按钮
     updateOrderButton();
 }
+
+// 自动刷新剧集列表（后台静默执行）
+async function autoRefreshEpisodeList() {
+    if (!window.episodeVodId || !window.episodeSourceName) {
+        return;
+    }
+
+    try {
+        // 构造API URL强制获取最新数据
+        const timestamp = new Date().getTime();
+        const apiUrl = `/api/detail?id=${encodeURIComponent(window.episodeVodId)}&source=${encodeURIComponent(window.episodeSourceName)}&_t=${timestamp}`;
+
+        const response = await fetch(apiUrl, {
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`API请求失败，状态码: ${response.status}`);
+        }
+
+        const videoDetails = await response.json();
+
+        if (videoDetails && videoDetails.episodes && videoDetails.episodes.length > 0) {
+            const newEpisodes = videoDetails.episodes;
+            const oldCount = currentEpisodes.length;
+            const newCount = newEpisodes.length;
+
+            // 只有在集数发生变化时才更新
+            if (newCount !== oldCount || !currentEpisodes.every((ep, i) => ep === newEpisodes[i])) {
+                // 更新当前剧集列表
+                currentEpisodes = newEpisodes;
+
+                // 更新localStorage
+                const episodeData = {
+                    episodes: newEpisodes,
+                    cacheTime: Date.now(),
+                    source: 'fresh_auto',
+                    vodId: window.episodeVodId,
+                    sourceName: window.episodeSourceName
+                };
+                localStorage.setItem('currentEpisodes', JSON.stringify(episodeData));
+
+                // 更新全局变量
+                window.episodeDataSource = 'fresh_auto';
+                window.episodeCacheTime = Date.now();
+
+                // 重新渲染剧集列表
+                renderEpisodes();
+
+                // 更新集数信息显示
+                updateEpisodeInfo();
+
+                // 静默显示更新消息（仅在有新集数时）
+                if (newCount > oldCount) {
+                    showToast(`发现 ${newCount - oldCount} 个新剧集`, 'success');
+                }
+
+                // 更新观看历史中的剧集列表
+                try {
+                    const history = JSON.parse(localStorage.getItem('viewingHistory') || '[]');
+                    const historyIndex = history.findIndex(item =>
+                        item.title === currentVideoTitle &&
+                        item.vod_id === window.episodeVodId &&
+                        item.sourceName === window.episodeSourceName
+                    );
+
+                    if (historyIndex !== -1) {
+                        history[historyIndex].episodes = [...newEpisodes];
+                        history[historyIndex].episodesCacheTime = Date.now();
+                        history[historyIndex].episodesSource = 'fresh_auto';
+                        localStorage.setItem('viewingHistory', JSON.stringify(history));
+                    }
+                } catch (e) {
+                    console.error('更新观看历史失败:', e);
+                }
+            } else {
+                // 即使没有变化，也更新缓存时间
+                window.episodeDataSource = 'fresh_auto';
+                window.episodeCacheTime = Date.now();
+                updateEpisodeInfo();
+            }
+        }
+
+    } catch (error) {
+        // 静默处理错误，不显示给用户
+        console.log('自动刷新剧集列表失败:', error);
+    }
+}
+
+// 启动自动刷新间隔
+function startAutoRefreshInterval() {
+    // 清除可能存在的旧间隔
+    if (window.autoRefreshInterval) {
+        clearInterval(window.autoRefreshInterval);
+    }
+
+    // 立即执行一次检查（延迟5秒，让页面完全加载）
+    setTimeout(() => {
+        autoRefreshEpisodeList();
+    }, 5000);
+
+    // 设置定期检查（每10分钟）
+    window.autoRefreshInterval = setInterval(() => {
+        autoRefreshEpisodeList();
+    }, 600000); // 10 minutes
+}
+
+// 停止自动刷新间隔
+function stopAutoRefreshInterval() {
+    if (window.autoRefreshInterval) {
+        clearInterval(window.autoRefreshInterval);
+        window.autoRefreshInterval = null;
+    }
+}
+
+// 页面卸载时清理间隔
+window.addEventListener('beforeunload', () => {
+    stopAutoRefreshInterval();
+});
 
 // 更新排序按钮状态
 function updateOrderButton() {
@@ -1055,14 +1223,14 @@ function saveToHistory() {
         duration: videoDuration,
         episodes: currentEpisodes && currentEpisodes.length > 0 ? [...currentEpisodes] : []
     };
-    
+
     try {
         const history = JSON.parse(localStorage.getItem('viewingHistory') || '[]');
 
         // 检查是否已经存在相同的系列记录 (基于标题、来源和 showIdentifier)
-        const existingIndex = history.findIndex(item => 
-            item.title === videoInfo.title && 
-            item.sourceName === videoInfo.sourceName && 
+        const existingIndex = history.findIndex(item =>
+            item.title === videoInfo.title &&
+            item.sourceName === videoInfo.sourceName &&
             item.showIdentifier === videoInfo.showIdentifier
         );
 
@@ -1074,7 +1242,7 @@ function saveToHistory() {
             existingItem.sourceName = videoInfo.sourceName; // Should be consistent, but update just in case
             existingItem.sourceCode = videoInfo.sourceCode;
             existingItem.vod_id = videoInfo.vod_id;
-            
+
             // Update URLs to reflect the current episode being watched
             existingItem.directVideoUrl = videoInfo.directVideoUrl; // Current episode's direct URL
             existingItem.url = videoInfo.url; // Player link for the current episode
@@ -1082,17 +1250,17 @@ function saveToHistory() {
             // 更新播放进度信息
             existingItem.playbackPosition = videoInfo.playbackPosition > 10 ? videoInfo.playbackPosition : (existingItem.playbackPosition || 0);
             existingItem.duration = videoInfo.duration || existingItem.duration;
-            
+
             // 更新集数列表（如果新的集数列表与存储的不同，例如集数增加了）
             if (videoInfo.episodes && videoInfo.episodes.length > 0) {
-                if (!existingItem.episodes || 
-                    !Array.isArray(existingItem.episodes) || 
-                    existingItem.episodes.length !== videoInfo.episodes.length || 
+                if (!existingItem.episodes ||
+                    !Array.isArray(existingItem.episodes) ||
+                    existingItem.episodes.length !== videoInfo.episodes.length ||
                     !videoInfo.episodes.every((ep, i) => ep === existingItem.episodes[i])) { // Basic check for content change
                     existingItem.episodes = [...videoInfo.episodes]; // Deep copy
                 }
             }
-            
+
             // 移到最前面
             const updatedItem = history.splice(existingIndex, 1)[0];
             history.unshift(updatedItem);
