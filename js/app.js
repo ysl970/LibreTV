@@ -968,18 +968,12 @@ async function showVideoEpisodesModal(id, title, sourceCode) {
     }
 }
 
-/**
- * 渲染剧集按钮HTML
- * @param {Array} episodes - 剧集列表
- * @param {string} videoTitle - 视频标题
- * @param {string} sourceCode - 来源代码
- * @param {string} sourceName - 来源名称
- * @returns {string} - 剧集按钮HTML
- */
-
 function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
     if (!episodes || episodes.length === 0) return '<p class="text-center text-gray-500">暂无剧集信息</p>';
     const currentReversedState = AppState.get('episodesReversed') || false;
+    // 设置当前视频ID（最好统一存一下）
+    // AppState.set('currentVideoId', vodId); // 如果你有vodId参数
+    const vodId = AppState.get('currentVideoId') || '';
 
     let html = `
     <div class="mb-4 flex justify-end items-center space-x-2">
@@ -987,22 +981,17 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
         <button onclick="copyLinks()"
                 title="复制所有剧集链接"
                 class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" ...></svg>
         </button>
         <button id="toggleEpisodeOrderBtn" onclick="toggleEpisodeOrderUI()" 
-                title="${currentReversedState ? '切换为正序排列' : '切换为倒序排列'}" /* 添加 title 提示 */
+                title="${currentReversedState ? '切换为正序排列' : '切换为倒序排列'}"
                 class="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center">
-            <svg id="orderIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="transition: transform 0.3s ease;">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-            </svg>
+            <svg id="orderIcon" ...></svg>
         </button>
     </div>
     <div id="episodeButtonsContainer" class="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">`;
 
     const displayEpisodes = currentReversedState ? [...episodes].reverse() : [...episodes];
-
     displayEpisodes.forEach((episodeUrl, displayIndex) => {
         const originalIndex = currentReversedState ? (episodes.length - 1 - displayIndex) : displayIndex;
         const safeVideoTitle = encodeURIComponent(videoTitle);
@@ -1010,7 +999,7 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
 
         html += `
         <button 
-            onclick="playVideo('<span class="math-inline">\{episodeUrl\}', decodeURIComponent\('</span>{safeVideoTitle}'), <span class="math-inline">\{originalIndex\}, decodeURIComponent\('</span>{safeSourceName}'), '<span class="math-inline">\{sourceCode\}', '</span>{vodId}')" 
+            onclick="playVideo('${episodeUrl}', decodeURIComponent('${safeVideoTitle}'), ${originalIndex}, decodeURIComponent('${safeSourceName}'), '${sourceCode}', '${vodId}')" 
             class="episode-btn px-2 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs sm:text-sm transition-colors truncate"
             data-index="${originalIndex}"
             title="第 ${originalIndex + 1} 集" 
