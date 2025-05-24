@@ -83,7 +83,7 @@ function sanitizeText(text) {
  * @param {string} sourceName - 来源名称
  * @param {string} sourceCode - 来源代码
  */
-function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
+function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '', vodId = '') {
     if (!url) {
         showToast('无效的视频链接', 'error');
         return;
@@ -98,6 +98,7 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
             episodeIndex: episodeIndex,
             sourceName: sourceName,
             sourceCode: sourceCode,
+            vod_id: vodId,
             episodes: AppState.get('currentEpisodes') || []
         };
         addToViewingHistory(videoInfoForHistory);
@@ -107,7 +108,9 @@ function playVideo(url, title, episodeIndex, sourceName = '', sourceCode = '') {
     playerUrl.searchParams.set('url', url);
     playerUrl.searchParams.set('title', title);
     playerUrl.searchParams.set('index', episodeIndex.toString());
-
+    if (vodId) {
+        playerUrl.searchParams.set('id', vodId);
+    }
     // const eps = AppState.get('currentEpisodes');
     //if (Array.isArray(eps) && eps.length) {
     //    playerUrl.searchParams.set('episodes', encodeURIComponent(JSON.stringify(eps)));
@@ -164,35 +167,78 @@ function playNextEpisode() {
     }
 }
 
-/**
- * Plays video from history (called by ui.js)
- * @param {string} url - Video URL
- * @param {string} title - Video title
- * @param {number} episodeIndex - Episode index
- * @param {number} playbackPosition - Playback position in seconds
- * @param {string} sourceName - Source name (optional)
- * @param {string} sourceCode - Source code (optional)
- */
-function playFromHistory(url, title, episodeIndex, playbackPosition = 0, sourceName = '', sourceCode = '') {
-    console.log(`Playing from history: ${title}, Episode ${episodeIndex + 1}`);
+function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
+    console.log(`[App - playFromHistory] Called with: url=${url}, title=${title}, epIndex=${episodeIndex}, pos=${playbackPosition}`);
 
-    // Update state
+    let historyItem = null;
+    let episodesList = [];
+    try {
+        const history = JSON.parse(localStorage.getItem('viewingHistory') || '[]');
+        historyItem = history.find(item =>
+            item.url === url &&
+            item.title === title &&
+            item.episodeIndex === episodeIndex
+        );
+
+        if (historyItem) {
+            console.log("[App - playFromHistory] Found historyItem:", historyItem);
+            if (historyItem.episodes && Array.isArray(historyItem.episodes)) {
+                episodesList = historyItem.episodes;
+            }
+        } else {
+            console.warn("[App - playFromHistory] Could not find exact match in viewingHistory. Will try with currentEpisodes.");
+            episodesList = AppState.get('currentEpisodes') || JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
+        }
+    } catch (e) {
+        console.error("Error accessing or parsing viewingHistory:", e);
+        episodesList = AppState.get('currentEpisodes') || JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
+    }
+
+    // 更新 AppState 和 localStorage 以反映即将播放的剧集信息
     AppState.set('currentEpisodeIndex', episodeIndex);
     AppState.set('currentVideoTitle', title);
+    if (episodesList.length > 0) {
+        AppState.set('currentEpisodes', episodesList);
+        localStorage.setItem('currentEpisodes', JSON.stringify(episodesList));
+    } else {
+        // 如果没有剧集列表，播放器可能会遇到问题，这里可以考虑是否要阻止播放或提示
+        console.warn(`[App - playFromHistory] No episodes list found for "${title}". Player might not have full context.`);
+    }
+    localStorage.setItem('currentEpisodeIndex', episodeIndex.toString());
+    localStorage.setItem('currentVideoTitle', title);
 
-    // Build player URL with position parameter
+
+    // 从 historyItem 中获取 vod_id, sourceName, sourceCode (如果存在)
+    const vodId = historyItem ? historyItem.vod_id || '' : '';
+    const actualSourceName = historyItem ? historyItem.sourceName || '' : ''; // 使用 historyItem 中的 sourceName
+    const actualSourceCode = historyItem ? historyItem.sourceCode || '' : ''; // 使用 historyItem 中的 sourceCode
+
+    // 构建播放器 URL
     const playerUrl = new URL('player.html', window.location.origin);
-    playerUrl.searchParams.set('url', url);
+    playerUrl.searchParams.set('url', url); // 这是特定集的URL
     playerUrl.searchParams.set('title', title);
-    playerUrl.searchParams.set('index', episodeIndex.toString()); // Changed from 'ep' to 'index' to match player.html expectations
-    if (sourceName) playerUrl.searchParams.set('source', sourceName);
-    if (sourceCode) playerUrl.searchParams.set('source_code', sourceCode);
-    if (playbackPosition > 0) playerUrl.searchParams.set('position', playbackPosition.toString());
+    playerUrl.searchParams.set('index', episodeIndex.toString());
 
-    // 去广告开关有关
-    const adOn = getBoolConfig(PLAYER_CONFIG.adFilteringStorage, false);
+    if (vodId) {
+        playerUrl.searchParams.set('id', vodId); // 传递 vod_id
+    }
+    if (actualSourceName) {
+        // player_app.js 会从 URL search param 'source' 读取 sourceName
+        playerUrl.searchParams.set('source', actualSourceName);
+    }
+    if (actualSourceCode) {
+        playerUrl.searchParams.set('source_code', actualSourceCode);
+    }
+    if (playbackPosition > 0) {
+        playerUrl.searchParams.set('position', playbackPosition.toString());
+    }
+
+    // 添加广告过滤参数 (PLAYER_CONFIG 和 getBoolConfig 应在 app.js 或其引用的 config.js 中可用)
+    const adOn = typeof getBoolConfig !== 'undefined' && typeof PLAYER_CONFIG !== 'undefined' ?
+        getBoolConfig(PLAYER_CONFIG.adFilteringStorage, false) : false;
     playerUrl.searchParams.set('af', adOn ? '1' : '0');
-    // Navigate to player page
+
+    console.log(`[App - playFromHistory] Navigating to player: ${playerUrl.toString()}`);
     window.location.href = playerUrl.toString();
 }
 
@@ -691,8 +737,9 @@ async function getVideoDetail(id, sourceCode, apiUrl = '') {
             firstEpisode,
             data.videoInfo?.title || '未知视频',
             0,
-            selectedApi.name || '',
-            sourceCode
+            selectedApi.name || '', // sourceName
+            sourceCode,
+            id // vod_id
         );
     } catch (error) {
         if (searchResults) {
@@ -963,7 +1010,7 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
 
         html += `
         <button 
-            onclick="playVideo('${episodeUrl}', decodeURIComponent('${safeVideoTitle}'), ${originalIndex}, decodeURIComponent('${safeSourceName}'), '${sourceCode}')" 
+            onclick="playVideo('<span class="math-inline">\{episodeUrl\}', decodeURIComponent\('</span>{safeVideoTitle}'), <span class="math-inline">\{originalIndex\}, decodeURIComponent\('</span>{safeSourceName}'), '<span class="math-inline">\{sourceCode\}', '</span>{vodId}')" 
             class="episode-btn px-2 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs sm:text-sm transition-colors truncate"
             data-index="${originalIndex}"
             title="第 ${originalIndex + 1} 集" 
