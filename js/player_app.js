@@ -534,7 +534,12 @@ function initializePageContent() {
             }
 
             if (positionToResume > 5 && currentEpisodes[resumeIndex]) {
-                showProgressRestoreModal({ /* ... */ }).then(wantsToResume => {
+                showProgressRestoreModal({ 
+                    title: "继续播放？",
+                    content: `发现《${currentVideoTitle}》第 ${resumeIndex + 1} 集的播放记录，<br>是否从 <span style="color:#00ccff">${formatPlayerTime(positionToResume)}</span> 继续播放？`,
+                    confirmText: "继续播放",
+                    cancelText: "从头播放"
+                }).then(wantsToResume => {
                     if (wantsToResume) {
                         episodeUrlForPlayer = currentEpisodes[resumeIndex];
                         indexForPlayer = resumeIndex;
