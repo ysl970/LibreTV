@@ -975,6 +975,7 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
     const safeVideoTitle = encodeURIComponent(videoTitle);
     const safeSourceName = encodeURIComponent(sourceName);
 
+    // 重点区别在下面一行
     let html = `
     <div class="mb-4 flex items-center w-full">
         <div class="text-sm text-gray-400">共 ${episodes.length} 集</div>
@@ -998,13 +999,11 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
         const originalIndex = currentReversedState ? (episodes.length - 1 - displayIndex) : displayIndex;
         html += `
         <button 
-            onclick="playVideo('${episodeUrl}', decodeURIComponent('${safeVideoTitle}'), ${originalIndex}, decodeURIComponent('${safeSourceName}'), '${sourceCode}', '${vodId}')" 
+            onclick="playVideo('${episodeUrl}', decodeURIComponent('${safeVideoTitle}'), ${originalIndex}, decodeURIComponent('${safeSourceName}'), '${sourceCode}', '${vodId}')"
             class="episode-btn px-2 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs sm:text-sm transition-colors truncate"
             data-index="${originalIndex}"
             title="第 ${originalIndex + 1} 集" 
-        >
-            第 ${originalIndex + 1} 集      
-        </button>`;
+        >第 ${originalIndex + 1} 集</button>`;
     });
     html += '</div>';
 
@@ -1021,6 +1020,7 @@ function renderEpisodeButtons(episodes, videoTitle, sourceCode, sourceName) {
     });
     return html;
 }
+
 
 // 复制视频链接到剪贴板
 function copyLinks() {
