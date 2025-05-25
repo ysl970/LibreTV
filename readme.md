@@ -1,12 +1,12 @@
 # YTPPTV - 免费在线视频搜索与观看平台
 
-## 📺 项目简介
+## 项目简介
 
 YTPPTV 是一个轻量级、免费的在线视频搜索与观看平台，提供来自多个视频源的内容搜索与播放服务。无需注册，即开即用，支持多种设备访问。项目结合了前端技术和后端代理功能，可部署在支持服务端功能的各类网站托管服务上。
 
 本项目基于 [bestK/tv](https://github.com/bestK/tv) 进行重构与增强。
 
-## 点击查看项目截图
+## 项目截图
 
 <img width="1902" alt="image" src="https://github.com/user-attachments/assets/44cbfd51-d29e-41ce-82c2-da9b498e1047" />
 
@@ -20,7 +20,7 @@ YTPPTV 支持标准的苹果 CMS V10 API 格式。添加自定义 API 时需遵�
 1. 在设置面板中选择"自定义接口"
 2. 接口地址: `https://example.com/api.php/provide/vod`
 
-## ⌨️ 键盘快捷键
+## 键盘快捷键
 
 播放器支持以下键盘快捷键：
 
@@ -31,7 +31,7 @@ YTPPTV 支持标准的苹果 CMS V10 API 格式。添加自定义 API 时需遵�
 - **F 键**: 全屏/退出全屏
 - **Esc 键**: 退出全屏
 
-## 🛠️ 技术栈
+## 技术栈
 
 - HTML5 + CSS3 + JavaScript (ES6+)
 - Tailwind CSS
@@ -40,7 +40,6 @@ YTPPTV 支持标准的苹果 CMS V10 API 格式。添加自定义 API 时需遵�
 - Cloudflare/Vercel/Netlify Serverless Functions
 - 服务端 HLS 代理和处理技术
 - localStorage 本地存储
-
 ## ⚠️ 免责声明
 
 YTPPTV 仅作为视频搜索工具，不存储、上传或分发任何视频内容。所有视频均来自第三方 API 接口提供的搜索结果。如有侵权内容，请联系相应的内容提供方。
