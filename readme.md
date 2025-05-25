@@ -1,8 +1,6 @@
 # YTPPTV - 免费在线视频搜索与观看平台
 
 <div align="center">
-  <img src="image/logo.png" alt="YTPPTV Logo" width="120">
-  <br>
   <p><strong>自由观影，畅享精彩</strong></p>
 </div>
 
