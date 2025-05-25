@@ -8,7 +8,8 @@ YTPPTV 是一个轻量级、免费的在线视频搜索与观看平台，提供�
 
 <details>
   <summary>点击查看项目截图</summary>
-  <img src="https://github.com/user-attachments/assets/df485345-e83b-4564-adf7-0680be92d3c7" alt="项目截图" style="max-width:600px">
+  <img src="<img width="1902" alt="image" src="https://github.com/user-attachments/assets/b1bbaff0-a97f-402d-a887-13970c582672" />
+" alt="项目截图" style="max-width:600px">
 </details>
 
 ### API兼容性
