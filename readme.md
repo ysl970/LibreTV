@@ -6,13 +6,11 @@ YTPPTV 是一个轻量级、免费的在线视频搜索与观看平台，提供�
 
 本项目基于 [bestK/tv](https://github.com/bestK/tv) 进行重构与增强。
 
-<details>
-  <summary>点击查看项目截图</summary>
-  <img src="<img width="1902" alt="image" src="https://github.com/user-attachments/assets/b1bbaff0-a97f-402d-a887-13970c582672" />
-" alt="项目截图" style="max-width:600px">
-</details>
+## 点击查看项目截图
 
-### API兼容性
+<img width="1902" alt="image" src="https://github.com/user-attachments/assets/44cbfd51-d29e-41ce-82c2-da9b498e1047" />
+
+## API兼容性
 
 YTPPTV 支持标准的苹果 CMS V10 API 格式。添加自定义 API 时需遵循以下格式：
 - 搜索接口: `https://example.com/api.php/provide/vod/?ac=videolist&wd=关键词`
