@@ -36,4 +36,4 @@ jobs:
           exit 1
       - name: Run curl command
         run: |
-          curl -X POST "https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/4e4b6f54-393e-4503-8f9e-0f5f19e48ce7"
+          curl -d "" "https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/e76bde5e-21e2-457c-a967-0836c3b7e320"
