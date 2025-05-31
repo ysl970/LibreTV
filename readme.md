@@ -6,9 +6,7 @@ YTPPTV 是一个轻量级、免费的在线视频搜索与观看平台，提供�
 
 本项目基于 [bestK/tv](https://github.com/bestK/tv) 进行重构与增强。
 
-## 项目截图
 
-<img width="1902" alt="image" src="https://github.com/user-attachments/assets/44cbfd51-d29e-41ce-82c2-da9b498e1047" />
 
 ## API兼容性
 
