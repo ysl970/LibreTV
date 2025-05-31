@@ -37,8 +37,8 @@ async function checkForUpdates() {
         // 获取最新版本
         let latestVersion;
         const VERSION_URL = {
-            PROXY: 'https://github.com/TLS-802/YTPPTV/blob/f16967d71289e763cd898eddf963f0d1a89bb04a/VERSION.txt',
-            DIRECT: 'https://github.com/TLS-802/YTPPTV/blob/f16967d71289e763cd898eddf963f0d1a89bb04a/VERSION.txt'
+            PROXY: 'https://github.com/TLS-802/YTPPTV/blob/main/VERSION.txt',
+            DIRECT: 'https://github.com/TLS-802/YTPPTV/blob/main/VERSION.txt'
         };
         const FETCH_TIMEOUT = 1500;
         
