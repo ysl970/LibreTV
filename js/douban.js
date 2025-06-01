@@ -1,8 +1,8 @@
 // 豆瓣热门电影电视剧推荐功能
 
 // 豆瓣标签列表 - 修改为默认标签
-let defaultMovieTags = ['热门', '最新', '豆瓣高分', '华语', '欧美', '韩国', '日本'];
-let defaultTvTags = ['热门', '国产剧', '美剧', '韩剧', '日剧', '综艺'];
+let defaultMovieTags = ['热门', '最新', '华语', '欧美', '韩国', '日本'];
+let defaultTvTags = ['热门', '国产', '美剧', '韩剧', '日剧', '综艺'];
 
 // 用户标签列表 - 存储用户实际使用的标签（包含保留的系统标签和用户添加的自定义标签）
 let movieTags = [];
@@ -51,7 +51,7 @@ function saveUserTags() {
 let doubanMovieTvCurrentSwitch = 'movie';
 let doubanCurrentTag = '热门';
 let doubanPageStart = 0;
-const doubanPageSize = 16; // 一次显示的项目数量
+const doubanPageSize = 18; // 一次显示的项目数量
 
 // 初始化豆瓣功能
 function initDouban() {
