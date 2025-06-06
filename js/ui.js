@@ -1,11 +1,16 @@
 // UI相关函数
 function toggleSettings(e) {
-// 密码保护校验
+    // 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
         if (window.isPasswordProtected() && !window.isPasswordVerified()) {
             showPasswordModal && showPasswordModal();
             return;
         }
+    }
+    // 阻止事件冒泡，防止触发document的点击事件
+    e && e.stopPropagation();
+    const panel = document.getElementById('settingsPanel');
+    panel.classList.toggle('show');
 }
 
 // 改进的Toast显示函数 - 支持队列显示多个Toast
