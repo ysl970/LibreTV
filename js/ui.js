@@ -1,70 +1,11 @@
 // UI相关函数
 function toggleSettings(e) {
-// 判断是否需要密码保护（Cloudflare 环境变量 PASSWORD 存在即保护）
-window.isPasswordProtected = function() {
-    return !!(window.__ENV__ && window.__ENV__.PASSWORD);
-};
-
-// 判断是否已通过验证（仅本会话，页面刷新需重输，可改localStorage为长期）
-window.isPasswordVerified = function() {
-    return sessionStorage.getItem('isAdminVerified') === '1';
-};
-
-// 显示密码输入弹窗
-window.showPasswordModal = function() {
-    if (document.getElementById('adminPasswordModal')) return;
-    const modal = document.createElement('div');
-    modal.id = 'adminPasswordModal';
-    modal.innerHTML = `
-        <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;">
-            <div style="background:#222;padding:2em 2em 1em 2em;border-radius:1em;text-align:center;min-width:260px;">
-                <div style="color:#fff;margin-bottom:1em;">请输入管理员密码</div>
-                <input id="adminPasswordInput" type="password" style="width:100%;padding:0.5em;margin-bottom:1em;" autofocus />
-                <br>
-                <button id="adminPasswordOK" style="margin-right:1em;">确定</button>
-                <button id="adminPasswordCancel">取消</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-
-    document.getElementById('adminPasswordOK').onclick = function() {
-        const pwd = document.getElementById('adminPasswordInput').value;
-        // 校验 Cloudflare 环境变量
-        if (window.__ENV__ && pwd === window.__ENV__.PASSWORD) {
-            sessionStorage.setItem('isAdminVerified', '1');
-            document.body.removeChild(modal);
-            // 通过验证后自动显示设置面板
-            const panel = document.getElementById('settingsPanel');
-            panel && panel.classList.add('show');
-        } else {
-            alert('密码错误');
-        }
-    };
-    document.getElementById('adminPasswordCancel').onclick = function() {
-        document.body.removeChild(modal);
-    };
-};
-
-// 用于按钮触发（如设置按钮的 onclick）
-function toggleSettings(e) {
-    // 密码保护校验
+// 密码保护校验
     if (window.isPasswordProtected && window.isPasswordVerified) {
         if (window.isPasswordProtected() && !window.isPasswordVerified()) {
             showPasswordModal && showPasswordModal();
             return;
         }
-    }
-    // 阻止事件冒泡，防止触发document的点击事件
-    e && e.stopPropagation();
-    const panel = document.getElementById('settingsPanel');
-    panel.classList.toggle('show');
-}
-    }
-    // 阻止事件冒泡，防止触发document的点击事件
-    e && e.stopPropagation();
-    const panel = document.getElementById('settingsPanel');
-    panel.classList.toggle('show');
 }
 
 // 改进的Toast显示函数 - 支持队列显示多个Toast
@@ -822,19 +763,12 @@ function clearViewingHistory() {
 }
 
 // 更新toggleSettings函数以处理历史面板互动
+const originalToggleSettings = toggleSettings;
 toggleSettings = function(e) {
-    // 密码保护校验
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            window.showPasswordModal && window.showPasswordModal();
-            return;
-        }
-    }
     if (e) e.stopPropagation();
 
-    // 设置面板的显示/隐藏逻辑
-    const panel = document.getElementById('settingsPanel');
-    panel.classList.toggle('show');
+    // 原始设置面板切换逻辑
+    originalToggleSettings(e);
 
     // 如果历史记录面板是打开的，则关闭它
     const historyPanel = document.getElementById('historyPanel');
