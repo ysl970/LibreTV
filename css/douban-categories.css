@@ -3,19 +3,19 @@
 /* 水平滚动容器样式 */
 [class^="douban-"] {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   padding-bottom: 10px;
   gap: 0.5rem;
+}
+
+/* 水平滚动容器样式 - 由JS控制添加，当内容数量≥8个时应用 */
+[class^="douban-"].scrollable {
+  flex-wrap: nowrap;
   overflow-x: auto;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-
-/* 水平滚动容器样式 - 由JS控制添加 */
-[class^="douban-"].scrollable {
-  /* 所有容器现在默认就是不换行的，这个类不需要重复定义这些属性 */
 }
 
 /* 隐藏滚动条但保留功能 */
