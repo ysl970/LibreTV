@@ -159,23 +159,25 @@ function setupMoreButtons() {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             
-            // 获取分类名称
-            const categoryTitle = this.closest('div').querySelector('h2').textContent;
+            // 获取分类信息（从data属性）
+            const category = this.getAttribute('data-category');
+            const type = this.getAttribute('data-type');
             
-            // 根据分类名称设置搜索内容
+            if (!category || !type) {
+                console.error('按钮缺少必要的data属性');
+                return;
+            }
+            
+            // 根据分类类型和名称设置搜索内容
             let searchTerm = '';
-            if (categoryTitle.includes('喜剧')) {
-                searchTerm = '喜剧电影';
-            } else if (categoryTitle.includes('动作')) {
-                searchTerm = '动作电影';
-            } else if (categoryTitle.includes('科幻')) {
-                searchTerm = '科幻电影';
-            } else if (categoryTitle.includes('爱情')) {
-                searchTerm = '爱情电影';
-            } else if (categoryTitle.includes('电视剧')) {
-                searchTerm = '热门电视剧';
-            } else if (categoryTitle.includes('综艺')) {
-                searchTerm = '热门综艺';
+            const categoryName = contentCategories[type][category];
+            
+            if (type === 'movie') {
+                searchTerm = `${categoryName}电影`;
+            } else if (type === 'tv') {
+                searchTerm = `${categoryName}电视剧`;
+            } else if (type === 'variety') {
+                searchTerm = `${categoryName}综艺`;
             }
             
             // 填充搜索框并执行搜索
@@ -203,8 +205,11 @@ async function fetchCategoryContent(type, category, categoryName) {
         } else if (type === 'tv') {
             apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
         } else if (type === 'variety') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺,'+categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            // 修复综艺内容获取，使用正确的tag参数
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
         }
+        
+        console.log(`正在获取 ${type}-${category} 内容，URL: ${apiUrl}`);
         
         // 获取数据
         const data = await fetchDoubanData(apiUrl);
