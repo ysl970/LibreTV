@@ -24,15 +24,8 @@ const contentCategories = {
     }
 };
 
-// 保留原有的标签系统，用于兼容性
-let defaultMovieTags = ['热门', '最新', '华语', '欧美', '韩国', '日本'];
-let defaultTvTags = ['热门', '国产', '美剧', '韩剧', '日剧', '综艺'];
-let movieTags = [];
-let tvTags = [];
-let doubanMovieTvCurrentSwitch = 'movie';
-let doubanCurrentTag = '热门';
-let doubanPageStart = 0;
-const doubanPageSize = 6; // 每个分类显示的数量
+// 默认每个分类显示的数量，可以通过设置修改
+let doubanPageSize = parseInt(localStorage.getItem('doubanPageSize')) || 6;
 
 // 初始化豆瓣功能
 function initDouban() {
@@ -74,9 +67,6 @@ function initDouban() {
         // 滚动到页面顶部
         window.scrollTo(0, 0);
     }
-
-    // 加载用户标签（兼容旧版）
-    loadUserTags();
     
     // 初始加载各分类内容
     if (localStorage.getItem('doubanEnabled') === 'true') {
@@ -85,35 +75,56 @@ function initDouban() {
     
     // 设置"更多"按钮点击事件
     setupMoreButtons();
+    
+    // 添加豆瓣设置到设置面板
+    addDoubanSettings();
 }
 
-// 加载用户标签（兼容旧版）
-function loadUserTags() {
-    try {
-        // 尝试从本地存储加载用户保存的标签
-        const savedMovieTags = localStorage.getItem('userMovieTags');
-        const savedTvTags = localStorage.getItem('userTvTags');
-        
-        // 如果本地存储中有标签数据，则使用它
-        if (savedMovieTags) {
-            movieTags = JSON.parse(savedMovieTags);
-        } else {
-            // 否则使用默认标签
-            movieTags = [...defaultMovieTags];
-        }
-        
-        if (savedTvTags) {
-            tvTags = JSON.parse(savedTvTags);
-        } else {
-            // 否则使用默认标签
-            tvTags = [...defaultTvTags];
-        }
-    } catch (e) {
-        console.error('加载标签失败：', e);
-        // 初始化为默认值，防止错误
-        movieTags = [...defaultMovieTags];
-        tvTags = [...defaultTvTags];
-    }
+// 添加豆瓣设置到设置面板
+function addDoubanSettings() {
+    // 查找设置面板中的功能开关区域
+    const settingsArea = document.querySelector('.settings-panel .space-y-5');
+    if (!settingsArea) return;
+    
+    // 创建豆瓣设置区域
+    const doubanSettingsDiv = document.createElement('div');
+    doubanSettingsDiv.className = 'p-3 bg-[#151515] rounded-lg shadow-inner';
+    doubanSettingsDiv.innerHTML = `
+        <label class="block text-sm font-medium text-gray-400 mb-3 border-b border-[#333] pb-1">豆瓣推荐设置</label>
+        <div class="mb-3">
+            <label class="text-sm font-medium text-gray-400">每个分类显示数量</label>
+            <div class="flex items-center mt-2">
+                <input type="range" id="doubanSizeSlider" min="3" max="12" step="1" value="${doubanPageSize}" 
+                       class="w-full h-2 bg-[#333] rounded-lg appearance-none cursor-pointer">
+                <span id="doubanSizeValue" class="ml-2 text-white">${doubanPageSize}</span>
+            </div>
+            <div class="flex justify-end mt-2">
+                <button id="applyDoubanSize" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs">
+                    应用设置
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // 将设置区域添加到设置面板
+    settingsArea.appendChild(doubanSettingsDiv);
+    
+    // 添加事件监听器
+    const slider = document.getElementById('doubanSizeSlider');
+    const sizeValue = document.getElementById('doubanSizeValue');
+    const applyButton = document.getElementById('applyDoubanSize');
+    
+    slider.addEventListener('input', function() {
+        sizeValue.textContent = this.value;
+    });
+    
+    applyButton.addEventListener('click', function() {
+        const newSize = parseInt(slider.value);
+        doubanPageSize = newSize;
+        localStorage.setItem('doubanPageSize', newSize);
+        showToast('设置已应用，正在刷新内容...', 'success');
+        loadAllCategoryContent();
+    });
 }
 
 // 根据设置更新豆瓣区域的显示状态
@@ -227,11 +238,11 @@ async function fetchMoreCategoryContent(type, category) {
             else if (category === 'drama') categoryName = '剧情';
             else if (category === 'hot') categoryName = '热门';
             
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=30&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=0`;
         } else if (type === 'tv') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('热门')}&sort=recommend&page_limit=30&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('热门')}&sort=recommend&page_limit=18&page_start=0`;
         } else if (type === 'variety') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=30&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=18&page_start=0`;
         }
         
         // 获取数据
@@ -252,7 +263,49 @@ function showCategoryModal(items, title) {
     modalTitle.textContent = title || '影视内容';
     
     // 构建内容HTML
-    let contentHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">';
+    let contentHTML = `
+        <div id="infiniteScrollContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            ${renderModalItems(items)}
+        </div>
+        <div id="loadingMore" class="text-center py-4 hidden">
+            <div class="inline-block w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+            <p class="text-gray-400 mt-2">加载更多内容...</p>
+        </div>
+        <div id="noMoreContent" class="text-center py-4 text-gray-500 hidden">
+            没有更多内容了
+        </div>
+    `;
+    
+    modalContent.innerHTML = contentHTML;
+    
+    // 保存当前分类和类型到模态框数据属性
+    modal.dataset.currentType = title.includes('电影') ? 'movie' : (title.includes('综艺') ? 'variety' : 'tv');
+    modal.dataset.currentCategory = getCategoryFromTitle(title);
+    modal.dataset.currentPage = 1; // 从第1页开始，第0页已经加载
+    
+    // 显示模态框
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    
+    // 设置滚动监听
+    setupInfiniteScroll();
+}
+
+// 从标题获取分类
+function getCategoryFromTitle(title) {
+    if (title.includes('喜剧')) return 'comedy';
+    if (title.includes('动作')) return 'action';
+    if (title.includes('科幻')) return 'scifi';
+    if (title.includes('爱情')) return 'romance';
+    if (title.includes('剧情')) return 'drama';
+    return 'hot';
+}
+
+// 渲染模态框内的项目
+function renderModalItems(items) {
+    if (!items || items.length === 0) return '';
+    
+    let itemsHTML = '';
     
     // 渲染每个项目
     items.forEach(item => {
@@ -274,7 +327,7 @@ function showCategoryModal(items, title) {
             .replace(/"/g, '&quot;');
         
         // 构建卡片HTML
-        contentHTML += `
+        itemsHTML += `
             <div class="bg-[#111] hover:bg-[#222] transition-all duration-300 rounded-lg overflow-hidden flex flex-col transform hover:scale-105 shadow-md hover:shadow-lg">
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
                     <img src="${item.cover}" alt="${safeTitle}" 
@@ -300,12 +353,112 @@ function showCategoryModal(items, title) {
         `;
     });
     
-    contentHTML += '</div>';
-    modalContent.innerHTML = contentHTML;
+    return itemsHTML;
+}
+
+// 设置无限滚动
+function setupInfiniteScroll() {
+    const modalContent = document.getElementById('modalContent');
+    const loadingMore = document.getElementById('loadingMore');
+    const noMoreContent = document.getElementById('noMoreContent');
+    const container = document.getElementById('infiniteScrollContainer');
+    const modal = document.getElementById('modal');
     
-    // 显示模态框
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    // 设置滚动事件监听
+    modalContent.addEventListener('scroll', debounce(function() {
+        // 检查是否已经滚动到底部
+        if (modalContent.scrollHeight - modalContent.scrollTop - modalContent.clientHeight < 100) {
+            // 如果正在加载或没有更多内容，则不执行
+            if (loadingMore.classList.contains('flex') || noMoreContent.classList.contains('flex')) {
+                return;
+            }
+            
+            // 显示加载中
+            loadingMore.classList.remove('hidden');
+            loadingMore.classList.add('flex');
+            
+            // 获取当前页码并增加
+            const currentPage = parseInt(modal.dataset.currentPage) || 1;
+            const nextPage = currentPage + 1;
+            modal.dataset.currentPage = nextPage;
+            
+            // 获取当前类型和分类
+            const type = modal.dataset.currentType;
+            const category = modal.dataset.currentCategory;
+            
+            // 加载更多内容
+            loadMoreItems(type, category, nextPage)
+                .then(items => {
+                    // 隐藏加载中
+                    loadingMore.classList.remove('flex');
+                    loadingMore.classList.add('hidden');
+                    
+                    if (!items || items.length === 0) {
+                        // 显示没有更多内容
+                        noMoreContent.classList.remove('hidden');
+                        noMoreContent.classList.add('flex');
+                        return;
+                    }
+                    
+                    // 追加新内容
+                    container.innerHTML += renderModalItems(items);
+                })
+                .catch(error => {
+                    console.error('加载更多内容失败:', error);
+                    
+                    // 隐藏加载中
+                    loadingMore.classList.remove('flex');
+                    loadingMore.classList.add('hidden');
+                    
+                    // 显示错误信息
+                    showToast('加载更多内容失败，请稍后再试', 'error');
+                });
+        }
+    }, 200));
+}
+
+// 防抖函数
+function debounce(func, wait) {
+    let timeout;
+    return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            func.apply(context, args);
+        }, wait);
+    };
+}
+
+// 加载更多内容
+async function loadMoreItems(type, category, page) {
+    try {
+        // 构建API请求URL
+        let apiUrl = '';
+        let categoryName = '';
+        
+        if (type === 'movie') {
+            if (category === 'comedy') categoryName = '喜剧';
+            else if (category === 'action') categoryName = '动作';
+            else if (category === 'scifi') categoryName = '科幻';
+            else if (category === 'romance') categoryName = '爱情';
+            else if (category === 'drama') categoryName = '剧情';
+            else if (category === 'hot') categoryName = '热门';
+            
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=${page * 18}`;
+        } else if (type === 'tv') {
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('热门')}&sort=recommend&page_limit=18&page_start=${page * 18}`;
+        } else if (type === 'variety') {
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=18&page_start=${page * 18}`;
+        }
+        
+        // 获取数据
+        const data = await fetchDoubanData(apiUrl);
+        return data.subjects || [];
+    } catch (error) {
+        console.error(`加载更多${type}-${category}内容失败:`, error);
+        throw error;
+    }
 }
 
 // 获取特定分类的内容
@@ -452,28 +605,6 @@ async function fetchDoubanData(url) {
             console.error("豆瓣 API 备用请求也失败：", fallbackErr);
             throw fallbackErr; // 向上抛出错误，让调用者处理
         }
-    }
-}
-
-// 只填充搜索框，不执行搜索，让用户自主决定搜索时机
-function fillSearchInput(title) {
-    if (!title) return;
-    
-    // 安全处理标题，防止XSS
-    const safeTitle = title
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    
-    const input = document.getElementById('searchInput');
-    if (input) {
-        input.value = safeTitle;
-        
-        // 聚焦搜索框，便于用户立即使用键盘操作
-        input.focus();
-        
-        // 显示一个提示，告知用户点击搜索按钮进行搜索
-        showToast('已填充搜索内容，点击搜索按钮开始搜索', 'info');
     }
 }
 
