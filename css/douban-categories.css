@@ -9,7 +9,7 @@
   overflow-x: hidden; /* 默认隐藏滚动条 */
 }
 
-/* 水平滚动容器样式 - 由JS控制添加，当内容数量>7个时应用 */
+/* 水平滚动容器样式 - 由JS控制添加，当内容数量≥8个时应用 */
 [class^="douban-"].scrollable {
   overflow-x: auto;
   scroll-behavior: smooth;
