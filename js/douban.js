@@ -199,11 +199,11 @@ async function fetchCategoryContent(type, category, categoryName) {
         // 构建API请求URL
         let apiUrl = '';
         if (type === 'movie') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${categoryName}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
         } else if (type === 'tv') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${categoryName}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
         } else if (type === 'variety') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺,${categoryName}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺,'+categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
         }
         
         // 获取数据
