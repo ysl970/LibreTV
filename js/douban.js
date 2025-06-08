@@ -3,24 +3,23 @@
 // 定义不同类型的内容分类
 const contentCategories = {
     movie: {
-        comedy: '喜剧',
-        action: '动作',
-        scifi: '科幻',
-        romance: '爱情',
-        drama: '剧情'
+        hot: '热门',
+        coming: '即将上映',
+        new: '新片',
+        top250: 'top250'
     },
     tv: {
         hot: '热门',
-        cn: '国产剧',
+        animation: '动漫',
+        short: '短剧',
+        us: '美剧',
+        hk: '港澳剧',
         kr: '韩剧',
-        jp: '日剧',
-        us: '美剧'
+        th: '泰剧',
+        jp: '日剧'
     },
     variety: {
-        hot: '热门',
-        cn: '中国',
-        kr: '韩国',
-        jp: '日本'
+        hot: '热门'
     }
 };
 
@@ -106,21 +105,44 @@ function updateDoubanVisibility() {
 
 // 加载所有分类内容
 function loadAllCategoryContent() {
-    // 加载热门电视
+    // 1. 热门电视剧
     fetchCategoryContent('tv', 'hot', '热门');
     
-    // 加载热门电影
-    fetchCategoryContent('movie', 'hot', '热门');
-    
-    // 加载热门综艺
+    // 2. 热门综艺
     fetchCategoryContent('variety', 'hot', '热门');
     
-    // 加载电影分类
-    fetchCategoryContent('movie', 'action', '动作');
-    fetchCategoryContent('movie', 'comedy', '喜剧');
-    fetchCategoryContent('movie', 'scifi', '科幻');
-    fetchCategoryContent('movie', 'romance', '爱情');
-    fetchCategoryContent('movie', 'drama', '剧情');
+    // 3. 热门电影
+    fetchCategoryContent('movie', 'hot', '热门');
+    
+    // 4. 热门动漫
+    fetchCategoryContent('tv', 'animation', '动漫');
+    
+    // 5. 热门短剧
+    fetchCategoryContent('tv', 'short', '短剧');
+    
+    // 6. 即将上映
+    fetchCategoryContent('movie', 'coming', '即将上映');
+    
+    // 7. 新片榜单
+    fetchCategoryContent('movie', 'new', '新片');
+    
+    // 8. 热门美剧
+    fetchCategoryContent('tv', 'us', '美剧');
+    
+    // 9. 热门港澳剧
+    fetchCategoryContent('tv', 'hk', '港澳剧');
+    
+    // 10. 热门韩剧
+    fetchCategoryContent('tv', 'kr', '韩剧');
+    
+    // 11. 热门泰剧
+    fetchCategoryContent('tv', 'th', '泰剧');
+    
+    // 12. 热门日剧
+    fetchCategoryContent('tv', 'jp', '日剧');
+    
+    // 13. Top250电影
+    fetchCategoryContent('movie', 'top250', 'top250');
 }
 
 // 设置"更多"按钮点击事件
@@ -166,15 +188,21 @@ function setupMoreButtons() {
 // 获取分类标题
 function getCategoryTitle(type, category) {
     if (type === 'movie') {
-        if (category === 'comedy') return '喜剧电影';
-        if (category === 'action') return '动作电影';
-        if (category === 'scifi') return '科幻电影';
-        if (category === 'romance') return '爱情电影';
-        if (category === 'drama') return '剧情电影';
         if (category === 'hot') return '热门电影';
+        if (category === 'coming') return '即将上映';
+        if (category === 'new') return '新片榜单';
+        if (category === 'top250') return 'Top250电影';
         return '电影';
     } else if (type === 'tv') {
-        return '热门电视';
+        if (category === 'hot') return '热门电视剧';
+        if (category === 'animation') return '热门动漫';
+        if (category === 'short') return '热门短剧';
+        if (category === 'us') return '热门美剧';
+        if (category === 'hk') return '热门港澳剧';
+        if (category === 'kr') return '热门韩剧';
+        if (category === 'th') return '热门泰剧';
+        if (category === 'jp') return '热门日剧';
+        return '电视剧';
     } else if (type === 'variety') {
         return '热门综艺';
     }
@@ -189,16 +217,24 @@ async function fetchMoreCategoryContent(type, category) {
         let categoryName = '';
         
         if (type === 'movie') {
-            if (category === 'comedy') categoryName = '喜剧';
-            else if (category === 'action') categoryName = '动作';
-            else if (category === 'scifi') categoryName = '科幻';
-            else if (category === 'romance') categoryName = '爱情';
-            else if (category === 'drama') categoryName = '剧情';
-            else if (category === 'hot') categoryName = '热门';
+            if (category === 'hot') categoryName = '热门';
+            else if (category === 'coming') categoryName = '即将上映';
+            else if (category === 'new') categoryName = '新片';
+            else if (category === 'top250') categoryName = 'top250';
             
             apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=0`;
         } else if (type === 'tv') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('热门')}&sort=recommend&page_limit=18&page_start=0`;
+            if (category === 'hot') categoryName = '热门';
+            else if (category === 'animation') categoryName = '动漫';
+            else if (category === 'short') categoryName = '短剧';
+            else if (category === 'us') categoryName = '美剧';
+            else if (category === 'hk') categoryName = '港澳剧';
+            else if (category === 'kr') categoryName = '韩剧';
+            else if (category === 'th') categoryName = '泰剧';
+            else if (category === 'jp') categoryName = '日剧';
+            else categoryName = '热门';
+            
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=0`;
         } else if (type === 'variety') {
             apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=18&page_start=0`;
         }
@@ -251,11 +287,16 @@ function showCategoryModal(items, title) {
 
 // 从标题获取分类
 function getCategoryFromTitle(title) {
-    if (title.includes('喜剧')) return 'comedy';
-    if (title.includes('动作')) return 'action';
-    if (title.includes('科幻')) return 'scifi';
-    if (title.includes('爱情')) return 'romance';
-    if (title.includes('剧情')) return 'drama';
+    if (title.includes('即将上映')) return 'coming';
+    if (title.includes('新片榜单')) return 'new';
+    if (title.includes('Top250')) return 'top250';
+    if (title.includes('动漫')) return 'animation';
+    if (title.includes('短剧')) return 'short';
+    if (title.includes('美剧')) return 'us';
+    if (title.includes('港澳剧')) return 'hk';
+    if (title.includes('韩剧')) return 'kr';
+    if (title.includes('泰剧')) return 'th';
+    if (title.includes('日剧')) return 'jp';
     return 'hot';
 }
 
@@ -396,16 +437,25 @@ async function loadMoreItems(type, category, page) {
         let categoryName = '';
         
         if (type === 'movie') {
-            if (category === 'comedy') categoryName = '喜剧';
-            else if (category === 'action') categoryName = '动作';
-            else if (category === 'scifi') categoryName = '科幻';
-            else if (category === 'romance') categoryName = '爱情';
-            else if (category === 'drama') categoryName = '剧情';
-            else if (category === 'hot') categoryName = '热门';
+            if (category === 'hot') categoryName = '热门';
+            else if (category === 'coming') categoryName = '即将上映';
+            else if (category === 'new') categoryName = '新片';
+            else if (category === 'top250') categoryName = 'top250';
+            else categoryName = '热门';
             
             apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=${page * 18}`;
         } else if (type === 'tv') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('热门')}&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            if (category === 'hot') categoryName = '热门';
+            else if (category === 'animation') categoryName = '动漫';
+            else if (category === 'short') categoryName = '短剧';
+            else if (category === 'us') categoryName = '美剧';
+            else if (category === 'hk') categoryName = '港澳剧';
+            else if (category === 'kr') categoryName = '韩剧';
+            else if (category === 'th') categoryName = '泰剧';
+            else if (category === 'jp') categoryName = '日剧';
+            else categoryName = '热门';
+            
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=${page * 18}`;
         } else if (type === 'variety') {
             apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=18&page_start=${page * 18}`;
         }
