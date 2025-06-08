@@ -552,6 +552,13 @@ function renderCategoryContent(data, container) {
         // 添加到容器
         container.appendChild(card);
     });
+    
+    // 检查子元素数量，如果超过8个则添加scrollable类
+    if (container.children.length > 8) {
+        container.classList.add('scrollable');
+    } else {
+        container.classList.remove('scrollable');
+    }
 }
 
 // 从豆瓣API获取数据
@@ -608,44 +615,7 @@ async function fetchDoubanData(url) {
     }
 }
 
-// 填充搜索框并执行搜索
-function fillAndSearch(title) {
-    if (!title) return;
-    
-    // 安全处理标题，防止XSS
-    const safeTitle = title
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    
-    // 关闭模态框
-    const modal = document.getElementById('modal');
-    if (modal && !modal.classList.contains('hidden')) {
-        closeModal();
-    }
-    
-    const input = document.getElementById('searchInput');
-    if (input) {
-        input.value = safeTitle;
-        search(); // 使用已有的search函数执行搜索
-        
-        // 同时更新浏览器URL，使其反映当前的搜索状态
-        try {
-            // 使用URI编码确保特殊字符能够正确显示
-            const encodedQuery = encodeURIComponent(safeTitle);
-            // 使用HTML5 History API更新URL，不刷新页面
-            window.history.pushState(
-                { search: safeTitle }, 
-                `搜索: ${safeTitle} - YTPPTV`, 
-                `/s=${encodedQuery}`
-            );
-            // 更新页面标题
-            document.title = `搜索: ${safeTitle} - YTPPTV`;
-        } catch (e) {
-            console.error('更新浏览器历史失败:', e);
-        }
-    }
-}
+
 
 // 填充搜索框，确保豆瓣资源API被选中，然后执行搜索
 async function fillAndSearchWithDouban(title) {
