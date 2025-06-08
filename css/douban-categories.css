@@ -133,35 +133,6 @@
   opacity: 0.6;
 }
 
-/* 缩小卡片高度的样式 */
-.douban-card-small {
-  transform: scale(0.75);
-  margin: -12.5% 0; /* 负边距补偿缩小后的空间 */
-  transform-origin: center top;
-}
-
-.douban-card-small:hover {
-  transform: scale(0.8);
-}
-
-/* 调整卡片内文字大小 */
-.douban-card-small .text-sm {
-  font-size: 0.7rem;
-}
-
-.douban-card-small .text-xs {
-  font-size: 0.65rem;
-}
-
-/* 调整评分和链接位置 */
-.douban-card-small .absolute.bottom-2 {
-  bottom: 0.25rem;
-}
-
-.douban-card-small .p-2 {
-  padding: 0.25rem;
-}
-
 .douban-card-rating {
   position: absolute;
   bottom: 0.5rem;
