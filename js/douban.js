@@ -168,38 +168,144 @@ function setupMoreButtons() {
             const category = this.dataset.category;
             const type = this.dataset.type;
             
-            // 根据类型和分类设置搜索内容
-            let searchTerm = '';
+            // 显示加载中状态
+            showLoading();
             
-            if (type === 'movie') {
-                // 电影类型
-                if (category === 'comedy') {
-                    searchTerm = '喜剧片';
-                } else if (category === 'action') {
-                    searchTerm = '动作片';
-                } else if (category === 'scifi') {
-                    searchTerm = '科幻片';
-                } else if (category === 'romance') {
-                    searchTerm = '爱情片';
-                } else if (category === 'drama') {
-                    searchTerm = '剧情片';
-                } else {
-                    searchTerm = '电影';
-                }
-            } else if (type === 'tv') {
-                // 电视剧类型
-                searchTerm = '电视剧';
-            } else if (type === 'variety') {
-                // 综艺类型
-                searchTerm = '综艺';
-            }
-            
-            // 填充搜索框并执行搜索
-            if (searchTerm) {
-                fillAndSearch(searchTerm);
-            }
+            // 获取更多该分类内容
+            fetchMoreCategoryContent(type, category)
+                .then(data => {
+                    if (!data || !data.subjects || data.subjects.length === 0) {
+                        showToast('没有更多内容', 'info');
+                        hideLoading();
+                        return;
+                    }
+                    
+                    // 显示模态框并填充内容
+                    showCategoryModal(data.subjects, getCategoryTitle(type, category));
+                })
+                .catch(error => {
+                    console.error('获取更多内容失败:', error);
+                    showToast('获取更多内容失败，请稍后再试', 'error');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
         });
     });
+}
+
+// 获取分类标题
+function getCategoryTitle(type, category) {
+    if (type === 'movie') {
+        if (category === 'comedy') return '喜剧电影';
+        if (category === 'action') return '动作电影';
+        if (category === 'scifi') return '科幻电影';
+        if (category === 'romance') return '爱情电影';
+        if (category === 'drama') return '剧情电影';
+        if (category === 'hot') return '热门电影';
+        return '电影';
+    } else if (type === 'tv') {
+        return '热门电视剧';
+    } else if (type === 'variety') {
+        return '热门综艺';
+    }
+    return '影视内容';
+}
+
+// 获取更多分类内容
+async function fetchMoreCategoryContent(type, category) {
+    try {
+        // 构建API请求URL，增加数量
+        let apiUrl = '';
+        let categoryName = '';
+        
+        if (type === 'movie') {
+            if (category === 'comedy') categoryName = '喜剧';
+            else if (category === 'action') categoryName = '动作';
+            else if (category === 'scifi') categoryName = '科幻';
+            else if (category === 'romance') categoryName = '爱情';
+            else if (category === 'drama') categoryName = '剧情';
+            else if (category === 'hot') categoryName = '热门';
+            
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=30&page_start=0`;
+        } else if (type === 'tv') {
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('热门')}&sort=recommend&page_limit=30&page_start=0`;
+        } else if (type === 'variety') {
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=30&page_start=0`;
+        }
+        
+        // 获取数据
+        return await fetchDoubanData(apiUrl);
+    } catch (error) {
+        console.error(`获取更多${type}-${category}内容失败:`, error);
+        throw error;
+    }
+}
+
+// 显示分类模态框
+function showCategoryModal(items, title) {
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
+    
+    // 设置标题
+    modalTitle.textContent = title || '影视内容';
+    
+    // 构建内容HTML
+    let contentHTML = '<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">';
+    
+    // 渲染每个项目
+    items.forEach(item => {
+        // 评分显示
+        let ratingHtml = '';
+        if (item.rate) {
+            const rating = parseFloat(item.rate);
+            ratingHtml = `
+                <div class="absolute bottom-2 left-2 bg-black/70 text-yellow-400 px-2 py-1 text-xs font-bold rounded-sm flex items-center">
+                    <span class="text-yellow-400">★</span> ${rating}
+                </div>
+            `;
+        }
+        
+        // 安全处理标题，防止XSS
+        const safeTitle = item.title
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        
+        // 构建卡片HTML
+        contentHTML += `
+            <div class="bg-[#111] hover:bg-[#222] transition-all duration-300 rounded-lg overflow-hidden flex flex-col transform hover:scale-105 shadow-md hover:shadow-lg">
+                <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
+                    <img src="${item.cover}" alt="${safeTitle}" 
+                        class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                        onerror="this.onerror=null; this.src='${PROXY_URL + encodeURIComponent(item.cover)}'; this.classList.add('object-contain');"
+                        loading="lazy" referrerpolicy="no-referrer">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
+                    ${ratingHtml}
+                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors">
+                        <a href="${item.url}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" onclick="event.stopPropagation();">
+                            🔗
+                        </a>
+                    </div>
+                </div>
+                <div class="p-2 text-center bg-[#111]">
+                    <button onclick="fillAndSearchWithDouban('${safeTitle}')" 
+                            class="text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
+                            title="${safeTitle}">
+                        ${safeTitle}
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    contentHTML += '</div>';
+    modalContent.innerHTML = contentHTML;
+    
+    // 显示模态框
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
 }
 
 // 获取特定分类的内容
@@ -268,7 +374,7 @@ function renderCategoryContent(data, container) {
         
         // 构建卡片HTML
         card.innerHTML = `
-            <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillSearchInput('${safeTitle}')">
+            <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
                 <img src="${item.cover}" alt="${safeTitle}" 
                     class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                     onerror="this.onerror=null; this.src='${PROXY_URL + encodeURIComponent(item.cover)}'; this.classList.add('object-contain');"
@@ -282,7 +388,7 @@ function renderCategoryContent(data, container) {
                 </div>
             </div>
             <div class="p-2 text-center bg-[#111]">
-                <button onclick="fillSearchInput('${safeTitle}')" 
+                <button onclick="fillAndSearchWithDouban('${safeTitle}')" 
                         class="text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
                         title="${safeTitle}">
                     ${safeTitle}
