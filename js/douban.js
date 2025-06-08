@@ -180,6 +180,8 @@ function setupMoreButtons() {
                 searchTerm = `${categoryName}综艺`;
             }
             
+            console.log(`点击了"更多"按钮: ${type}-${category}, 搜索词: ${searchTerm}`);
+            
             // 填充搜索框并执行搜索
             if (searchTerm) {
                 fillAndSearch(searchTerm);
@@ -192,7 +194,10 @@ function setupMoreButtons() {
 async function fetchCategoryContent(type, category, categoryName) {
     const containerClass = `douban-${type}-${category}`;
     const container = document.querySelector(`.${containerClass}`);
-    if (!container) return;
+    if (!container) {
+        console.error(`找不到容器: .${containerClass}`);
+        return;
+    }
     
     try {
         // 显示加载中状态
