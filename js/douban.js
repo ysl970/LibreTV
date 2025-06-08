@@ -511,8 +511,8 @@ function renderCategoryContent(data, container) {
         container.appendChild(card);
     });
     
-    // 检查子元素数量，如果大于等于8个则添加scrollable类
-    if (container.children.length >= 8) {
+    // 检查子元素数量，如果大于7个则添加scrollable类
+    if (container.children.length > 7) {
         container.classList.add('scrollable');
     } else {
         container.classList.remove('scrollable');
