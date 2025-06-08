@@ -148,7 +148,7 @@ function updateDoubanVisibility() {
 
 // 加载所有分类内容
 function loadAllCategoryContent() {
-    // 加载热门电视剧
+    // 加载热门电视
     fetchCategoryContent('tv', 'hot', '热门');
     
     // 加载热门电影
@@ -216,7 +216,7 @@ function getCategoryTitle(type, category) {
         if (category === 'hot') return '热门电影';
         return '电影';
     } else if (type === 'tv') {
-        return '热门电视剧';
+        return '热门电视';
     } else if (type === 'variety') {
         return '热门综艺';
     }
