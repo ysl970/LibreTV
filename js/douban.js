@@ -511,8 +511,11 @@ function renderCategoryContent(data, container) {
         container.appendChild(card);
     });
     
-    // 检查子元素数量，如果大于7个则添加scrollable类
-    if (container.children.length > 7) {
+    // 检查子元素数量，根据屏幕宽度决定何时添加scrollable类
+    const isMobile = window.innerWidth <= 767;
+    const threshold = isMobile ? 3 : 7;
+    
+    if (container.children.length > threshold) {
         container.classList.add('scrollable');
     } else {
         container.classList.remove('scrollable');
@@ -669,3 +672,19 @@ function resetToHome() {
 
 // 加载豆瓣首页内容
 document.addEventListener('DOMContentLoaded', initDouban);
+
+// 监听窗口大小变化，动态调整滚动条显示
+window.addEventListener('resize', function() {
+    // 获取所有豆瓣内容容器
+    const containers = document.querySelectorAll('[class^="douban-"]');
+    containers.forEach(container => {
+        const isMobile = window.innerWidth <= 767;
+        const threshold = isMobile ? 3 : 7;
+        
+        if (container.children.length > threshold) {
+            container.classList.add('scrollable');
+        } else {
+            container.classList.remove('scrollable');
+        }
+    });
+});
