@@ -287,13 +287,7 @@ function deleteSingleSearchHistory(query) {
 
 // 增加清除搜索历史功能
 function clearSearchHistory() {
-    // 密码保护校验
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            showPasswordModal && showPasswordModal();
-            return;
-        }
-    }
+    // 移除密码保护校验，直接允许清除
     try {
         localStorage.removeItem(SEARCH_HISTORY_KEY);
         renderSearchHistory();
@@ -674,13 +668,7 @@ async function playFromHistory(url, title, episodeIndex, playbackPosition = 0) {
 // IMPORTANT: videoInfo passed to this function should include a 'showIdentifier' property
 // (ideally `${sourceName}_${vod_id}`), 'sourceName', and 'vod_id'.
 function addToViewingHistory(videoInfo) {
-    // 密码保护校验
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            showPasswordModal && showPasswordModal();
-            return;
-        }
-    }
+    // 移除密码保护校验，允许直接添加观看历史
     try {
         const history = getViewingHistory();
 
