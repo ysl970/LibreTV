@@ -121,7 +121,7 @@ function loadAllCategoryContent() {
     // 6. 热门美剧
     fetchCategoryContent('tv', 'us', '美剧');
     
-    // 7. 热门港澳剧
+    // 7. 热门港剧
     fetchCategoryContent('tv', 'hk', '港剧');
     
     // 8. 热门韩剧
@@ -185,7 +185,7 @@ function getCategoryTitle(type, category) {
     } else if (type === 'tv') {
         if (category === 'hot') return '热门电视剧';
         if (category === 'us') return '热门美剧';
-        if (category === 'hk') return '热门港澳剧';
+        if (category === 'hk') return '热门港剧';
         if (category === 'kr') return '热门韩剧';
         if (category === 'jp') return '热门日剧';
         return '电视剧';
