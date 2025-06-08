@@ -1,9 +1,18 @@
 // UI相关函数
 function toggleSettings(e) {
-    // 密码保护校验
+    // 密码保护校验 - 仅对设置按钮生效
     if (window.isPasswordProtected && window.isPasswordVerified) {
         if (window.isPasswordProtected() && !window.isPasswordVerified()) {
             showPasswordModal && showPasswordModal();
+            
+            // 添加密码验证成功后的事件监听，验证成功后打开设置面板
+            document.addEventListener('passwordVerified', function openSettingsAfterVerification() {
+                const panel = document.getElementById('settingsPanel');
+                panel.classList.add('show');
+                // 移除一次性事件监听器
+                document.removeEventListener('passwordVerified', openSettingsAfterVerification);
+            }, { once: true });
+            
             return;
         }
     }
@@ -297,13 +306,6 @@ function clearSearchHistory() {
 
 // 历史面板相关函数
 function toggleHistory(e) {
-    // 密码保护校验
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            showPasswordModal && showPasswordModal();
-            return;
-        }
-    }
     if (e) e.stopPropagation();
 
     const panel = document.getElementById('historyPanel');

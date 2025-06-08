@@ -157,35 +157,21 @@ async function handlePasswordSubmit() {
     }
 }
 
-/**
- * 初始化密码验证系统（需适配异步事件）
- */
-function initPasswordProtection() {
-    if (!isPasswordProtected()) {
-        return; // 如果未设置密码保护，则不进行任何操作
+// 在密码弹窗显示时设置事件监听器
+document.addEventListener('DOMContentLoaded', function() {
+    // 设置密码提交按钮事件监听
+    const submitButton = document.getElementById('passwordSubmitBtn');
+    if (submitButton) {
+        submitButton.addEventListener('click', handlePasswordSubmit);
     }
     
-    // 如果未验证密码，则显示密码验证弹窗
-    if (!isPasswordVerified()) {
-        showPasswordModal();
-        
-        // 设置密码提交按钮事件监听
-        const submitButton = document.getElementById('passwordSubmitBtn');
-        if (submitButton) {
-            submitButton.addEventListener('click', handlePasswordSubmit);
-        }
-        
-        // 设置密码输入框回车键监听
-        const passwordInput = document.getElementById('passwordInput');
-        if (passwordInput) {
-            passwordInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    handlePasswordSubmit();
-                }
-            });
-        }
+    // 设置密码输入框回车键监听
+    const passwordInput = document.getElementById('passwordInput');
+    if (passwordInput) {
+        passwordInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handlePasswordSubmit();
+            }
+        });
     }
-}
-
-// 在页面加载完成后初始化密码保护
-document.addEventListener('DOMContentLoaded', initPasswordProtection);
+});
