@@ -137,16 +137,21 @@ function updateDoubanVisibility() {
 
 // 加载所有分类内容
 function loadAllCategoryContent() {
-    // 加载电影分类
-    for (const [key, value] of Object.entries(contentCategories.movie)) {
-        fetchCategoryContent('movie', key, value);
-    }
-    
-    // 加载电视剧分类
+    // 加载热门电视剧
     fetchCategoryContent('tv', 'hot', '热门');
     
-    // 加载综艺分类
+    // 加载热门电影
+    fetchCategoryContent('movie', 'hot', '热门');
+    
+    // 加载热门综艺
     fetchCategoryContent('variety', 'hot', '热门');
+    
+    // 加载电影分类
+    fetchCategoryContent('movie', 'action', '动作');
+    fetchCategoryContent('movie', 'comedy', '喜剧');
+    fetchCategoryContent('movie', 'scifi', '科幻');
+    fetchCategoryContent('movie', 'romance', '爱情');
+    fetchCategoryContent('movie', 'drama', '剧情');
 }
 
 // 设置"更多"按钮点击事件
@@ -159,23 +164,34 @@ function setupMoreButtons() {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             
-            // 获取分类名称
-            const categoryTitle = this.closest('div').querySelector('h2').textContent;
+            // 获取分类和类型属性
+            const category = this.dataset.category;
+            const type = this.dataset.type;
             
-            // 根据分类名称设置搜索内容
+            // 根据类型和分类设置搜索内容
             let searchTerm = '';
-            if (categoryTitle.includes('喜剧')) {
-                searchTerm = '喜剧电影';
-            } else if (categoryTitle.includes('动作')) {
-                searchTerm = '动作电影';
-            } else if (categoryTitle.includes('科幻')) {
-                searchTerm = '科幻电影';
-            } else if (categoryTitle.includes('爱情')) {
-                searchTerm = '爱情电影';
-            } else if (categoryTitle.includes('电视剧')) {
-                searchTerm = '热门电视剧';
-            } else if (categoryTitle.includes('综艺')) {
-                searchTerm = '热门综艺';
+            
+            if (type === 'movie') {
+                // 电影类型
+                if (category === 'comedy') {
+                    searchTerm = '喜剧片';
+                } else if (category === 'action') {
+                    searchTerm = '动作片';
+                } else if (category === 'scifi') {
+                    searchTerm = '科幻片';
+                } else if (category === 'romance') {
+                    searchTerm = '爱情片';
+                } else if (category === 'drama') {
+                    searchTerm = '剧情片';
+                } else {
+                    searchTerm = '电影';
+                }
+            } else if (type === 'tv') {
+                // 电视剧类型
+                searchTerm = '电视剧';
+            } else if (type === 'variety') {
+                // 综艺类型
+                searchTerm = '综艺';
             }
             
             // 填充搜索框并执行搜索
@@ -203,7 +219,8 @@ async function fetchCategoryContent(type, category, categoryName) {
         } else if (type === 'tv') {
             apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
         } else if (type === 'variety') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺,'+categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            // 修改综艺API请求，确保能获取到综艺内容
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
         }
         
         // 获取数据
