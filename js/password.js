@@ -116,6 +116,9 @@ function hidePasswordModal() {
     }
 }
 
+// 将函数设为全局可访问
+window.hidePasswordModal = hidePasswordModal;
+
 /**
  * 显示密码错误信息
  */
