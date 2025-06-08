@@ -53,11 +53,20 @@
   [class^="douban-"] > div {
     width: calc(100% / 3 - 8px);
   }
+  
+  /* 移动端默认只显示3个，超过3个出现滑动条 */
+  [class^="douban-"] {
+    overflow-x: hidden;
+  }
+  
+  [class^="douban-"].scrollable {
+    overflow-x: auto;
+  }
 }
 
 @media (max-width: 479px) {
   [class^="douban-"] > div {
-    width: calc(100% / 2 - 8px);
+    width: calc(100% / 3 - 8px); /* 保持在小屏幕上也显示3个 */
   }
 }
 
