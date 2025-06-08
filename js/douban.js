@@ -24,14 +24,6 @@ const contentCategories = {
     }
 };
 
-// 保留原有的标签系统，用于兼容性
-let defaultMovieTags = ['热门', '最新', '华语', '欧美', '韩国', '日本'];
-let defaultTvTags = ['热门', '国产', '美剧', '韩剧', '日剧', '综艺'];
-let movieTags = [];
-let tvTags = [];
-let doubanMovieTvCurrentSwitch = 'movie';
-let doubanCurrentTag = '热门';
-let doubanPageStart = 0;
 // 默认每个分类显示的数量，可以通过设置修改
 let doubanPageSize = parseInt(localStorage.getItem('doubanPageSize')) || 6;
 
@@ -75,9 +67,6 @@ function initDouban() {
         // 滚动到页面顶部
         window.scrollTo(0, 0);
     }
-
-    // 加载用户标签（兼容旧版）
-    loadUserTags();
     
     // 初始加载各分类内容
     if (localStorage.getItem('doubanEnabled') === 'true') {
@@ -136,35 +125,6 @@ function addDoubanSettings() {
         showToast('设置已应用，正在刷新内容...', 'success');
         loadAllCategoryContent();
     });
-}
-
-// 加载用户标签（兼容旧版）
-function loadUserTags() {
-    try {
-        // 尝试从本地存储加载用户保存的标签
-        const savedMovieTags = localStorage.getItem('userMovieTags');
-        const savedTvTags = localStorage.getItem('userTvTags');
-        
-        // 如果本地存储中有标签数据，则使用它
-        if (savedMovieTags) {
-            movieTags = JSON.parse(savedMovieTags);
-        } else {
-            // 否则使用默认标签
-            movieTags = [...defaultMovieTags];
-        }
-        
-        if (savedTvTags) {
-            tvTags = JSON.parse(savedTvTags);
-        } else {
-            // 否则使用默认标签
-            tvTags = [...defaultTvTags];
-        }
-    } catch (e) {
-        console.error('加载标签失败：', e);
-        // 初始化为默认值，防止错误
-        movieTags = [...defaultMovieTags];
-        tvTags = [...defaultTvTags];
-    }
 }
 
 // 根据设置更新豆瓣区域的显示状态
@@ -648,28 +608,6 @@ async function fetchDoubanData(url) {
     }
 }
 
-// 只填充搜索框，不执行搜索，让用户自主决定搜索时机
-function fillSearchInput(title) {
-    if (!title) return;
-    
-    // 安全处理标题，防止XSS
-    const safeTitle = title
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    
-    const input = document.getElementById('searchInput');
-    if (input) {
-        input.value = safeTitle;
-        
-        // 聚焦搜索框，便于用户立即使用键盘操作
-        input.focus();
-        
-        // 显示一个提示，告知用户点击搜索按钮进行搜索
-        showToast('已填充搜索内容，点击搜索按钮开始搜索', 'info');
-    }
-}
-
 // 填充搜索框并执行搜索
 function fillAndSearch(title) {
     if (!title) return;
@@ -679,6 +617,12 @@ function fillAndSearch(title) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    
+    // 关闭模态框
+    const modal = document.getElementById('modal');
+    if (modal && !modal.classList.contains('hidden')) {
+        closeModal();
+    }
     
     const input = document.getElementById('searchInput');
     if (input) {
@@ -712,6 +656,12 @@ async function fillAndSearchWithDouban(title) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    
+    // 关闭模态框
+    const modal = document.getElementById('modal');
+    if (modal && !modal.classList.contains('hidden')) {
+        closeModal();
+    }
     
     // 确保豆瓣资源API被选中
     if (typeof selectedAPIs !== 'undefined' && !selectedAPIs.includes('dbzy')) {
