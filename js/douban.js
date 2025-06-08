@@ -11,11 +11,9 @@ const contentCategories = {
     tv: {
         hot: '热门',
         animation: '动漫',
-        short: '短剧',
         us: '美剧',
         hk: '港澳剧',
         kr: '韩剧',
-        th: '泰剧',
         jp: '日剧'
     },
     variety: {
@@ -117,31 +115,25 @@ function loadAllCategoryContent() {
     // 4. 热门动画
     fetchCategoryContent('tv', 'animation', '动画');
     
-    // 5. 冷门佳片
-    fetchCategoryContent('movie', 'short', '冷门佳片');
-    
-    // 6. 最新热门
+    // 5. 最新热门
     fetchCategoryContent('movie', 'coming', '热门');
     
-    // 7. 新片榜单
+    // 6. 新片榜单
     fetchCategoryContent('movie', 'new', '最新');
     
-    // 8. 热门美剧
+    // 7. 热门美剧
     fetchCategoryContent('tv', 'us', '美剧');
     
-    // 9. 热门港澳剧
+    // 8. 热门港剧
     fetchCategoryContent('tv', 'hk', '港剧');
     
-    // 10. 热门韩剧
+    // 9. 热门韩剧
     fetchCategoryContent('tv', 'kr', '韩剧');
     
-    // 11. 热门泰国剧
-    fetchCategoryContent('tv', 'th', '泰国');
-    
-    // 12. 热门日剧
+    // 10. 热门日剧
     fetchCategoryContent('tv', 'jp', '日剧');
     
-    // 13. Top250电影
+    // 11. Top250电影
     fetchCategoryContent('movie', 'top250', '豆瓣高分');
 }
 
@@ -196,11 +188,9 @@ function getCategoryTitle(type, category) {
     } else if (type === 'tv') {
         if (category === 'hot') return '热门电视剧';
         if (category === 'animation') return '热门动画';
-        if (category === 'short') return '冷门佳片';
         if (category === 'us') return '热门美剧';
         if (category === 'hk') return '热门港澳剧';
         if (category === 'kr') return '热门韩剧';
-        if (category === 'th') return '热门泰国剧';
         if (category === 'jp') return '热门日剧';
         return '电视剧';
     } else if (type === 'variety') {
@@ -236,18 +226,12 @@ async function fetchMoreCategoryContent(type, category) {
             } else if (category === 'animation') {
                 // 动画使用动画标签
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&sort=recommend&page_limit=18&page_start=0`;
-            } else if (category === 'short') {
-                // 冷门佳片使用冷门标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=冷门佳片&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'us') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'hk') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'kr') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=recommend&page_limit=18&page_start=0`;
-            } else if (category === 'th') {
-                // 泰剧使用泰国标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰国&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'jp') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=recommend&page_limit=18&page_start=0`;
             } else {
@@ -310,11 +294,9 @@ function getCategoryFromTitle(title) {
     if (title.includes('新片榜单')) return 'new';
     if (title.includes('Top250')) return 'top250';
     if (title.includes('动画')) return 'animation';
-    if (title.includes('冷门佳片')) return 'short';
     if (title.includes('美剧')) return 'us';
     if (title.includes('港澳剧')) return 'hk';
     if (title.includes('韩剧')) return 'kr';
-    if (title.includes('泰国剧')) return 'th';
     if (title.includes('日剧')) return 'jp';
     return 'hot';
 }
@@ -329,7 +311,7 @@ function renderModalItems(items) {
     items.forEach(item => {
         // 评分显示
         let ratingHtml = '';
-        if (item.rate) {
+        if (item.rate && item.rate !== '0') {
             const rating = parseFloat(item.rate);
             ratingHtml = `
                 <div class="absolute bottom-2 left-2 bg-black/70 text-yellow-400 px-2 py-1 text-xs font-bold rounded-sm flex items-center h-6">
@@ -339,7 +321,7 @@ function renderModalItems(items) {
         } else {
             // 为没有评分的项目添加一个占位符，保持卡片高度一致
             ratingHtml = `
-                <div class="absolute bottom-2 left-2 bg-transparent h-6"></div>
+                <div class="absolute bottom-2 left-2 bg-transparent px-2 py-1 h-6"></div>
             `;
         }
         
@@ -480,18 +462,12 @@ async function loadMoreItems(type, category, page) {
             } else if (category === 'animation') {
                 // 动画使用动画标签
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&sort=recommend&page_limit=18&page_start=${page * 18}`;
-            } else if (category === 'short') {
-                // 冷门佳片使用冷门标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=冷门佳片&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'us') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'hk') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'kr') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
-            } else if (category === 'th') {
-                // 泰剧使用泰国标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰国&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'jp') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else {
@@ -540,18 +516,12 @@ async function fetchCategoryContent(type, category, categoryName) {
             if (category === 'animation') {
                 // 动画使用动画标签
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
-            } else if (category === 'short') {
-                // 冷门佳片使用冷门标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=冷门佳片&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'us') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'hk') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'kr') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
-            } else if (category === 'th') {
-                // 泰剧使用泰国标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰国&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'jp') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else {
@@ -590,7 +560,7 @@ function renderCategoryContent(data, container) {
         
         // 评分显示
         let ratingHtml = '';
-        if (item.rate) {
+        if (item.rate && item.rate !== '0') {
             const rating = parseFloat(item.rate);
             ratingHtml = `
                 <div class="absolute bottom-2 left-2 bg-black/70 text-yellow-400 px-2 py-1 text-xs font-bold rounded-sm flex items-center h-6">
@@ -600,7 +570,7 @@ function renderCategoryContent(data, container) {
         } else {
             // 为没有评分的项目添加一个占位符，保持卡片高度一致
             ratingHtml = `
-                <div class="absolute bottom-2 left-2 bg-transparent h-6"></div>
+                <div class="absolute bottom-2 left-2 bg-transparent px-2 py-1 h-6"></div>
             `;
         }
         
