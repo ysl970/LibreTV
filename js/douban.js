@@ -25,7 +25,7 @@ const contentCategories = {
 };
 
 // 默认每个分类显示的数量，固定为7个
-let doubanPageSize = 7;
+const doubanPageSize = 7;
 
 // 初始化豆瓣功能
 function initDouban() {
