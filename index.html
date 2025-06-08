@@ -242,10 +242,10 @@
             <!-- 豆瓣热门推荐区域: 默认隐藏，现在位于搜索区域下方，调整宽度 -->
             <div id="doubanArea" class="w-full my-8 hidden">
                 <div class="mx-auto max-w-screen-xl px-2">
-                    <!-- 热门电视区域 -->
+                    <!-- 1. 热门电视剧区域 -->
                     <div class="mb-8">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热门电视</h2>
+                            <h2 class="text-xl font-bold gradient-text">热门电视剧</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hot" data-type="tv">
                                 更多 
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -256,21 +256,7 @@
                         <div class="douban-tv-hot"></div>
                     </div>
 
-                    <!-- 热门电影区域 -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热门电影</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hot" data-type="movie">
-                                更多 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-                        <div class="douban-movie-hot"></div>
-                    </div>
-
-                    <!-- 热门综艺区域 -->
+                    <!-- 2. 热门综艺区域 -->
                     <div class="mb-8">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">热门综艺</h2>
@@ -284,74 +270,158 @@
                         <div class="douban-variety-hot"></div>
                     </div>
 
-                    <!-- 动作电影区域 -->
+                    <!-- 3. 热门电影区域 -->
                     <div class="mb-8">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">动作电影</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="action" data-type="movie">
+                            <h2 class="text-xl font-bold gradient-text">热门电影</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hot" data-type="movie">
                                 更多 
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                 </svg>
                             </a>
                         </div>
-                        <div class="douban-movie-action"></div>
+                        <div class="douban-movie-hot"></div>
                     </div>
 
-                    <!-- 喜剧电影区域 -->
+                    <!-- 4. 热门动漫区域 -->
                     <div class="mb-8">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">喜剧电影</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="comedy" data-type="movie">
+                            <h2 class="text-xl font-bold gradient-text">热门动漫</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="animation" data-type="tv">
                                 更多 
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                 </svg>
                             </a>
                         </div>
-                        <div class="douban-movie-comedy"></div>
+                        <div class="douban-tv-animation"></div>
                     </div>
 
-                    <!-- 科幻电影区域 -->
+                    <!-- 5. 热门短剧区域 -->
                     <div class="mb-8">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">科幻电影</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="scifi" data-type="movie">
+                            <h2 class="text-xl font-bold gradient-text">热门短剧</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="short" data-type="tv">
                                 更多 
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                 </svg>
                             </a>
                         </div>
-                        <div class="douban-movie-scifi"></div>
+                        <div class="douban-tv-short"></div>
                     </div>
 
-                    <!-- 爱情电影区域 -->
+                    <!-- 6. 即将上映区域 -->
                     <div class="mb-8">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">爱情电影</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="romance" data-type="movie">
+                            <h2 class="text-xl font-bold gradient-text">即将上映</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="coming" data-type="movie">
                                 更多 
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                 </svg>
                             </a>
                         </div>
-                        <div class="douban-movie-romance"></div>
+                        <div class="douban-movie-coming"></div>
                     </div>
 
-                    <!-- 剧情电影区域 -->
+                    <!-- 7. 新片榜单区域 -->
                     <div class="mb-8">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">剧情电影</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="drama" data-type="movie">
+                            <h2 class="text-xl font-bold gradient-text">新片榜单</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="new" data-type="movie">
                                 更多 
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                                 </svg>
                             </a>
                         </div>
-                        <div class="douban-movie-drama"></div>
+                        <div class="douban-movie-new"></div>
+                    </div>
+
+                    <!-- 8. 热门美剧区域 -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold gradient-text">热门美剧</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="us" data-type="tv">
+                                更多 
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="douban-tv-us"></div>
+                    </div>
+
+                    <!-- 9. 热门港澳剧区域 -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold gradient-text">热门港澳剧</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hk" data-type="tv">
+                                更多 
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="douban-tv-hk"></div>
+                    </div>
+
+                    <!-- 10. 热门韩剧区域 -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold gradient-text">热门韩剧</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="kr" data-type="tv">
+                                更多 
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="douban-tv-kr"></div>
+                    </div>
+
+                    <!-- 11. 热门泰剧区域 -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold gradient-text">热门泰剧</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="th" data-type="tv">
+                                更多 
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="douban-tv-th"></div>
+                    </div>
+
+                    <!-- 12. 热门日剧区域 -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold gradient-text">热门日剧</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="jp" data-type="tv">
+                                更多 
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="douban-tv-jp"></div>
+                    </div>
+
+                    <!-- 13. Top250电影区域 -->
+                    <div class="mb-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold gradient-text">Top250电影</h2>
+                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="top250" data-type="movie">
+                                更多 
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
+                        <div class="douban-movie-top250"></div>
                     </div>
                 </div>
             </div>
