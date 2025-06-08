@@ -1,4 +1,20 @@
 /* 豆瓣分类布局样式 */
+.douban-category {
+  margin-bottom: 2rem;
+}
+
+.douban-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.douban-category-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+}
 
 /* 增强分类标题渐变效果 */
 .gradient-text {
@@ -24,6 +40,24 @@
   background: linear-gradient(to right, #00ccff, #ff3c78);
   opacity: 0.5;
   border-radius: 2px;
+}
+
+.douban-more-link {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s ease;
+}
+
+.douban-more-link:hover {
+  color: white;
+}
+
+.douban-more-link svg {
+  height: 1rem;
+  width: 1rem;
+  margin-left: 0.25rem;
 }
 
 /* 水平滚动容器样式 */
@@ -119,4 +153,98 @@
   justify-content: center;
   align-items: center;
   margin-top: 1rem;
+}
+
+.douban-card {
+  background-color: #111;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  transform: translateZ(0);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.douban-card:hover {
+  background-color: #222;
+  transform: scale(1.05) translateZ(0);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+}
+
+.douban-card-image-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.douban-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.douban-card:hover .douban-card-image {
+  transform: scale(1.1);
+}
+
+.douban-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  opacity: 0.6;
+}
+
+.douban-card-rating {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fbbf24;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+}
+
+.douban-card-link {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s ease;
+}
+
+.douban-card-link:hover {
+  background-color: #333;
+}
+
+.douban-card-info {
+  padding: 0.5rem;
+  text-align: center;
+  background-color: #111;
+}
+
+.douban-card-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+  transition: color 0.2s ease;
+}
+
+.douban-card-title:hover {
+  color: #ec4899;
 } 
