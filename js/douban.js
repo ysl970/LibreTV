@@ -214,35 +214,50 @@ async function fetchMoreCategoryContent(type, category) {
     try {
         // 构建API请求URL，增加数量
         let apiUrl = '';
-        let categoryName = '';
         
+        // 根据不同的分类使用不同的API或参数
         if (type === 'movie') {
-            if (category === 'hot') categoryName = '热门';
-            else if (category === 'coming') categoryName = '即将上映';
-            else if (category === 'new') categoryName = '新片';
-            else if (category === 'top250') categoryName = 'top250';
-            
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=0`;
+            if (category === 'top250') {
+                // Top250使用特殊API
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=rank&page_limit=18&page_start=0`;
+            } else if (category === 'coming') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=即将上映&sort=time&page_limit=18&page_start=0`;
+            } else if (category === 'new') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=18&page_start=0`;
+            } else if (category === 'hot') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=recommend&page_limit=18&page_start=0`;
+            } else {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=recommend&page_limit=18&page_start=0`;
+            }
         } else if (type === 'tv') {
-            if (category === 'hot') categoryName = '热门';
-            else if (category === 'animation') categoryName = '动漫';
-            else if (category === 'short') categoryName = '短剧';
-            else if (category === 'us') categoryName = '美剧';
-            else if (category === 'hk') categoryName = '港澳剧';
-            else if (category === 'kr') categoryName = '韩剧';
-            else if (category === 'th') categoryName = '泰剧';
-            else if (category === 'jp') categoryName = '日剧';
-            else categoryName = '热门';
-            
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=0`;
+            if (category === 'hot') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=recommend&page_limit=18&page_start=0`;
+            } else if (category === 'animation') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动漫&sort=recommend&page_limit=18&page_start=0`;
+            } else if (category === 'short') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=短剧&sort=recommend&page_limit=18&page_start=0`;
+            } else if (category === 'us') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=recommend&page_limit=18&page_start=0`;
+            } else if (category === 'hk') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&sort=recommend&page_limit=18&page_start=0`;
+            } else if (category === 'kr') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=recommend&page_limit=18&page_start=0`;
+            } else if (category === 'th') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰剧&sort=recommend&page_limit=18&page_start=0`;
+            } else if (category === 'jp') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=recommend&page_limit=18&page_start=0`;
+            } else {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=recommend&page_limit=18&page_start=0`;
+            }
         } else if (type === 'variety') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=18&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&sort=recommend&page_limit=18&page_start=0`;
         }
         
         // 获取数据
-        return await fetchDoubanData(apiUrl);
+        const data = await fetchDoubanData(apiUrl);
+        return data;
     } catch (error) {
-        console.error(`获取更多${type}-${category}内容失败:`, error);
+        console.error('获取更多内容失败:', error);
         throw error;
     }
 }
@@ -313,9 +328,14 @@ function renderModalItems(items) {
         if (item.rate) {
             const rating = parseFloat(item.rate);
             ratingHtml = `
-                <div class="absolute bottom-2 left-2 bg-black/70 text-yellow-400 px-2 py-1 text-xs font-bold rounded-sm flex items-center">
+                <div class="absolute bottom-2 left-2 bg-black/70 text-yellow-400 px-2 py-1 text-xs font-bold rounded-sm flex items-center h-6">
                     <span class="text-yellow-400">★</span> ${rating}
                 </div>
+            `;
+        } else {
+            // 为没有评分的项目添加一个占位符，保持卡片高度一致
+            ratingHtml = `
+                <div class="absolute bottom-2 left-2 bg-transparent h-6"></div>
             `;
         }
         
@@ -335,7 +355,7 @@ function renderModalItems(items) {
                         loading="lazy" referrerpolicy="no-referrer">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     ${ratingHtml}
-                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors">
+                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors h-6 flex items-center">
                         <a href="${item.url}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" onclick="event.stopPropagation();">
                             🔗
                         </a>
@@ -434,30 +454,43 @@ async function loadMoreItems(type, category, page) {
     try {
         // 构建API请求URL
         let apiUrl = '';
-        let categoryName = '';
         
+        // 根据不同的分类使用不同的API或参数
         if (type === 'movie') {
-            if (category === 'hot') categoryName = '热门';
-            else if (category === 'coming') categoryName = '即将上映';
-            else if (category === 'new') categoryName = '新片';
-            else if (category === 'top250') categoryName = 'top250';
-            else categoryName = '热门';
-            
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            if (category === 'top250') {
+                // Top250使用特殊API
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=rank&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'coming') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=即将上映&sort=time&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'new') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'hot') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            } else {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            }
         } else if (type === 'tv') {
-            if (category === 'hot') categoryName = '热门';
-            else if (category === 'animation') categoryName = '动漫';
-            else if (category === 'short') categoryName = '短剧';
-            else if (category === 'us') categoryName = '美剧';
-            else if (category === 'hk') categoryName = '港澳剧';
-            else if (category === 'kr') categoryName = '韩剧';
-            else if (category === 'th') categoryName = '泰剧';
-            else if (category === 'jp') categoryName = '日剧';
-            else categoryName = '热门';
-            
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            if (category === 'hot') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'animation') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动漫&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'short') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=短剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'us') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'hk') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'kr') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'th') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            } else if (category === 'jp') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            } else {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            }
         } else if (type === 'variety') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=18&page_start=${page * 18}`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&sort=recommend&page_limit=18&page_start=${page * 18}`;
         }
         
         // 获取数据
@@ -481,13 +514,40 @@ async function fetchCategoryContent(type, category, categoryName) {
         
         // 构建API请求URL
         let apiUrl = '';
+        
+        // 根据不同的分类使用不同的API或参数
         if (type === 'movie') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            if (category === 'top250') {
+                // Top250使用特殊API
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=rank&page_limit=${doubanPageSize}&page_start=0`;
+            } else if (category === 'coming') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=即将上映&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+            } else if (category === 'new') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+            } else {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            }
         } else if (type === 'tv') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            if (category === 'animation') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动漫&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            } else if (category === 'short') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=短剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            } else if (category === 'us') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            } else if (category === 'hk') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            } else if (category === 'kr') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            } else if (category === 'th') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            } else if (category === 'jp') {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            } else {
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            }
         } else if (type === 'variety') {
             // 修改综艺API请求，确保能获取到综艺内容
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent('综艺')}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
         }
         
         // 获取数据
@@ -521,9 +581,14 @@ function renderCategoryContent(data, container) {
         if (item.rate) {
             const rating = parseFloat(item.rate);
             ratingHtml = `
-                <div class="absolute bottom-2 left-2 bg-black/70 text-yellow-400 px-2 py-1 text-xs font-bold rounded-sm flex items-center">
+                <div class="absolute bottom-2 left-2 bg-black/70 text-yellow-400 px-2 py-1 text-xs font-bold rounded-sm flex items-center h-6">
                     <span class="text-yellow-400">★</span> ${rating}
                 </div>
+            `;
+        } else {
+            // 为没有评分的项目添加一个占位符，保持卡片高度一致
+            ratingHtml = `
+                <div class="absolute bottom-2 left-2 bg-transparent h-6"></div>
             `;
         }
         
@@ -542,7 +607,7 @@ function renderCategoryContent(data, container) {
                     loading="lazy" referrerpolicy="no-referrer">
                 <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                 ${ratingHtml}
-                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors">
+                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors h-6 flex items-center">
                     <a href="${item.url}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" onclick="event.stopPropagation();">
                         🔗
                     </a>
@@ -565,7 +630,7 @@ function renderCategoryContent(data, container) {
     const isMobile = window.innerWidth <= 767;
     const threshold = isMobile ? 3 : 7;
     
-    if (container.children.length > threshold) {
+    if (container.children.length >= (isMobile ? 4 : 8)) {
         container.classList.add('scrollable');
     } else {
         container.classList.remove('scrollable');
@@ -625,8 +690,6 @@ async function fetchDoubanData(url) {
         }
     }
 }
-
-
 
 // 填充搜索框，确保豆瓣资源API被选中，然后执行搜索
 async function fillAndSearchWithDouban(title) {
