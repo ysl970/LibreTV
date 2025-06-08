@@ -25,7 +25,7 @@ const contentCategories = {
 };
 
 // 默认每个分类显示的数量，可以通过设置修改
-let doubanPageSize = parseInt(localStorage.getItem('doubanPageSize')) || 6;
+let doubanPageSize = parseInt(localStorage.getItem('doubanPageSize')) || 8;
 
 // 初始化豆瓣功能
 function initDouban() {
