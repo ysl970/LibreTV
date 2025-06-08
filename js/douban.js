@@ -195,8 +195,8 @@ function getCategoryTitle(type, category) {
         return '电影';
     } else if (type === 'tv') {
         if (category === 'hot') return '热门电视剧';
-        if (category === 'animation') return '热门动漫';
-        if (category === 'short') return '热门短剧';
+        if (category === 'animation') return '热门动画';
+        if (category === 'short') return '冷门佳片';
         if (category === 'us') return '热门美剧';
         if (category === 'hk') return '热门港澳剧';
         if (category === 'kr') return '热门韩剧';
@@ -221,7 +221,8 @@ async function fetchMoreCategoryContent(type, category) {
                 // Top250使用特殊API
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=rank&page_limit=18&page_start=0`;
             } else if (category === 'coming') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=即将上映&sort=time&page_limit=18&page_start=0`;
+                // 即将上映使用热门+排序方式
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=time&page_limit=18&page_start=0`;
             } else if (category === 'new') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=18&page_start=0`;
             } else if (category === 'hot') {
@@ -233,9 +234,11 @@ async function fetchMoreCategoryContent(type, category) {
             if (category === 'hot') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'animation') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动漫&sort=recommend&page_limit=18&page_start=0`;
+                // 动画使用日本动画标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日本动画&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'short') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=短剧&sort=recommend&page_limit=18&page_start=0`;
+                // 冷门佳片使用冷门标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=冷门佳片&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'us') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'hk') {
@@ -243,7 +246,8 @@ async function fetchMoreCategoryContent(type, category) {
             } else if (category === 'kr') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'th') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰剧&sort=recommend&page_limit=18&page_start=0`;
+                // 泰剧使用泰国标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰国&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'jp') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=recommend&page_limit=18&page_start=0`;
             } else {
@@ -305,8 +309,8 @@ function getCategoryFromTitle(title) {
     if (title.includes('即将上映')) return 'coming';
     if (title.includes('新片榜单')) return 'new';
     if (title.includes('Top250')) return 'top250';
-    if (title.includes('动漫')) return 'animation';
-    if (title.includes('短剧')) return 'short';
+    if (title.includes('动画')) return 'animation';
+    if (title.includes('冷门佳片')) return 'short';
     if (title.includes('美剧')) return 'us';
     if (title.includes('港澳剧')) return 'hk';
     if (title.includes('韩剧')) return 'kr';
@@ -461,7 +465,8 @@ async function loadMoreItems(type, category, page) {
                 // Top250使用特殊API
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=rank&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'coming') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=即将上映&sort=time&page_limit=18&page_start=${page * 18}`;
+                // 即将上映使用热门+排序方式
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=time&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'new') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'hot') {
@@ -473,9 +478,11 @@ async function loadMoreItems(type, category, page) {
             if (category === 'hot') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'animation') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动漫&sort=recommend&page_limit=18&page_start=${page * 18}`;
+                // 动画使用日本动画标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日本动画&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'short') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=短剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
+                // 冷门佳片使用冷门标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=冷门佳片&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'us') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'hk') {
@@ -483,7 +490,8 @@ async function loadMoreItems(type, category, page) {
             } else if (category === 'kr') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'th') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
+                // 泰剧使用泰国标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰国&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'jp') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else {
@@ -497,7 +505,7 @@ async function loadMoreItems(type, category, page) {
         const data = await fetchDoubanData(apiUrl);
         return data.subjects || [];
     } catch (error) {
-        console.error(`加载更多${type}-${category}内容失败:`, error);
+        console.error('加载更多内容失败:', error);
         throw error;
     }
 }
@@ -521,7 +529,8 @@ async function fetchCategoryContent(type, category, categoryName) {
                 // Top250使用特殊API
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=rank&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'coming') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=即将上映&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                // 即将上映使用热门+排序方式
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=time&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'new') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=${doubanPageSize}&page_start=0`;
             } else {
@@ -529,9 +538,11 @@ async function fetchCategoryContent(type, category, categoryName) {
             }
         } else if (type === 'tv') {
             if (category === 'animation') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动漫&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+                // 动画使用日本动画标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日本动画&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'short') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=短剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+                // 冷门佳片使用冷门标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=冷门佳片&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'us') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'hk') {
@@ -539,7 +550,8 @@ async function fetchCategoryContent(type, category, categoryName) {
             } else if (category === 'kr') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'th') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+                // 泰剧使用泰国标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=泰国&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'jp') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else {
