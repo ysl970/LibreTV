@@ -551,11 +551,7 @@ async function handleMultipleCustomSearch(searchQuery, customApiUrls) {
         const requestUrl = typeof input === 'string' ? new URL(input, window.location.origin) : input.url;
         
         if (requestUrl.pathname.startsWith('/api/')) {
-            if (window.isPasswordProtected && window.isPasswordVerified) {
-                if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-                    return;
-                }
-            }
+            // 移除密码验证检查，允许所有API请求通过
             try {
                 const data = await handleApiRequest(requestUrl);
                 return new Response(data, {
