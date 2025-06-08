@@ -114,35 +114,35 @@ function loadAllCategoryContent() {
     // 3. 热门电影
     fetchCategoryContent('movie', 'hot', '热门');
     
-    // 4. 热门动漫
-    fetchCategoryContent('tv', 'animation', '动漫');
+    // 4. 热门动画
+    fetchCategoryContent('tv', 'animation', '动画');
     
-    // 5. 热门短剧
-    fetchCategoryContent('tv', 'short', '短剧');
+    // 5. 冷门佳片
+    fetchCategoryContent('movie', 'short', '冷门佳片');
     
-    // 6. 即将上映
-    fetchCategoryContent('movie', 'coming', '即将上映');
+    // 6. 最新热门
+    fetchCategoryContent('movie', 'coming', '热门');
     
     // 7. 新片榜单
-    fetchCategoryContent('movie', 'new', '新片');
+    fetchCategoryContent('movie', 'new', '最新');
     
     // 8. 热门美剧
     fetchCategoryContent('tv', 'us', '美剧');
     
     // 9. 热门港澳剧
-    fetchCategoryContent('tv', 'hk', '港澳剧');
+    fetchCategoryContent('tv', 'hk', '港剧');
     
     // 10. 热门韩剧
     fetchCategoryContent('tv', 'kr', '韩剧');
     
-    // 11. 热门泰剧
-    fetchCategoryContent('tv', 'th', '泰剧');
+    // 11. 热门泰国剧
+    fetchCategoryContent('tv', 'th', '泰国');
     
     // 12. 热门日剧
     fetchCategoryContent('tv', 'jp', '日剧');
     
     // 13. Top250电影
-    fetchCategoryContent('movie', 'top250', 'top250');
+    fetchCategoryContent('movie', 'top250', '豆瓣高分');
 }
 
 // 设置"更多"按钮点击事件
@@ -189,7 +189,7 @@ function setupMoreButtons() {
 function getCategoryTitle(type, category) {
     if (type === 'movie') {
         if (category === 'hot') return '热门电影';
-        if (category === 'coming') return '即将上映';
+        if (category === 'coming') return '最新热门';
         if (category === 'new') return '新片榜单';
         if (category === 'top250') return 'Top250电影';
         return '电影';
@@ -200,7 +200,7 @@ function getCategoryTitle(type, category) {
         if (category === 'us') return '热门美剧';
         if (category === 'hk') return '热门港澳剧';
         if (category === 'kr') return '热门韩剧';
-        if (category === 'th') return '热门泰剧';
+        if (category === 'th') return '热门泰国剧';
         if (category === 'jp') return '热门日剧';
         return '电视剧';
     } else if (type === 'variety') {
@@ -234,8 +234,8 @@ async function fetchMoreCategoryContent(type, category) {
             if (category === 'hot') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'animation') {
-                // 动画使用日本动画标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日本动画&sort=recommend&page_limit=18&page_start=0`;
+                // 动画使用动画标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&sort=recommend&page_limit=18&page_start=0`;
             } else if (category === 'short') {
                 // 冷门佳片使用冷门标签
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=冷门佳片&sort=recommend&page_limit=18&page_start=0`;
@@ -306,7 +306,7 @@ function showCategoryModal(items, title) {
 
 // 从标题获取分类
 function getCategoryFromTitle(title) {
-    if (title.includes('即将上映')) return 'coming';
+    if (title.includes('最新热门')) return 'coming';
     if (title.includes('新片榜单')) return 'new';
     if (title.includes('Top250')) return 'top250';
     if (title.includes('动画')) return 'animation';
@@ -314,7 +314,7 @@ function getCategoryFromTitle(title) {
     if (title.includes('美剧')) return 'us';
     if (title.includes('港澳剧')) return 'hk';
     if (title.includes('韩剧')) return 'kr';
-    if (title.includes('泰剧')) return 'th';
+    if (title.includes('泰国剧')) return 'th';
     if (title.includes('日剧')) return 'jp';
     return 'hot';
 }
@@ -478,8 +478,8 @@ async function loadMoreItems(type, category, page) {
             if (category === 'hot') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'animation') {
-                // 动画使用日本动画标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日本动画&sort=recommend&page_limit=18&page_start=${page * 18}`;
+                // 动画使用动画标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&sort=recommend&page_limit=18&page_start=${page * 18}`;
             } else if (category === 'short') {
                 // 冷门佳片使用冷门标签
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=冷门佳片&sort=recommend&page_limit=18&page_start=${page * 18}`;
@@ -538,8 +538,8 @@ async function fetchCategoryContent(type, category, categoryName) {
             }
         } else if (type === 'tv') {
             if (category === 'animation') {
-                // 动画使用日本动画标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日本动画&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+                // 动画使用动画标签
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'short') {
                 // 冷门佳片使用冷门标签
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=冷门佳片&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
