@@ -24,8 +24,8 @@ const contentCategories = {
     }
 };
 
-// 默认每个分类显示的数量，可以通过设置修改
-let doubanPageSize = parseInt(localStorage.getItem('doubanPageSize')) || 7;
+// 默认每个分类显示的数量，固定为7个
+let doubanPageSize = 7;
 
 // 初始化豆瓣功能
 function initDouban() {
@@ -82,49 +82,7 @@ function initDouban() {
 
 // 添加豆瓣设置到设置面板
 function addDoubanSettings() {
-    // 查找设置面板中的功能开关区域
-    const settingsArea = document.querySelector('.settings-panel .space-y-5');
-    if (!settingsArea) return;
-    
-    // 创建豆瓣设置区域
-    const doubanSettingsDiv = document.createElement('div');
-    doubanSettingsDiv.className = 'p-3 bg-[#151515] rounded-lg shadow-inner';
-    doubanSettingsDiv.innerHTML = `
-        <label class="block text-sm font-medium text-gray-400 mb-3 border-b border-[#333] pb-1">豆瓣推荐设置</label>
-        <div class="mb-3">
-            <label class="text-sm font-medium text-gray-400">每个分类显示数量</label>
-            <div class="flex items-center mt-2">
-                <input type="range" id="doubanSizeSlider" min="3" max="12" step="1" value="${doubanPageSize}" 
-                       class="w-full h-2 bg-[#333] rounded-lg appearance-none cursor-pointer">
-                <span id="doubanSizeValue" class="ml-2 text-white">${doubanPageSize}</span>
-            </div>
-            <div class="flex justify-end mt-2">
-                <button id="applyDoubanSize" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs">
-                    应用设置
-                </button>
-            </div>
-        </div>
-    `;
-    
-    // 将设置区域添加到设置面板
-    settingsArea.appendChild(doubanSettingsDiv);
-    
-    // 添加事件监听器
-    const slider = document.getElementById('doubanSizeSlider');
-    const sizeValue = document.getElementById('doubanSizeValue');
-    const applyButton = document.getElementById('applyDoubanSize');
-    
-    slider.addEventListener('input', function() {
-        sizeValue.textContent = this.value;
-    });
-    
-    applyButton.addEventListener('click', function() {
-        const newSize = parseInt(slider.value);
-        doubanPageSize = newSize;
-        localStorage.setItem('doubanPageSize', newSize);
-        showToast('设置已应用，正在刷新内容...', 'success');
-        loadAllCategoryContent();
-    });
+    // 不再需要添加豆瓣设置，因为我们固定显示7个
 }
 
 // 根据设置更新豆瓣区域的显示状态
@@ -553,8 +511,8 @@ function renderCategoryContent(data, container) {
         container.appendChild(card);
     });
     
-    // 检查子元素数量，如果超过8个则添加scrollable类
-    if (container.children.length > 8) {
+    // 检查子元素数量，如果大于等于8个则添加scrollable类
+    if (container.children.length >= 8) {
         container.classList.add('scrollable');
     } else {
         container.classList.remove('scrollable');
