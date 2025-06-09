@@ -124,9 +124,15 @@ app.use('/proxy', async (req, res) => {
             return res.status(400).json({ error: 'Missing target URL' });
         }
 
+        if (!isValidUrl(targetUrl)) {
+            return res.status(400).json({ error: 'Invalid target URL' });
+        }
+
+        console.log('Proxy request for:', targetUrl); // 添加日志
+
         // 添加请求头
         const headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'User-Agent': config.userAgent,
             'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Cache-Control': 'no-cache',
@@ -135,29 +141,54 @@ app.use('/proxy', async (req, res) => {
             'Origin': 'https://www.douban.com'
         };
 
-        // 设置超时
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        let retries = 0;
+        let lastError = null;
 
-        const response = await fetch(targetUrl, {
-            headers,
-            signal: controller.signal
-        });
+        while (retries <= config.maxRetries) {
+            try {
+                // 设置超时
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), config.timeout);
 
-        clearTimeout(timeoutId);
+                console.log(`Attempt ${retries + 1} for ${targetUrl}`); // 添加重试日志
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+                const response = await fetch(targetUrl, {
+                    headers,
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                console.log('Response content-type:', contentType); // 添加响应类型日志
+
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    console.log('Response data:', data); // 添加响应数据日志
+                    return res.json(data);
+                } else {
+                    const text = await response.text();
+                    return res.send(text);
+                }
+            } catch (error) {
+                lastError = error;
+                console.error(`Attempt ${retries + 1} failed:`, error); // 添加错误日志
+                retries++;
+                
+                if (retries <= config.maxRetries) {
+                    // 等待一段时间后重试
+                    await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+                    continue;
+                }
+                break;
+            }
         }
 
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-            const data = await response.json();
-            res.json(data);
-        } else {
-            const text = await response.text();
-            res.send(text);
-        }
+        throw lastError || new Error('Request failed after retries');
     } catch (error) {
         console.error('Proxy error:', error);
         res.status(500).json({
