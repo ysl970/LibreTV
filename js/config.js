@@ -191,9 +191,9 @@ const AGGREGATED_SEARCH_CONFIG = {
 // 抽象API请求配置
 const API_CONFIG = {
     search: {
-        // 修改搜索路径配置
-        path: '/api.php/provide/vod/?ac=videolist&wd=',
-        pagePath: '/api.php/provide/vod/?ac=videolist&wd={query}&pg={page}',
+        // 修改搜索路径配置，移除重复的路径
+        path: '?ac=videolist&wd=',
+        pagePath: '?ac=videolist&wd={query}&pg={page}',
         maxPages: 50, // 最大获取页数
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -201,7 +201,6 @@ const API_CONFIG = {
         }
     },
     detail: {
-        // 只拼接参数部分
         path: '?ac=videolist&ids=',
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
