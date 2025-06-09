@@ -88,7 +88,6 @@ let shortcutHintTimeout = null; // 用于控制快捷键提示显示时间
 let adFilteringEnabled = true; // 默认开启广告过滤
 let progressSaveInterval = null; // 定期保存进度的计时器
 let currentVideoUrl = ''; // 记录当前实际的视频URL
-let availableApiSources = []; // 存储可用的API源
 const isWebkit = (typeof window.webkitConvertPointFromNodeToPage === 'function')
 Artplayer.FULLSCREEN_WEB_IN_BODY = true;
 
@@ -261,12 +260,6 @@ function initializePageContent() {
             clearInterval(waitForVideo);
         }
     }, 200);
-
-    // 初始化API源选择器
-    initializeApiSourceSelector();
-
-    // 初始化集数选择区域
-    initializeEpisodeGrid();
 }
 
 // 处理键盘快捷键
@@ -765,36 +758,6 @@ function initPlayer(videoUrl) {
             `;
         }
     }, 10000);
-
-    // 获取可用的API源
-    fetchAvailableApiSources();
-}
-
-// 获取可用的API源
-async function fetchAvailableApiSources() {
-    try {
-        const response = await fetch('/api/sources');
-        if (!response.ok) {
-            throw new Error('获取API源失败');
-        }
-        
-        const sources = await response.json();
-        availableApiSources = sources;
-        
-        // 保存到localStorage
-        localStorage.setItem('availableApiSources', JSON.stringify(sources));
-        
-        // 更新选择器
-        updateApiSourceSelector();
-    } catch (error) {
-        console.error('获取API源失败:', error);
-        // 如果获取失败，尝试使用缓存的源
-        const savedSources = localStorage.getItem('availableApiSources');
-        if (savedSources) {
-            availableApiSources = JSON.parse(savedSources);
-            updateApiSourceSelector();
-        }
-    }
 }
 
 // 自定义M3U8 Loader用于过滤广告
@@ -863,9 +826,6 @@ function updateEpisodeInfo() {
     } else {
         document.getElementById('episodeInfo').textContent = '无集数信息';
     }
-
-    // 更新集数选择区域
-    initializeEpisodeGrid();
 }
 
 // 更新按钮状态
@@ -1472,91 +1432,4 @@ function closeEmbeddedPlayer() {
         console.error('尝试关闭嵌入式播放器失败:', e);
     }
     return false;
-}
-
-// 初始化API源选择器
-function initializeApiSourceSelector() {
-    const apiSourceSelect = document.getElementById('apiSourceSelect');
-    
-    // 从localStorage获取可用的API源
-    const savedSources = localStorage.getItem('availableApiSources');
-    if (savedSources) {
-        availableApiSources = JSON.parse(savedSources);
-        updateApiSourceSelector();
-    }
-
-    // 监听选择变化
-    apiSourceSelect.addEventListener('change', function(e) {
-        const selectedSource = e.target.value;
-        if (selectedSource) {
-            // 更新当前视频源
-            const urlParams = new URLSearchParams(window.location.search);
-            urlParams.set('source_code', selectedSource);
-            window.history.replaceState({}, '', `?${urlParams.toString()}`);
-            
-            // 重新加载视频
-            const videoUrl = urlParams.get('url');
-            if (videoUrl) {
-                initPlayer(videoUrl);
-            }
-        }
-    });
-}
-
-// 更新API源选择器
-function updateApiSourceSelector() {
-    const apiSourceSelect = document.getElementById('apiSourceSelect');
-    apiSourceSelect.innerHTML = '';
-    
-    if (availableApiSources.length === 0) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = '暂无可用源';
-        apiSourceSelect.appendChild(option);
-        return;
-    }
-
-    availableApiSources.forEach(source => {
-        const option = document.createElement('option');
-        option.value = source.code;
-        option.textContent = source.name;
-        apiSourceSelect.appendChild(option);
-    });
-
-    // 设置当前选中的源
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentSource = urlParams.get('source_code');
-    if (currentSource) {
-        apiSourceSelect.value = currentSource;
-    }
-}
-
-// 初始化集数选择区域
-function initializeEpisodeGrid() {
-    const episodeGrid = document.getElementById('episodeGrid');
-    
-    // 清空现有内容
-    episodeGrid.innerHTML = '';
-    
-    if (currentEpisodes.length === 0) {
-        return;
-    }
-
-    // 创建集数按钮
-    currentEpisodes.forEach((episode, index) => {
-        const button = document.createElement('button');
-        button.className = `px-2 py-1 text-sm rounded-lg transition-colors ${
-            index === currentEpisodeIndex 
-            ? 'bg-[#00ccff] text-white' 
-            : 'bg-[#222] hover:bg-[#333] text-gray-300'
-        }`;
-        button.textContent = episode.title || `第${index + 1}集`;
-        
-        // 添加点击事件
-        button.addEventListener('click', () => {
-            playEpisode(index);
-        });
-        
-        episodeGrid.appendChild(button);
-    });
 }
