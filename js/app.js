@@ -611,13 +611,17 @@ async function search() {
     // 合并所有API结果
     const flatResults = allResults.flat();
     const resultsArea = document.getElementById('resultsArea');
-    if (!resultsArea) return;
+    const resultsGrid = document.getElementById('results');
+    if (!resultsArea || !resultsGrid) return;
+    resultsArea.classList.remove('hidden');
     if (flatResults.length === 0) {
-        resultsArea.innerHTML = '<div class="text-center text-gray-400 py-8">未找到可播放资源</div>';
+        resultsGrid.innerHTML = '<div class="text-center text-gray-400 py-8">未找到可播放资源</div>';
+        document.getElementById('searchResultsCount').textContent = '0';
         return;
     }
+    document.getElementById('searchResultsCount').textContent = flatResults.length;
     // 渲染所有API的结果，每个资源可点击直接播放
-    resultsArea.innerHTML = flatResults.map((item, idx) => {
+    resultsGrid.innerHTML = flatResults.map((item, idx) => {
         const playUrls = (item.vod_play_url && typeof item.vod_play_url === 'string') ?
             item.vod_play_url.split('#').map((s, i) => ({ url: s.split('$')[1] || '', name: s.split('$')[0] || `第${i+1}集` })) : [];
         const firstUrl = playUrls.length > 0 ? playUrls[0].url : '';
