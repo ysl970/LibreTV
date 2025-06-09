@@ -1487,7 +1487,7 @@ function renderEpisodeCards() {
         const realIndex = window.episodesReversed ? window.currentEpisodes.length - 1 - idx : idx;
         const isActive = realIndex === window.currentEpisodeIndex;
         html += `<div class="episode-card${isActive ? ' active' : ''}" onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集">
-          ${isActive ? '<span class=\"episode-icon\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"2\" y=\"2\" width=\"16\" height=\"16\" rx=\"3\" fill=\"#00ccff\"/><rect x=\"5\" y=\"5\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#ff3c78\"/></svg></span>' : ''}
+          ${isActive ? '<span class="episode-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-2-4l4-2-4-2v4z" fill="#00ccff"/></svg></span>' : ''}
           <span class="episode-label">第${realIndex+1}集</span>
         </div>`;
     });
