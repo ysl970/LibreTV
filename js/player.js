@@ -1604,3 +1604,77 @@ window.addEventListener('DOMContentLoaded', async function () {
     }
     renderEpisodes();
 });
+
+// ========== 新UI渲染逻辑 =============
+
+// 渲染资源信息卡片（顶部）
+function renderResourceInfoBar() {
+    if (typeof API_SITES === 'undefined') return;
+    const container = document.getElementById('resourceInfoBarContainer');
+    if (!container) return;
+    // 获取当前source_code
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentSource = urlParams.get('source_code') || '';
+    const currentIndex = parseInt(urlParams.get('index') || '0', 10);
+    const title = urlParams.get('title') || document.getElementById('videoTitle').textContent || '';
+    const currentResource = API_SITES[currentSource];
+    const resourceName = currentResource ? currentResource.name : '未知资源';
+    // 视频数
+    let videoCount = window.currentEpisodes && window.currentEpisodes.length ? window.currentEpisodes.length : 0;
+    // HTML结构
+    container.innerHTML = `
+      <div class="resource-info-bar-left">
+        <span>${resourceName}</span>
+        <span class="resource-info-bar-videos">${videoCount} 个视频</span>
+      </div>
+      <button class="resource-switch-btn" id="switchResourceBtn">
+        <span class="resource-switch-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4v16m0 0l-6-6m6 6l6-6" stroke="#a67c2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        切换资源
+      </button>
+    `;
+    // 绑定切换资源弹窗事件
+    const switchBtn = document.getElementById('switchResourceBtn');
+    if (switchBtn) {
+      switchBtn.onclick = function(e) {
+        e.preventDefault();
+        showResourceModal && showResourceModal();
+      };
+    }
+}
+
+// 渲染集数卡片区
+function renderEpisodeCards() {
+    const container = document.getElementById('episodeCardsContainer');
+    if (!container) return;
+    if (!window.currentEpisodes || window.currentEpisodes.length === 0) {
+        container.innerHTML = '<div class="episode-card" style="opacity:0.5;cursor:default;">没有可用的集数</div>';
+        return;
+    }
+    const episodes = window.episodesReversed ? [...window.currentEpisodes].reverse() : window.currentEpisodes;
+    let html = '';
+    episodes.forEach((ep, idx) => {
+        // 真实索引
+        const realIndex = window.episodesReversed ? window.currentEpisodes.length - 1 - idx : idx;
+        const isActive = realIndex === window.currentEpisodeIndex;
+        html += `<div class="episode-card${isActive ? ' active' : ''}" onclick="playEpisode(${realIndex})">
+          ${realIndex === 0 ? '<span class=\"episode-icon\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"2\" y=\"2\" width=\"16\" height=\"16\" rx=\"3\" fill=\"#2d225a\"/><rect x=\"5\" y=\"5\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#fff\"/></svg></span>' : ''}
+          <span class="episode-label">第 ${String(realIndex+1).padStart(2,'0')} 集</span>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+// 重载playEpisode，切换集数后刷新UI
+const _oldPlayEpisode = window.playEpisode;
+window.playEpisode = function(index) {
+    if (typeof _oldPlayEpisode === 'function') _oldPlayEpisode(index);
+    renderEpisodeCards();
+};
+
+// 页面初始化时渲染新UI
+window.addEventListener('DOMContentLoaded', function () {
+    renderResourceInfoBar();
+    renderEpisodeCards();
+});
