@@ -116,60 +116,47 @@ function isValidUrl(urlString) {
   }
 }
 
-// 代理路由
-app.get('/proxy/:encodedUrl', async (req, res) => {
+// 代理请求处理
+app.use('/proxy', async (req, res) => {
     try {
-        const targetUrl = decodeURIComponent(req.params.encodedUrl);
-        console.log('Proxy request:', targetUrl);
-        
-        // 验证URL
-        if (!isValidUrl(targetUrl)) {
-            throw new Error('Invalid URL');
+        const targetUrl = decodeURIComponent(req.url.substring(1));
+        if (!targetUrl) {
+            return res.status(400).json({ error: 'Missing target URL' });
         }
 
-        // 获取请求头
+        // 添加请求头
         const headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
+            'Pragma': 'no-cache',
+            'Referer': 'https://www.douban.com/',
+            'Origin': 'https://www.douban.com'
         };
 
-        // 添加重试机制
-        let retries = 0;
-        const maxRetries = config.maxRetries;
-        
-        while (retries <= maxRetries) {
-            try {
-                // 发送请求
-                const response = await fetch(targetUrl, { 
-                    headers,
-                    timeout: config.timeout
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+        // 设置超时
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-                // 设置响应头
-                res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
-                res.setHeader('Access-Control-Allow-Origin', '*');
-                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-                res.setHeader('Pragma', 'no-cache');
-                res.setHeader('Expires', '0');
+        const response = await fetch(targetUrl, {
+            headers,
+            signal: controller.signal
+        });
 
-                // 流式传输响应
-                response.body.pipe(res);
-                return;
-            } catch (error) {
-                if (retries === maxRetries) {
-                    throw error;
-                }
-                retries++;
-                console.log(`Retry ${retries}/${maxRetries} for ${targetUrl}`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * retries));
-            }
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            res.json(data);
+        } else {
+            const text = await response.text();
+            res.send(text);
         }
     } catch (error) {
         console.error('Proxy error:', error);
