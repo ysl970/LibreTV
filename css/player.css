@@ -189,25 +189,25 @@ input:checked + .slider:before {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #f3f4f6; /* 浅灰色背景，与图片一致 */
+  background: linear-gradient(135deg, #232a36 60%, #1c2939 100%);
   border-radius: 16px;
   padding: 12px 20px; /* 调整内边距以匹配图片布局 */
   margin-bottom: 18px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 .resource-info-bar-left {
   display: flex;
   align-items: center;
   font-size: 1.1rem; /* 调整字体大小 */
   font-weight: bold;
-  color: #222; /* 深色字体，与图片一致 */
+  color: #fff; /* 文字颜色改为白色 */
   flex: 1;
 }
 .resource-info-bar-videos {
   font-size: 1rem; /* 调整字体大小 */
   font-weight: normal;
   margin-left: 10px;
-  color: #666; /* 稍浅的深色，与图片一致 */
+  color: #ccc; /* 副文本颜色调亮 */
 }
 .resource-switch-btn {
   display: flex;
