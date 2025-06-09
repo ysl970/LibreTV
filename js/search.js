@@ -42,7 +42,7 @@ function renderSearchResults(results) {
     }
     
     container.innerHTML = results.map(item => `
-        <div class="search-result-item" onclick="playVideo('${item.source_code}', '${item.vod_id}', '${item.vod_name}')">
+        <div class="search-result-item" onclick="playFirstEpisode('${item.source_code}', '${item.vod_id}', '${item.vod_name}')">
             <div class="search-card-img-container">
                 <img src="${item.vod_pic}" alt="${item.vod_name}" loading="lazy">
             </div>
@@ -56,6 +56,51 @@ function renderSearchResults(results) {
             </div>
         </div>
     `).join('');
+}
+
+// 播放第一集
+async function playFirstEpisode(sourceCode, vodId, title) {
+    try {
+        // 获取视频详情
+        const detail = await getVideoDetail(sourceCode, vodId);
+        if (!detail || !detail.vod_play_url) {
+            showToast('获取视频信息失败');
+            return;
+        }
+
+        // 解析播放地址
+        const playUrls = detail.vod_play_url.split('#');
+        if (!playUrls || playUrls.length === 0) {
+            showToast('无法获取播放地址');
+            return;
+        }
+
+        // 构建播放URL（默认播放第一集）
+        const playUrl = new URL('player.html', window.location.href);
+        playUrl.searchParams.set('source_code', sourceCode);
+        playUrl.searchParams.set('vod_id', vodId);
+        playUrl.searchParams.set('title', title);
+        playUrl.searchParams.set('index', '0'); // 设置播放第一集
+
+        // 跳转到播放页面
+        window.location.href = playUrl.toString();
+    } catch (error) {
+        console.error('播放失败:', error);
+        showToast('播放失败，请稍后重试');
+    }
+}
+
+// 获取视频详情
+async function getVideoDetail(sourceCode, vodId) {
+    try {
+        const response = await fetch(`/api/detail?source=${sourceCode}&id=${vodId}`);
+        if (!response.ok) throw new Error('获取视频详情失败');
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('获取视频详情失败:', error);
+        throw error;
+    }
 }
 
 // 初始化搜索
