@@ -11,6 +11,16 @@ async function handleApiRequest(url) {
                 throw new Error('缺少搜索参数');
             }
             
+            // 处理聚合搜索
+            if (source === 'aggregated') {
+                return await handleAggregatedSearch(searchQuery);
+            }
+            
+            // 处理多个自定义API的聚合搜索
+            if (source === 'custom' && customApi.includes(',')) {
+                return await handleMultipleCustomSearch(searchQuery, customApi);
+            }
+            
             // 验证API和source的有效性
             if (source === 'custom' && !customApi) {
                 throw new Error('使用自定义API时必须提供API地址');
@@ -345,16 +355,27 @@ async function handleSpecialSourceDetail(id, sourceCode) {
 
 // 处理聚合搜索
 async function handleAggregatedSearch(searchQuery) {
-    // 获取可用的API源列表（排除aggregated和custom）
-    const availableSources = Object.keys(API_SITES).filter(key => 
-        key !== 'aggregated' && key !== 'custom'
+    // 从localStorage获取用户选中的API列表
+    let selectedAPIs = [];
+    try {
+        const storedAPIs = localStorage.getItem('selectedAPIs');
+        if (storedAPIs) {
+            selectedAPIs = JSON.parse(storedAPIs);
+        }
+    } catch (error) {
+        console.error('读取选中API失败:', error);
+    }
+    
+    // 过滤出内置API（非自定义API）
+    const availableSources = selectedAPIs.filter(key => 
+        !key.startsWith('custom_') && API_SITES[key]
     );
     
     if (availableSources.length === 0) {
-        throw new Error('没有可用的API源');
+        throw new Error('没有选择可用的API源');
     }
     
-    // 创建所有API源的搜索请求
+    // 创建所有选中API源的搜索请求
     const searchPromises = availableSources.map(async (source) => {
         try {
             const apiUrl = `${API_SITES[source].api}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`;
@@ -454,10 +475,9 @@ async function handleAggregatedSearch(searchQuery) {
 // 处理多个自定义API源的聚合搜索
 async function handleMultipleCustomSearch(searchQuery, customApiUrls) {
     // 解析自定义API列表
-    const apiUrls = customApiUrls.split(CUSTOM_API_CONFIG.separator)
+    const apiUrls = customApiUrls.split(',')
         .map(url => url.trim())
-        .filter(url => url.length > 0 && /^https?:\/\//.test(url))
-        .slice(0, CUSTOM_API_CONFIG.maxSources);
+        .filter(url => url.length > 0 && /^https?:\/\//.test(url));
     
     if (apiUrls.length === 0) {
         throw new Error('没有提供有效的自定义API地址');
@@ -492,7 +512,7 @@ async function handleMultipleCustomSearch(searchQuery, customApiUrls) {
             // 为搜索结果添加源信息
             const results = data.list.map(item => ({
                 ...item,
-                source_name: `${CUSTOM_API_CONFIG.namePrefix}${index+1}`,
+                source_name: `自定义源${index+1}`,
                 source_code: 'custom',
                 api_url: apiUrl // 保存API URL以便详情获取
             }));
