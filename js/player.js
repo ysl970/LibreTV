@@ -95,7 +95,6 @@ Artplayer.FULLSCREEN_WEB_IN_BODY = true;
 document.addEventListener('DOMContentLoaded', function () {
     // 移除密码验证检查，直接初始化页面内容
     initializePageContent();
-    renderResourceSelector();
 });
 
 // 初始化页面内容
@@ -431,7 +430,7 @@ function initPlayer(videoUrl) {
         autoplay: true,
         pip: false,
         autoSize: false,
-        autoMini: true,
+        autoMini: false,
         screenshot: true,
         setting: true,
         loop: false,
@@ -1434,49 +1433,20 @@ function toggleControlsLock() {
 
 // 支持在iframe中关闭播放器
 function closeEmbeddedPlayer() {
+    if (window.parent && typeof window.parent.closeVideoPlayer === 'function') {
+        window.parent.closeVideoPlayer();
+        return true;
+    }
     try {
-        if (window.self !== window.top) {
-            // 如果在iframe中，尝试调用父窗口的关闭方法
-            if (window.parent && typeof window.parent.closeVideoPlayer === 'function') {
-                window.parent.closeVideoPlayer();
-                return true;
-            }
+        if (window.top !== window.self) {
+            window.top.postMessage({ type: 'CLOSE_PLAYER' }, '*');
+            return true;
         }
     } catch (e) {
         console.error('尝试关闭嵌入式播放器失败:', e);
     }
     return false;
 }
-
-// 渲染资源选择卡片区域（只保留顶部资源名和切换按钮）
-function renderResourceSelector() {
-    if (typeof API_SITES === 'undefined') return;
-    const container = document.getElementById('resourceSelectorContainer');
-    if (!container) return;
-
-    // 获取当前source_code
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentSource = urlParams.get('source_code') || '';
-    // 当前资源信息
-    const currentResource = API_SITES[currentSource];
-    const resourceName = currentResource ? currentResource.name : '未知资源';
-    // 只保留资源名和切换按钮，不显示卡片
-    let html = `<div class="resource-selector-bar">
-        <span class="resource-info">${resourceName}</span>
-        <button class="switch-resource-btn" id="switchResourceBtn">
-            <span class="switch-resource-icon" style="display:inline-block;">
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 4v12m0 0l-4-4m4 4l4-4" stroke="#a67c2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            切换资源
-        </button>
-    </div>`;
-    container.innerHTML = html;
-}
-
-// 页面加载后渲染资源选择卡片
-window.addEventListener('DOMContentLoaded', function () {
-    renderResourceSelector();
-});
 
 // 优化后的集数卡片渲染（icon只在当前集左侧）
 function renderEpisodeCards() {
@@ -1595,7 +1565,6 @@ async function searchResourceByApiAndTitle(apiKey, title) {
 
 // 绑定弹窗事件
 window.addEventListener('DOMContentLoaded', function () {
-    // ...原有代码...
     // 切换资源按钮弹窗
     const switchBtn = document.getElementById('switchResourceBtn');
     if (switchBtn) {
