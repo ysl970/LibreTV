@@ -1601,6 +1601,6 @@ window.addEventListener('DOMContentLoaded', async function () {
         } catch (e) {
             window.currentEpisodes = [];
         }
-        renderEpisodes();
     }
+    renderEpisodes();
 });
