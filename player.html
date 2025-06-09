@@ -137,6 +137,33 @@
       }
       #homeButton { pointer-events: auto !important; }
       body { padding-top: 72px; }
+
+      /* Styles for new source and episode selection */
+      .source-select {
+        background-color: #2d3748;
+        color: white;
+        border: 1px solid #4a5568;
+      }
+      .episode-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 0.5rem;
+      }
+      .episode-btn {
+        background-color: #2d3748;
+        color: #e2e8f0;
+        border: 1px solid #4a5568;
+        transition: background-color 0.2s, border-color 0.2s;
+      }
+      .episode-btn:hover {
+        background-color: #4a5568;
+        border-color: #718096;
+      }
+      .episode-btn.active {
+        background-color: #4c51bf;
+        color: white;
+        border-color: #667eea;
+      }
     </style>
     
     <!-- Loading indicator has been removed as requested -->
@@ -190,22 +217,25 @@
             </div>
         </div>
 
-        <!-- 集数导航 -->
-        <div class="player-container">
-            <div class="flex justify-between items-center my-4">
-                <button onclick="playPreviousEpisode()" id="prevButton" class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors">
-                    <svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                    上一集
+        <!-- 新的选集区域 -->
+        <div id="episodeSelectionArea" class="mt-4 p-4 bg-[#1a1a1a] rounded-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold">选集</h3>
+                <span id="episodeTotal" class="text-sm text-gray-400"></span>
+            </div>
+            
+            <!-- 播放源切换 -->
+            <div class="flex items-center mb-4 p-3 bg-[#222] rounded-md">
+                <select id="sourceSelector" class="source-select flex-grow p-2 rounded-md mr-4"></select>
+                <button onclick="switchSource()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-md flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M4 20h5v-5M20 4h-5v5"></path></svg>
+                    切换资源
                 </button>
-                <span class="text-gray-400" id="episodeInfo">加载中...</span>
-                <button onclick="playNextEpisode()" id="nextButton" class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors">
-                    下一集
-                    <svg class="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
+            </div>
+
+            <!-- 剧集列表 -->
+            <div id="episodesContainer" class="episode-grid">
+                <!-- Episodes will be rendered here -->
             </div>
         </div>
 
@@ -247,16 +277,6 @@
                                 d="M15 11V7a3 3 0 00-6 0v4m-3 4h12v6H6v-6z" />
                         </svg>
                     </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 集数网格 -->
-        <div class="player-container">
-            <div class="episode-grid" id="episodesGrid">
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2" id="episodesList">
-                    <!-- 集数将在这里动态加载 -->
-                    <div class="col-span-full text-center text-gray-400 py-8">加载中...</div>
                 </div>
             </div>
         </div>
@@ -356,6 +376,219 @@
                 }
             });
         });
+    </script>
+
+    <script>
+        let art;
+        let sourceList = [];
+        let currentSourceCode;
+        let currentEpisodeIndex;
+        let videoTitle;
+        let vodId;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const url = params.get('url');
+            videoTitle = params.get('name') || params.get('title') || '正在播放';
+            vodId = params.get('id');
+            currentSourceCode = params.get('source');
+            currentEpisodeIndex = parseInt(params.get('episode') || params.get('index') || '0', 10);
+            
+            document.title = `${videoTitle} - YTPPTV 播放器`;
+            document.getElementById('videoTitle').textContent = videoTitle;
+
+            try {
+                const encodedSourceList = params.get('sourceList');
+                if (encodedSourceList) {
+                    sourceList = JSON.parse(decodeURIComponent(encodedSourceList));
+                }
+            } catch (e) {
+                console.error('解析播放源列表失败:', e);
+            }
+            
+            initPlayer(url);
+            setupSourceSelector();
+            renderEpisodesForCurrentSource();
+
+            const backButton = document.getElementById('goBack');
+            const backUrl = params.get('back');
+            if (backUrl) {
+                backButton.href = backUrl;
+            } else {
+                backButton.onclick = (e) => { e.preventDefault(); window.history.back(); };
+            }
+        });
+
+        function initPlayer(url) {
+            if (art) art.destroy(true);
+
+            art = new Artplayer({
+                container: '#player',
+                url: url,
+                title: videoTitle,
+                poster: 'image/poster.png',
+                volume: 0.7,
+                isLive: false,
+                muted: false,
+                autoplay: true,
+                pip: true,
+                autoSize: true,
+                setting: true,
+                playbackRate: true,
+                aspectRatio: true,
+                fullscreen: true,
+                fullscreenWeb: true,
+                mini: true,
+                airplay: true,
+                theme: '#00a1d6',
+            });
+
+            art.on('ready', () => {
+                console.log('播放器准备就绪');
+                // Optional: add to viewing history on ready
+            });
+
+            art.on('video:ended', () => {
+                playNextEpisode();
+            });
+        }
+        
+        function setupSourceSelector() {
+            const selector = document.getElementById('sourceSelector');
+            selector.innerHTML = '';
+            if (sourceList.length > 0) {
+                sourceList.forEach((source, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = `${source.source_name} (${source.vod_remarks || '高清'})`;
+                    if (source.source_code === currentSourceCode) {
+                        option.selected = true;
+                    }
+                    selector.appendChild(option);
+                });
+            } else {
+                 const option = document.createElement('option');
+                 option.textContent = '当前源';
+                 selector.appendChild(option);
+                 selector.disabled = true;
+            }
+        }
+
+        async function switchSource() {
+            const selector = document.getElementById('sourceSelector');
+            const selectedIndex = selector.value;
+            const selectedSource = sourceList[selectedIndex];
+            
+            if (!selectedSource || selectedSource.source_code === currentSourceCode) {
+                return;
+            }
+            
+            document.getElementById('loading-title').textContent = '正在切换资源...';
+            document.getElementById('player').classList.add('player-placeholder');
+            
+            try {
+                let episodes = [];
+                // 如果详情已在搜索时获取，直接使用
+                if (selectedSource.detail && selectedSource.detail.vod_play_url) {
+                    const playSources = selectedSource.detail.vod_play_url.split('$$$');
+                    episodes = playSources[0].split('#').map(e => e.split('$')[1]);
+                } else {
+                    // 否则，重新请求详情
+                    let apiUrl = selectedSource.source_code.startsWith('custom_')
+                        ? getCustomApiInfo(selectedSource.source_code.replace('custom_', ''))?.url
+                        : API_SITES[selectedSource.source_code]?.api;
+                    
+                    if (!apiUrl) throw new Error(`API not found for ${selectedSource.source_code}`);
+
+                    const detailUrl = `${apiUrl}${API_CONFIG.detail.path.replace('{ids}', selectedSource.vod_id)}`;
+                    const res = await fetch(`${PROXY_URL}${encodeURIComponent(detailUrl)}`);
+                    const data = await res.json();
+                    const detail = data?.list?.[0];
+                    if (!detail?.vod_play_url) throw new Error('新资源无播放列表');
+                    
+                    const playSources = detail.vod_play_url.split('$$$');
+                    episodes = playSources[0].split('#').map(e => e.split('$')[1]);
+                    
+                    // 缓存详情
+                    sourceList[selectedIndex].detail = detail;
+                }
+
+                if (episodes.length > 0) {
+                    currentSourceCode = selectedSource.source_code;
+                    // 尝试播放相同集数，如果超出范围则播放最后一集
+                    currentEpisodeIndex = Math.min(currentEpisodeIndex, episodes.length - 1);
+                    const newUrl = episodes[currentEpisodeIndex];
+                    
+                    renderEpisodesForCurrentSource();
+                    initPlayer(newUrl);
+                }
+
+            } catch(e) {
+                console.error("切换资源失败:", e);
+                alert("切换资源失败，请稍后再试。");
+                 document.getElementById('player').classList.remove('player-placeholder');
+            }
+        }
+        
+        function renderEpisodesForCurrentSource() {
+            const container = document.getElementById('episodesContainer');
+            const totalSpan = document.getElementById('episodeTotal');
+            container.innerHTML = '加载中...';
+
+            const source = sourceList.find(s => s.source_code === currentSourceCode);
+            if (!source || !source.detail || !source.detail.vod_play_url) {
+                container.innerHTML = '<p class="text-gray-400">无法加载剧集列表。</p>';
+                totalSpan.textContent = '';
+                return;
+            }
+
+            const playSources = source.detail.vod_play_url.split('$$$');
+            const episodes = playSources[0].split('#');
+            
+            totalSpan.textContent = `共 ${episodes.length} 集`;
+            container.innerHTML = '';
+            
+            episodes.forEach((ep, index) => {
+                const [name, url] = ep.split('$');
+                const btn = document.createElement('button');
+                btn.className = `episode-btn p-2 rounded-md text-sm truncate ${index === currentEpisodeIndex ? 'active' : ''}`;
+                btn.textContent = name || `第 ${index + 1} 集`;
+                btn.onclick = () => {
+                    currentEpisodeIndex = index;
+                    initPlayer(url);
+                    // Update active button
+                    document.querySelectorAll('.episode-btn.active').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                };
+                container.appendChild(btn);
+            });
+        }
+        
+        function playNextEpisode() {
+            const source = sourceList.find(s => s.source_code === currentSourceCode);
+            if (!source || !source.detail || !source.detail.vod_play_url) return;
+
+            const playSources = source.detail.vod_play_url.split('$$$');
+            const episodes = playSources[0].split('#');
+            
+            if (currentEpisodeIndex < episodes.length - 1) {
+                currentEpisodeIndex++;
+                const newUrl = episodes[currentEpisodeIndex].split('$')[1];
+                initPlayer(newUrl);
+                renderEpisodesForCurrentSource();
+            } else {
+                console.log('已经是最后一集');
+            }
+        }
+
+        function goBack(event) {
+            event.preventDefault();
+            if (document.referrer && document.referrer.includes(window.location.host)) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
+        }
     </script>
 </body>
 </html>
