@@ -332,10 +332,6 @@ function getCategoryFromTitle(title) {
 function renderModalItems(items) {
     if (!items || items.length === 0) return '';
     
-    // 从模态框获取当前类型
-    const modal = document.getElementById('modal');
-    const type = modal?.dataset.currentType || '';
-    
     let itemsHTML = '';
     
     // 渲染每个项目
@@ -365,7 +361,7 @@ function renderModalItems(items) {
         // 构建卡片HTML
         itemsHTML += `
             <div class="bg-[#111] hover:bg-[#222] transition-all duration-300 rounded-lg overflow-hidden flex flex-col transform hover:scale-105 shadow-md hover:shadow-lg">
-                <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}', '${type}')">
+                <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
                     <img src="${item.cover}" alt="${safeTitle}" 
                         class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
                         onerror="this.onerror=null; this.src='${PROXY_URL + encodeURIComponent(item.cover)}'; this.classList.add('object-contain');"
@@ -379,7 +375,7 @@ function renderModalItems(items) {
                     </div>
                 </div>
                 <div class="p-2 text-center bg-[#111]">
-                    <button onclick="fillAndSearchWithDouban('${safeTitle}', '${type}')" 
+                    <button onclick="fillAndSearchWithDouban('${safeTitle}')" 
                             class="text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
                             title="${safeTitle}">
                         ${safeTitle}
@@ -598,14 +594,6 @@ function renderCategoryContent(data, container) {
         return;
     }
     
-    // 确定类型：根据容器类名
-    let type = 'movie';
-    if (container.className.includes('tv-')) {
-        type = 'tv';
-    } else if (container.className.includes('variety-')) {
-        type = 'variety';
-    }
-    
     // 创建一个文档片段，减少DOM操作次数
     const fragment = document.createDocumentFragment();
     
@@ -637,7 +625,7 @@ function renderCategoryContent(data, container) {
         
         // 构建卡片HTML
         card.innerHTML = `
-            <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}', '${type}')">
+            <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
                 <img src="${thumbnailPlaceholder}" 
                     data-src="${item.cover}" 
                     alt="${safeTitle}" 
@@ -653,7 +641,7 @@ function renderCategoryContent(data, container) {
                 </div>
             </div>
             <div class="p-2 text-center bg-[#111]">
-                <button onclick="fillAndSearchWithDouban('${safeTitle}', '${type}')" 
+                <button onclick="fillAndSearchWithDouban('${safeTitle}')" 
                         class="text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
                         title="${safeTitle}">
                     ${safeTitle}
@@ -819,7 +807,7 @@ async function fetchDoubanData(url) {
 }
 
 // 填充搜索框，确保豆瓣资源API被选中，然后执行搜索
-async function fillAndSearchWithDouban(title, type) {
+async function fillAndSearchWithDouban(title) {
     if (!title) return;
     
     // 安全处理标题，防止XSS
@@ -832,11 +820,6 @@ async function fillAndSearchWithDouban(title, type) {
     const modal = document.getElementById('modal');
     if (modal && !modal.classList.contains('hidden')) {
         closeModal();
-    }
-    
-    // 检查模态框数据属性以获取类型
-    if (!type && modal && modal.dataset.currentType) {
-        type = modal.dataset.currentType;
     }
     
     // 确保豆瓣资源API被选中
@@ -865,27 +848,10 @@ async function fillAndSearchWithDouban(title, type) {
         }
     }
     
-    // 根据内容类型调整搜索关键词
-    let searchQuery = safeTitle;
-    
-    // 添加类型标识以提高搜索精确度
-    if (type) {
-        if (type === 'movie') {
-            // 电影类型可能不需要特别标注，保持原标题
-            searchQuery = `${safeTitle} 电影`;
-        } else if (type === 'tv') {
-            // 为电视剧添加标识
-            searchQuery = `${safeTitle} 电视剧`;
-        } else if (type === 'variety') {
-            // 为综艺添加标识
-            searchQuery = `${safeTitle} 综艺`;
-        }
-    }
-    
     // 填充搜索框并执行搜索
     const input = document.getElementById('searchInput');
     if (input) {
-        input.value = searchQuery;
+        input.value = safeTitle;
         
         // 检查search函数是否存在
         if (typeof search === 'function') {
@@ -899,15 +865,15 @@ async function fillAndSearchWithDouban(title, type) {
         // 更新浏览器URL，使其反映当前的搜索状态
         try {
             // 使用URI编码确保特殊字符能够正确显示
-            const encodedQuery = encodeURIComponent(searchQuery);
+            const encodedQuery = encodeURIComponent(safeTitle);
             // 使用HTML5 History API更新URL，不刷新页面
             window.history.pushState(
-                { search: searchQuery }, 
-                `搜索: ${searchQuery} - YTPPTV`, 
+                { search: safeTitle }, 
+                `搜索: ${safeTitle} - YTPPTV`, 
                 `/s=${encodedQuery}`
             );
             // 更新页面标题
-            document.title = `搜索: ${searchQuery} - YTPPTV`;
+            document.title = `搜索: ${safeTitle} - YTPPTV`;
         } catch (e) {
             console.error('更新浏览器历史失败:', e);
         }
