@@ -1,966 +1,602 @@
-// 豆瓣热门电影电视剧推荐功能
-
-// 定义不同类型的内容分类
-const contentCategories = {
-    movie: {
-        hot: '热门',
-        coming: '即将上映',
-        new: '新片',
-        top250: 'top250'
-    },
-    tv: {
-        hot: '热门',
-        animation: '动漫',
-        us: '美剧',
-        hk: '港澳剧',
-        kr: '韩剧',
-        jp: '日剧'
-    },
-    variety: {
-        hot: '热门'
-    }
-};
-
-// 默认每个分类显示的数量，固定为7个
-const doubanPageSize = 7;
-
-// 添加内容加载状态跟踪
-const doubanLoadStatus = {
-    initialized: false,
-    priorityLoaded: false,
-    secondaryLoaded: false,
-    finalLoaded: false
-};
-
-// 初始化豆瓣功能
-function initDouban() {
-    // 设置豆瓣开关的初始状态
-    const doubanToggle = document.getElementById('doubanToggle');
-    if (doubanToggle) {
-        const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
-        doubanToggle.checked = isEnabled;
-        
-        // 设置开关外观
-        const toggleBg = doubanToggle.nextElementSibling;
-        const toggleDot = toggleBg.nextElementSibling;
-        if (isEnabled) {
-            toggleBg.classList.add('bg-pink-600');
-            toggleDot.classList.add('translate-x-6');
-        }
-        
-        // 添加事件监听
-        doubanToggle.addEventListener('change', function(e) {
-            const isChecked = e.target.checked;
-            localStorage.setItem('doubanEnabled', isChecked);
-            
-            // 更新开关外观
-            if (isChecked) {
-                toggleBg.classList.add('bg-pink-600');
-                toggleDot.classList.add('translate-x-6');
-            } else {
-                toggleBg.classList.remove('bg-pink-600');
-                toggleDot.classList.remove('translate-x-6');
+// 改进的API请求处理函数
+async function handleApiRequest(url) {
+    const customApi = url.searchParams.get('customApi') || '';
+    const customDetail = url.searchParams.get('customDetail') || '';
+    const source = url.searchParams.get('source') || 'heimuer';
+    
+    try {
+        if (url.pathname === '/api/search') {
+            const searchQuery = url.searchParams.get('wd');
+            if (!searchQuery) {
+                throw new Error('缺少搜索参数');
             }
             
-            // 更新显示状态
-            updateDoubanVisibility();
-        });
-        
-        // 初始更新显示状态
-        updateDoubanVisibility();
-
-        // 滚动到页面顶部
-        window.scrollTo(0, 0);
-    }
-    
-    // 初始加载各分类内容
-    if (localStorage.getItem('doubanEnabled') === 'true') {
-        // 只有在未初始化时才加载内容
-        if (!doubanLoadStatus.initialized) {
-            loadAllCategoryContent();
-            doubanLoadStatus.initialized = true;
-        }
-    }
-    
-    // 设置"更多"按钮点击事件
-    setupMoreButtons();
-    
-    // 添加豆瓣设置到设置面板
-    addDoubanSettings();
-}
-
-// 添加豆瓣设置到设置面板
-function addDoubanSettings() {
-    // 不再需要添加豆瓣设置，因为我们固定显示7个
-}
-
-// 根据设置更新豆瓣区域的显示状态
-function updateDoubanVisibility() {
-    const doubanArea = document.getElementById('doubanArea');
-    if (!doubanArea) return;
-    
-    const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
-    const isSearching = document.getElementById('resultsArea') && 
-        !document.getElementById('resultsArea').classList.contains('hidden');
-    
-    // 只有在启用且没有搜索结果显示时才显示豆瓣区域
-    if (isEnabled && !isSearching) {
-        doubanArea.classList.remove('hidden');
-        
-        // 检查是否需要初始化内容
-        if (!doubanLoadStatus.initialized) {
-            loadAllCategoryContent();
-            doubanLoadStatus.initialized = true;
-        } else {
-            // 重新初始化懒加载，确保图片正确加载
-            reinitializeLazyLoading();
-        }
-    } else {
-        doubanArea.classList.add('hidden');
-    }
-}
-
-// 重新初始化所有容器中的懒加载图片
-function reinitializeLazyLoading() {
-    const containers = document.querySelectorAll('[class^="douban-"]');
-    containers.forEach(container => {
-        initLazyLoading(container);
-    });
-}
-
-// 加载所有分类内容
-function loadAllCategoryContent() {
-    // 优先加载的内容（首屏可见内容）
-    const priorityLoad = () => {
-        // 1. 热门电影（最受关注）
-        fetchCategoryContent('movie', 'hot', '热门');
-        
-        // 2. 热门电视剧
-        fetchCategoryContent('tv', 'hot', '热门');
-        
-        doubanLoadStatus.priorityLoaded = true;
-    };
-    
-    // 第二批加载（稍后加载）
-    const secondaryLoad = () => {
-        // 3. 热门综艺
-        fetchCategoryContent('variety', 'hot', '热门');
-        
-        // 4. 热门动画
-        fetchCategoryContent('movie', 'animation', '动画');
-        
-        // 5. 新片榜单
-        fetchCategoryContent('movie', 'new', '最新');
-        
-        doubanLoadStatus.secondaryLoaded = true;
-    };
-    
-    // 最后加载（用户可能需要滚动才能看到的内容）
-    const finalLoad = () => {
-        // 6. 热门美剧
-        fetchCategoryContent('tv', 'us', '美剧');
-        
-        // 7. 热门港剧
-        fetchCategoryContent('tv', 'hk', '港剧');
-        
-        // 8. 热门韩剧
-        fetchCategoryContent('tv', 'kr', '韩剧');
-        
-        // 9. 热门日剧
-        fetchCategoryContent('tv', 'jp', '日剧');
-        
-        // 10. Top250电影
-        fetchCategoryContent('movie', 'top250', '豆瓣高分');
-        
-        doubanLoadStatus.finalLoaded = true;
-    };
-
-    // 立即加载首屏内容（如果尚未加载）
-    if (!doubanLoadStatus.priorityLoaded) {
-        priorityLoad();
-    }
-    
-    // 第二批内容（如果尚未加载）
-    if (!doubanLoadStatus.secondaryLoaded) {
-        setTimeout(secondaryLoad, 100);
-    }
-    
-    // 最后一批内容（如果尚未加载）
-    if (!doubanLoadStatus.finalLoaded) {
-        // 使用IntersectionObserver检测何时加载剩余内容
-        if ('IntersectionObserver' in window) {
-            // 创建一个观察点，当用户滚动到第二批内容时加载剩余内容
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        finalLoad();
-                        observer.disconnect(); // 只需触发一次
-                    }
-                });
-            });
+            // 验证API和source的有效性
+            if (source === 'custom' && !customApi) {
+                throw new Error('使用自定义API时必须提供API地址');
+            }
             
-            // 观察第二批内容的最后一个元素
-            setTimeout(() => {
-                const target = document.querySelector('.douban-movie-new');
-                if (target) {
-                    observer.observe(target);
-                } else {
-                    // 如果找不到目标元素，延迟加载剩余内容
-                    setTimeout(finalLoad, 300);
+            if (!API_SITES[source] && source !== 'custom') {
+                throw new Error('无效的API来源');
+            }
+            
+            const apiUrl = customApi
+                ? `${customApi}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`
+                : `${API_SITES[source].api}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`;
+            
+            // 添加超时处理
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            try {
+                const response = await fetch(PROXY_URL + encodeURIComponent(apiUrl), {
+                    headers: API_CONFIG.search.headers,
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status}`);
                 }
-            }, 150);
-        } else {
-            // 不支持IntersectionObserver的浏览器，使用延迟加载
-            setTimeout(finalLoad, 300);
-        }
-    }
-}
-
-// 设置"更多"按钮点击事件
-function setupMoreButtons() {
-    // 获取所有"更多"按钮
-    const moreButtons = document.querySelectorAll('#doubanArea a[href="#"]');
-    
-    // 为每个按钮添加点击事件
-    moreButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // 获取分类和类型属性
-            const category = this.dataset.category;
-            const type = this.dataset.type;
-            
-            // 显示加载中状态
-            showLoading();
-            
-            // 获取更多该分类内容
-            fetchMoreCategoryContent(type, category)
-                .then(data => {
-                    if (!data || !data.subjects || data.subjects.length === 0) {
-                        showToast('没有更多内容', 'info');
-                        hideLoading();
-                        return;
+                
+                const data = await response.json();
+                
+                // 检查JSON格式的有效性
+                if (!data || !Array.isArray(data.list)) {
+                    throw new Error('API返回的数据格式无效');
+                }
+                
+                // 添加源信息到每个结果
+                data.list.forEach(item => {
+                    item.source_name = source === 'custom' ? '自定义源' : API_SITES[source].name;
+                    item.source_code = source;
+                    // 对于自定义源，添加API URL信息
+                    if (source === 'custom') {
+                        item.api_url = customApi;
                     }
-                    
-                    // 显示模态框并填充内容
-                    showCategoryModal(data.subjects, getCategoryTitle(type, category));
-                })
-                .catch(error => {
-                    console.error('获取更多内容失败:', error);
-                    showToast('获取更多内容失败，请稍后再试', 'error');
-                })
-                .finally(() => {
-                    hideLoading();
                 });
-        });
-    });
-}
-
-// 获取分类标题
-function getCategoryTitle(type, category) {
-    if (type === 'movie') {
-        if (category === 'hot') return '热门电影';
-        if (category === 'new') return '新片榜单';
-        if (category === 'top250') return 'Top250电影';
-        if (category === 'animation') return '热门动画';
-        return '电影';
-    } else if (type === 'tv') {
-        if (category === 'hot') return '热门电视剧';
-        if (category === 'us') return '热门美剧';
-        if (category === 'hk') return '热门港剧';
-        if (category === 'kr') return '热门韩剧';
-        if (category === 'jp') return '热门日剧';
-        return '电视剧';
-    } else if (type === 'variety') {
-        return '热门综艺';
-    }
-    return '影视内容';
-}
-
-// 获取更多分类内容
-async function fetchMoreCategoryContent(type, category) {
-    try {
-        // 构建API请求URL，增加数量
-        let apiUrl = '';
-        
-        // 根据不同的分类使用不同的API或参数
-        if (type === 'movie') {
-            if (category === 'top250') {
-                // Top250使用特殊API
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=rank&page_limit=18&page_start=0`;
-            } else if (category === 'new') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=18&page_start=0`;
-            } else if (category === 'animation') {
-                // 动画使用动画标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画&sort=time&page_limit=18&page_start=0`;
-            } else if (category === 'hot') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=time&page_limit=18&page_start=0`;
-            } else {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=time&page_limit=18&page_start=0`;
-            }
-        } else if (type === 'tv') {
-            if (category === 'hot') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=time&page_limit=18&page_start=0`;
-            } else if (category === 'us') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=time&page_limit=18&page_start=0`;
-            } else if (category === 'hk') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&sort=time&page_limit=18&page_start=0`;
-            } else if (category === 'kr') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=time&page_limit=18&page_start=0`;
-            } else if (category === 'jp') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=time&page_limit=18&page_start=0`;
-            } else {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=time&page_limit=18&page_start=0`;
-            }
-        } else if (type === 'variety') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&sort=time&page_limit=18&page_start=0`;
-        }
-        
-        // 获取数据
-        const data = await fetchDoubanData(apiUrl);
-        return data;
-    } catch (error) {
-        console.error('获取更多内容失败:', error);
-        throw error;
-    }
-}
-
-// 显示分类模态框
-function showCategoryModal(items, title) {
-    const modal = document.getElementById('modal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalContent = document.getElementById('modalContent');
-    
-    // 设置标题
-    modalTitle.textContent = title || '影视内容';
-    
-    // 构建内容HTML
-    let contentHTML = `
-        <div id="infiniteScrollContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            ${renderModalItems(items)}
-        </div>
-        <div id="loadingMore" class="text-center py-4 hidden">
-            <div class="inline-block w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
-            <p class="text-gray-400 mt-2">加载更多内容...</p>
-        </div>
-        <div id="noMoreContent" class="text-center py-4 text-gray-500 hidden">
-            没有更多内容了
-        </div>
-    `;
-    
-    modalContent.innerHTML = contentHTML;
-    
-    // 保存当前分类和类型到模态框数据属性
-    modal.dataset.currentType = title.includes('电影') ? 'movie' : (title.includes('综艺') ? 'variety' : 'tv');
-    modal.dataset.currentCategory = getCategoryFromTitle(title);
-    modal.dataset.currentPage = 1; // 从第1页开始，第0页已经加载
-    
-    // 显示模态框
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    
-    // 设置滚动监听
-    setupInfiniteScroll();
-}
-
-// 从标题获取分类
-function getCategoryFromTitle(title) {
-    if (title.includes('新片榜单')) return 'new';
-    if (title.includes('Top250')) return 'top250';
-    if (title.includes('动画')) return 'animation';
-    if (title.includes('美剧')) return 'us';
-    if (title.includes('港澳剧')) return 'hk';
-    if (title.includes('韩剧')) return 'kr';
-    if (title.includes('日剧')) return 'jp';
-    return 'hot';
-}
-
-// 渲染模态框内的项目
-function renderModalItems(items) {
-    if (!items || items.length === 0) return '';
-    
-    let itemsHTML = '';
-    
-    // 渲染每个项目
-    items.forEach(item => {
-        // 评分显示
-        let ratingHtml = '';
-        if (item.rate && item.rate !== '0') {
-            const rating = parseFloat(item.rate);
-            ratingHtml = `
-                <div class="absolute bottom-2 left-2 bg-black/70 text-yellow-400 px-2 py-1 text-xs font-bold rounded-sm flex items-center h-6">
-                    <span class="text-yellow-400">★</span> ${rating}
-                </div>
-            `;
-        } else {
-            // 为没有评分的项目添加一个占位符，保持卡片高度一致
-            ratingHtml = `
-                <div class="absolute bottom-2 left-2 bg-transparent px-2 py-1 h-6"></div>
-            `;
-        }
-        
-        // 安全处理标题，防止XSS
-        const safeTitle = item.title
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-        
-        // 构建卡片HTML
-        itemsHTML += `
-            <div class="bg-[#111] hover:bg-[#222] transition-all duration-300 rounded-lg overflow-hidden flex flex-col transform hover:scale-105 shadow-md hover:shadow-lg">
-                <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                    <img src="${item.cover}" alt="${safeTitle}" 
-                        class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                        onerror="this.onerror=null; this.src='${PROXY_URL + encodeURIComponent(item.cover)}'; this.classList.add('object-contain');"
-                        loading="lazy" referrerpolicy="no-referrer">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
-                    ${ratingHtml}
-                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors h-6 flex items-center">
-                        <a href="${item.url}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" onclick="event.stopPropagation();">
-                            🔗
-                        </a>
-                    </div>
-                </div>
-                <div class="p-2 text-center bg-[#111]">
-                    <button onclick="fillAndSearchWithDouban('${safeTitle}')" 
-                            class="text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
-                            title="${safeTitle}">
-                        ${safeTitle}
-                    </button>
-                </div>
-            </div>
-        `;
-    });
-    
-    return itemsHTML;
-}
-
-// 设置无限滚动
-function setupInfiniteScroll() {
-    const modalContent = document.getElementById('modalContent');
-    const loadingMore = document.getElementById('loadingMore');
-    const noMoreContent = document.getElementById('noMoreContent');
-    const container = document.getElementById('infiniteScrollContainer');
-    const modal = document.getElementById('modal');
-    
-    // 设置滚动事件监听
-    modalContent.addEventListener('scroll', debounce(function() {
-        // 检查是否已经滚动到底部
-        if (modalContent.scrollHeight - modalContent.scrollTop - modalContent.clientHeight < 100) {
-            // 如果正在加载或没有更多内容，则不执行
-            if (loadingMore.classList.contains('flex') || noMoreContent.classList.contains('flex')) {
-                return;
-            }
-            
-            // 显示加载中
-            loadingMore.classList.remove('hidden');
-            loadingMore.classList.add('flex');
-            
-            // 获取当前页码并增加
-            const currentPage = parseInt(modal.dataset.currentPage) || 1;
-            const nextPage = currentPage + 1;
-            modal.dataset.currentPage = nextPage;
-            
-            // 获取当前类型和分类
-            const type = modal.dataset.currentType;
-            const category = modal.dataset.currentCategory;
-            
-            // 加载更多内容
-            loadMoreItems(type, category, nextPage)
-                .then(items => {
-                    // 隐藏加载中
-                    loadingMore.classList.remove('flex');
-                    loadingMore.classList.add('hidden');
-                    
-                    if (!items || items.length === 0) {
-                        // 显示没有更多内容
-                        noMoreContent.classList.remove('hidden');
-                        noMoreContent.classList.add('flex');
-                        return;
-                    }
-                    
-                    // 追加新内容
-                    container.innerHTML += renderModalItems(items);
-                })
-                .catch(error => {
-                    console.error('加载更多内容失败:', error);
-                    
-                    // 隐藏加载中
-                    loadingMore.classList.remove('flex');
-                    loadingMore.classList.add('hidden');
-                    
-                    // 显示错误信息
-                    showToast('加载更多内容失败，请稍后再试', 'error');
+                
+                return JSON.stringify({
+                    code: 200,
+                    list: data.list || [],
                 });
-        }
-    }, 200));
-}
-
-// 防抖函数
-function debounce(func, wait) {
-    let timeout;
-    return function() {
-        const context = this;
-        const args = arguments;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-            func.apply(context, args);
-        }, wait);
-    };
-}
-
-// 加载更多内容
-async function loadMoreItems(type, category, page) {
-    try {
-        // 构建API请求URL
-        let apiUrl = '';
-        
-        // 根据不同的分类使用不同的API或参数
-        if (type === 'movie') {
-            if (category === 'top250') {
-                // Top250使用特殊API
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=rank&page_limit=18&page_start=${page * 18}`;
-            } else if (category === 'new') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=18&page_start=${page * 18}`;
-            } else if (category === 'animation') {
-                // 动画使用动画标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画&sort=time&page_limit=18&page_start=${page * 18}`;
-            } else if (category === 'hot') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=time&page_limit=18&page_start=${page * 18}`;
-            } else {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=time&page_limit=18&page_start=${page * 18}`;
+            } catch (fetchError) {
+                clearTimeout(timeoutId);
+                throw fetchError;
             }
-        } else if (type === 'tv') {
-            if (category === 'hot') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=time&page_limit=18&page_start=${page * 18}`;
-            } else if (category === 'us') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=time&page_limit=18&page_start=${page * 18}`;
-            } else if (category === 'hk') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&sort=time&page_limit=18&page_start=${page * 18}`;
-            } else if (category === 'kr') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=time&page_limit=18&page_start=${page * 18}`;
-            } else if (category === 'jp') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=time&page_limit=18&page_start=${page * 18}`;
-            } else {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=time&page_limit=18&page_start=${page * 18}`;
-            }
-        } else if (type === 'variety') {
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&sort=time&page_limit=18&page_start=${page * 18}`;
         }
-        
-        // 获取数据
-        const data = await fetchDoubanData(apiUrl);
-        return data.subjects || [];
-    } catch (error) {
-        console.error('加载更多内容失败:', error);
-        throw error;
-    }
-}
 
-// 获取特定分类的内容
-async function fetchCategoryContent(type, category, categoryName) {
-    const containerClass = `douban-${type}-${category}`;
-    const container = document.querySelector(`.${containerClass}`);
-    if (!container) return;
-    
-    try {
-        // 显示加载中状态
-        container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">加载中...</div>';
-        
-        // 构建API请求URL
-        let apiUrl = '';
-        
-        // 根据不同的分类使用不同的API或参数
-        if (type === 'movie') {
-            if (category === 'top250') {
-                // Top250使用特殊API
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=rank&page_limit=${doubanPageSize}&page_start=0`;
-            } else if (category === 'new') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=${doubanPageSize}&page_start=0`;
-            } else if (category === 'animation') {
-                // 动画使用动画标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画&sort=time&page_limit=${doubanPageSize}&page_start=0`;
-            } else {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+        // 详情处理
+        if (url.pathname === '/api/detail') {
+            const id = url.searchParams.get('id');
+            const sourceCode = url.searchParams.get('source') || 'heimuer'; // 获取源代码
+            
+            if (!id) {
+                throw new Error('缺少视频ID参数');
             }
-        } else if (type === 'tv') {
-            if (category === 'us') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&sort=time&page_limit=${doubanPageSize}&page_start=0`;
-            } else if (category === 'hk') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&sort=time&page_limit=${doubanPageSize}&page_start=0`;
-            } else if (category === 'kr') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&sort=time&page_limit=${doubanPageSize}&page_start=0`;
-            } else if (category === 'jp') {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=time&page_limit=${doubanPageSize}&page_start=0`;
-            } else {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+            
+            // 验证ID格式 - 只允许数字和有限的特殊字符
+            if (!/^[\w-]+$/.test(id)) {
+                throw new Error('无效的视频ID格式');
             }
-        } else if (type === 'variety') {
-            // 修改综艺API请求，确保能获取到综艺内容
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&sort=time&page_limit=${doubanPageSize}&page_start=0`;
-        }
-        
-        // 获取数据
-        const data = await fetchDoubanData(apiUrl);
-        
-        // 渲染内容
-        renderCategoryContent(data, container);
-    } catch (error) {
-        console.error(`获取${type}-${category}内容失败:`, error);
-        container.innerHTML = `<div class="col-span-full text-center py-8 text-red-500">加载失败，请稍后再试</div>`;
-    }
-}
 
-// 渲染分类内容
-function renderCategoryContent(data, container) {
-    // 清空容器
-    container.innerHTML = '';
-    
-    if (!data || !data.subjects || data.subjects.length === 0) {
-        container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">暂无内容</div>';
-        return;
-    }
-    
-    // 创建一个文档片段，减少DOM操作次数
-    const fragment = document.createDocumentFragment();
-    
-    data.subjects.forEach(item => {
-        // 创建卡片元素
-        const card = document.createElement('div');
-        card.className = 'bg-[#111] hover:bg-[#222] transition-all duration-300 rounded-lg overflow-hidden flex flex-col transform hover:scale-105 shadow-md hover:shadow-lg';
-        
-        // 安全处理标题，防止XSS
-        const safeTitle = item.title
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-        
-        // 评分处理
-        let ratingHtml = '';
-        if (item.rate && parseFloat(item.rate) > 0) {
-            const rating = parseFloat(item.rate);
-            const ratingClass = rating >= 8 ? 'text-green-500' : (rating >= 6 ? 'text-yellow-500' : 'text-red-500');
-            ratingHtml = `
-                <div class="absolute top-2 right-2 bg-black/70 ${ratingClass} text-xs px-2 py-1 rounded-sm">
-                    ${rating}分
-                </div>
-            `;
-        }
-        
-        // 使用data-src代替src，实现懒加载
-        const thumbnailPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450"%3E%3Crect width="300" height="450" fill="%23333"%3E%3C/rect%3E%3C/svg%3E';
-        
-        // 构建卡片HTML
-        card.innerHTML = `
-            <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                <img src="${thumbnailPlaceholder}" 
-                    data-src="${item.cover}" 
-                    alt="${safeTitle}" 
-                    class="w-full h-full object-cover transition-transform duration-500 hover:scale-110 lazy-image"
-                    onerror="this.onerror=null; this.src='${PROXY_URL + encodeURIComponent(item.cover)}'; this.classList.add('object-contain');"
-                    loading="lazy" referrerpolicy="no-referrer">
-                <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
-                ${ratingHtml}
-                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors h-6 flex items-center">
-                    <a href="${item.url}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" onclick="event.stopPropagation();">
-                        🔗
-                    </a>
-                </div>
-            </div>
-            <div class="p-2 text-center bg-[#111]">
-                <button onclick="fillAndSearchWithDouban('${safeTitle}')" 
-                        class="text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
-                        title="${safeTitle}">
-                    ${safeTitle}
-                </button>
-            </div>
-        `;
-        
-        // 添加到文档片段
-        fragment.appendChild(card);
-    });
-    
-    // 一次性添加所有元素到DOM
-    container.appendChild(fragment);
-    
-    // 检查子元素数量，根据屏幕宽度决定何时添加scrollable类
-    const isMobile = window.innerWidth <= 767;
-    const threshold = isMobile ? 3 : 7;
-    
-    if (container.children.length >= (isMobile ? 4 : 8)) {
-        container.classList.add('scrollable');
-    } else {
-        container.classList.remove('scrollable');
-    }
-    
-    // 初始化懒加载
-    initLazyLoading(container);
-}
+            // 验证API和source的有效性
+            if (sourceCode === 'custom' && !customApi) {
+                throw new Error('使用自定义API时必须提供API地址');
+            }
+            
+            if (!API_SITES[sourceCode] && sourceCode !== 'custom') {
+                throw new Error('无效的API来源');
+            }
 
-// 初始化图片懒加载
-function initLazyLoading(container) {
-    if ('IntersectionObserver' in window) {
-        const lazyImageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const lazyImage = entry.target;
-                    lazyImage.src = lazyImage.dataset.src;
-                    lazyImage.classList.remove('lazy-image');
-                    lazyImageObserver.unobserve(lazyImage);
+            // 对于有detail参数的源，都使用特殊处理方式
+            if (sourceCode !== 'custom' && API_SITES[sourceCode].detail) {
+                return await handleSpecialSourceDetail(id, sourceCode);
+            }
+            
+            // 如果是自定义API，并且传递了detail参数，尝试特殊处理
+            // 优先 customDetail
+            if (sourceCode === 'custom' && customDetail) {
+                return await handleCustomApiSpecialDetail(id, customDetail);
+            }
+            if (sourceCode === 'custom' && url.searchParams.get('useDetail') === 'true') {
+                return await handleCustomApiSpecialDetail(id, customApi);
+            }
+            
+            const detailUrl = customApi
+                ? `${customApi}${API_CONFIG.detail.path}${id}`
+                : `${API_SITES[sourceCode].api}${API_CONFIG.detail.path}${id}`;
+            
+            // 添加超时处理
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            try {
+                const response = await fetch(PROXY_URL + encodeURIComponent(detailUrl), {
+                    headers: API_CONFIG.detail.headers,
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`详情请求失败: ${response.status}`);
+                }
+                
+                // 解析JSON
+                const data = await response.json();
+                
+                // 检查返回的数据是否有效
+                if (!data || !data.list || !Array.isArray(data.list) || data.list.length === 0) {
+                    throw new Error('获取到的详情内容无效');
+                }
+                
+                // 获取第一个匹配的视频详情
+                const videoDetail = data.list[0];
+                
+                // 提取播放地址
+                let episodes = [];
+                
+                if (videoDetail.vod_play_url) {
+                    // 分割不同播放源
+                    const playSources = videoDetail.vod_play_url.split('$$$');
                     
-                    // 预加载下一个图片（如果有）
-                    const nextImage = lazyImage.parentElement.parentElement.nextElementSibling;
-                    if (nextImage) {
-                        const img = nextImage.querySelector('img.lazy-image');
-                        if (img && img.dataset.src) {
-                            setTimeout(() => {
-                                const preloadImg = new Image();
-                                preloadImg.src = img.dataset.src;
-                            }, 100);
-                        }
+                    // 提取第一个播放源的集数（通常为主要源）
+                    if (playSources.length > 0) {
+                        const mainSource = playSources[0];
+                        const episodeList = mainSource.split('#');
+                        
+                        // 从每个集数中提取URL
+                        episodes = episodeList.map(ep => {
+                            const parts = ep.split('$');
+                            // 返回URL部分(通常是第二部分，如果有的话)
+                            return parts.length > 1 ? parts[1] : '';
+                        }).filter(url => url && (url.startsWith('http://') || url.startsWith('https://')));
                     }
                 }
-            });
-        });
-        
-        const lazyImages = container.querySelectorAll('img.lazy-image');
-        lazyImages.forEach(lazyImage => {
-            lazyImageObserver.observe(lazyImage);
-        });
-    } else {
-        // 不支持IntersectionObserver的浏览器回退到立即加载
-        const lazyImages = container.querySelectorAll('img.lazy-image');
-        lazyImages.forEach(img => {
-            img.src = img.dataset.src;
-            img.classList.remove('lazy-image');
+                
+                // 如果没有找到播放地址，尝试使用正则表达式查找m3u8链接
+                if (episodes.length === 0 && videoDetail.vod_content) {
+                    const matches = videoDetail.vod_content.match(M3U8_PATTERN) || [];
+                    episodes = matches.map(link => link.replace(/^\$/, ''));
+                }
+                
+                return JSON.stringify({
+                    code: 200,
+                    episodes: episodes,
+                    detailUrl: detailUrl,
+                    videoInfo: {
+                        title: videoDetail.vod_name,
+                        cover: videoDetail.vod_pic,
+                        desc: videoDetail.vod_content,
+                        type: videoDetail.type_name,
+                        year: videoDetail.vod_year,
+                        area: videoDetail.vod_area,
+                        director: videoDetail.vod_director,
+                        actor: videoDetail.vod_actor,
+                        remarks: videoDetail.vod_remarks,
+                        // 添加源信息
+                        source_name: sourceCode === 'custom' ? '自定义源' : API_SITES[sourceCode].name,
+                        source_code: sourceCode
+                    }
+                });
+            } catch (fetchError) {
+                clearTimeout(timeoutId);
+                throw fetchError;
+            }
+        }
+
+        throw new Error('未知的API路径');
+    } catch (error) {
+        console.error('API处理错误:', error);
+        return JSON.stringify({
+            code: 400,
+            msg: error.message || '请求处理失败',
+            list: [],
+            episodes: [],
         });
     }
 }
 
-// 从豆瓣API获取数据
-// 添加缓存对象
-const doubanCache = {};
-const CACHE_EXPIRY = 30 * 60 * 1000; // 缓存30分钟
-
-async function fetchDoubanData(url) {
-    // 检查缓存
-    const now = Date.now();
-    if (doubanCache[url] && doubanCache[url].expiry > now) {
-        console.log("从缓存获取豆瓣数据:", url);
-        return doubanCache[url].data;
-    }
-    
-    // 添加超时控制
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000); // 减少超时时间到6秒
-    
-    // 设置请求选项，包括信号和头部
-    const fetchOptions = {
-        signal: controller.signal,
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Referer': 'https://movie.douban.com/',
-            'Accept': 'application/json, text/plain, */*',
-        }
-    };
-
+// 处理自定义API的特殊详情页
+async function handleCustomApiSpecialDetail(id, customApi) {
     try {
-        // 尝试直接访问（豆瓣API可能允许部分CORS请求）
-        const response = await fetch(PROXY_URL + encodeURIComponent(url), fetchOptions);
+        // 构建详情页URL
+        const detailUrl = `${customApi}/index.php/vod/detail/id/${id}.html`;
+        
+        // 添加超时处理
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        // 获取详情页HTML
+        const response = await fetch(PROXY_URL + encodeURIComponent(detailUrl), {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            },
+            signal: controller.signal
+        });
+        
         clearTimeout(timeoutId);
         
         if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+            throw new Error(`自定义API详情页请求失败: ${response.status}`);
         }
         
-        const data = await response.json();
+        // 获取HTML内容
+        const html = await response.text();
         
-        // 保存到缓存
-        doubanCache[url] = {
-            data: data,
-            expiry: now + CACHE_EXPIRY
-        };
+        // 使用通用模式提取m3u8链接
+        const generalPattern = /\$(https?:\/\/[^"'\s]+?\.m3u8)/g;
+        let matches = html.match(generalPattern) || [];
         
-        return data;
-    } catch (err) {
-        console.error("豆瓣 API 请求失败（直接代理）：", err);
+        // 处理链接
+        matches = matches.map(link => {
+            link = link.substring(1, link.length);
+            const parenIndex = link.indexOf('(');
+            return parenIndex > 0 ? link.substring(0, parenIndex) : link;
+        });
         
-        // 如果是超时错误，尝试从localStorage获取
-        const cacheKey = `douban_${url.replace(/[^a-zA-Z0-9]/g, '_')}`;
-        const cachedData = localStorage.getItem(cacheKey);
+        // 提取基本信息
+        const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+        const titleText = titleMatch ? titleMatch[1].trim() : '';
         
-        if (cachedData) {
-            try {
-                console.log("从localStorage恢复豆瓣数据:", url);
-                const parsedData = JSON.parse(cachedData);
-                return parsedData;
-            } catch (e) {
-                console.error("解析缓存数据失败:", e);
+        const descMatch = html.match(/<div[^>]*class=["']sketch["'][^>]*>([\s\S]*?)<\/div>/);
+        const descText = descMatch ? descMatch[1].replace(/<[^>]+>/g, ' ').trim() : '';
+        
+        return JSON.stringify({
+            code: 200,
+            episodes: matches,
+            detailUrl: detailUrl,
+            videoInfo: {
+                title: titleText,
+                desc: descText,
+                source_name: '自定义源',
+                source_code: 'custom'
             }
-        }
-        
-        // 失败后尝试备用方法：作为备选
-        const fallbackUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-        
-        try {
-            const fallbackResponse = await fetch(fallbackUrl);
-            
-            if (!fallbackResponse.ok) {
-                throw new Error(`备用API请求失败! 状态: ${fallbackResponse.status}`);
-            }
-            
-            const data = await fallbackResponse.json();
-            
-            // 解析原始内容
-            if (data && data.contents) {
-                const parsedData = JSON.parse(data.contents);
-                
-                // 保存到localStorage作为备用缓存
-                try {
-                    localStorage.setItem(cacheKey, JSON.stringify(parsedData));
-                } catch (e) {
-                    console.error("保存到localStorage失败:", e);
-                }
-                
-                return parsedData;
-            } else {
-                throw new Error("无法获取有效数据");
-            }
-        } catch (fallbackErr) {
-            console.error("豆瓣 API 备用请求也失败：", fallbackErr);
-            throw fallbackErr; // 向上抛出错误，让调用者处理
-        }
+        });
+    } catch (error) {
+        console.error(`自定义API详情获取失败:`, error);
+        throw error;
     }
 }
 
-// 填充搜索框，确保豆瓣资源API被选中，然后执行搜索
-async function fillAndSearchWithDouban(title) {
-    if (!title) {
-        showToast('请输入影视名称', 'warning');
-        return;
-    }
-
+// 通用特殊源详情处理函数
+async function handleSpecialSourceDetail(id, sourceCode) {
     try {
-        showLoading('正在获取豆瓣推荐...');
-        const response = await fetch(`/proxy/${encodeURIComponent('https://movie.douban.com/j/subject_suggest?q=' + encodeURIComponent(title))}`);
+        // 构建详情页URL（使用配置中的detail URL而不是api URL）
+        const detailUrl = `${API_SITES[sourceCode].detail}/index.php/vod/detail/id/${id}.html`;
+        
+        // 添加超时处理
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        // 获取详情页HTML
+        const response = await fetch(PROXY_URL + encodeURIComponent(detailUrl), {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            },
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`详情页请求失败: ${response.status}`);
+        }
+        
+        // 获取HTML内容
+        const html = await response.text();
+        
+        // 根据不同源类型使用不同的正则表达式
+        let matches = [];
+        
+        if (sourceCode === 'ffzy') {
+            // 非凡影视使用特定的正则表达式
+            const ffzyPattern = /\$(https?:\/\/[^"'\s]+?\/\d{8}\/\d+_[a-f0-9]+\/index\.m3u8)/g;
+            matches = html.match(ffzyPattern) || [];
+        }
+        
+        // 如果没有找到链接或者是其他源类型，尝试一个更通用的模式
+        if (matches.length === 0) {
+            const generalPattern = /\$(https?:\/\/[^"'\s]+?\.m3u8)/g;
+            matches = html.match(generalPattern) || [];
+        }
+        // 去重处理，避免一个播放源多集显示
+        matches = [...new Set(matches)];
+        // 处理链接
+        matches = matches.map(link => {
+            link = link.substring(1, link.length);
+            const parenIndex = link.indexOf('(');
+            return parenIndex > 0 ? link.substring(0, parenIndex) : link;
+        });
+        
+        // 提取可能存在的标题、简介等基本信息
+        const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+        const titleText = titleMatch ? titleMatch[1].trim() : '';
+        
+        const descMatch = html.match(/<div[^>]*class=["']sketch["'][^>]*>([\s\S]*?)<\/div>/);
+        const descText = descMatch ? descMatch[1].replace(/<[^>]+>/g, ' ').trim() : '';
+        
+        return JSON.stringify({
+            code: 200,
+            episodes: matches,
+            detailUrl: detailUrl,
+            videoInfo: {
+                title: titleText,
+                desc: descText,
+                source_name: API_SITES[sourceCode].name,
+                source_code: sourceCode
+            }
+        });
+    } catch (error) {
+        console.error(`${API_SITES[sourceCode].name}详情获取失败:`, error);
+        throw error;
+    }
+}
+
+// 处理聚合搜索
+async function handleAggregatedSearch(searchQuery) {
+    // 获取可用的API源列表（排除aggregated和custom）
+    const availableSources = Object.keys(API_SITES).filter(key => 
+        key !== 'aggregated' && key !== 'custom'
+    );
+    
+    if (availableSources.length === 0) {
+        throw new Error('没有可用的API源');
+    }
+    
+    // 创建所有API源的搜索请求
+    const searchPromises = availableSources.map(async (source) => {
+        try {
+            const apiUrl = `${API_SITES[source].api}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`;
+            
+            // 使用Promise.race添加超时处理
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error(`${source}源搜索超时`)), 8000)
+            );
+            
+            const fetchPromise = fetch(PROXY_URL + encodeURIComponent(apiUrl), {
+                headers: API_CONFIG.search.headers
+            });
+            
+            const response = await Promise.race([fetchPromise, timeoutPromise]);
+            
+            if (!response.ok) {
+                throw new Error(`${source}源请求失败: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data || !Array.isArray(data.list)) {
+                throw new Error(`${source}源返回的数据格式无效`);
+            }
+            
+            // 为搜索结果添加源信息
+            const results = data.list.map(item => ({
+                ...item,
+                source_name: API_SITES[source].name,
+                source_code: source
+            }));
+            
+            return results;
+        } catch (error) {
+            console.warn(`${source}源搜索失败:`, error);
+            return []; // 返回空数组表示该源搜索失败
+        }
+    });
+    
+    try {
+        // 并行执行所有搜索请求
+        const resultsArray = await Promise.all(searchPromises);
+        
+        // 合并所有结果
+        let allResults = [];
+        resultsArray.forEach(results => {
+            if (Array.isArray(results) && results.length > 0) {
+                allResults = allResults.concat(results);
+            }
+        });
+        
+        // 如果没有搜索结果，返回空结果
+        if (allResults.length === 0) {
+            return JSON.stringify({
+                code: 200,
+                list: [],
+                msg: '所有源均无搜索结果'
+            });
+        }
+        
+        // 去重（根据vod_id和source_code组合）
+        const uniqueResults = [];
+        const seen = new Set();
+        
+        allResults.forEach(item => {
+            const key = `${item.source_code}_${item.vod_id}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueResults.push(item);
+            }
+        });
+        
+        // 按照视频名称和来源排序
+        uniqueResults.sort((a, b) => {
+            // 首先按照视频名称排序
+            const nameCompare = (a.vod_name || '').localeCompare(b.vod_name || '');
+            if (nameCompare !== 0) return nameCompare;
+            
+            // 如果名称相同，则按照来源排序
+            return (a.source_name || '').localeCompare(b.source_name || '');
+        });
+        
+        return JSON.stringify({
+            code: 200,
+            list: uniqueResults,
+        });
+    } catch (error) {
+        console.error('聚合搜索处理错误:', error);
+        return JSON.stringify({
+            code: 400,
+            msg: '聚合搜索处理失败: ' + error.message,
+            list: []
+        });
+    }
+}
+
+// 处理多个自定义API源的聚合搜索
+async function handleMultipleCustomSearch(searchQuery, customApiUrls) {
+    // 解析自定义API列表
+    const apiUrls = customApiUrls.split(CUSTOM_API_CONFIG.separator)
+        .map(url => url.trim())
+        .filter(url => url.length > 0 && /^https?:\/\//.test(url))
+        .slice(0, CUSTOM_API_CONFIG.maxSources);
+    
+    if (apiUrls.length === 0) {
+        throw new Error('没有提供有效的自定义API地址');
+    }
+    
+    // 为每个API创建搜索请求
+    const searchPromises = apiUrls.map(async (apiUrl, index) => {
+        try {
+            const fullUrl = `${apiUrl}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`;
+            
+            // 使用Promise.race添加超时处理
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error(`自定义API ${index+1} 搜索超时`)), 8000)
+            );
+            
+            const fetchPromise = fetch(PROXY_URL + encodeURIComponent(fullUrl), {
+                headers: API_CONFIG.search.headers
+            });
+            
+            const response = await Promise.race([fetchPromise, timeoutPromise]);
+            
+            if (!response.ok) {
+                throw new Error(`自定义API ${index+1} 请求失败: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data || !Array.isArray(data.list)) {
+                throw new Error(`自定义API ${index+1} 返回的数据格式无效`);
+            }
+            
+            // 为搜索结果添加源信息
+            const results = data.list.map(item => ({
+                ...item,
+                source_name: `${CUSTOM_API_CONFIG.namePrefix}${index+1}`,
+                source_code: 'custom',
+                api_url: apiUrl // 保存API URL以便详情获取
+            }));
+            
+            return results;
+        } catch (error) {
+            console.warn(`自定义API ${index+1} 搜索失败:`, error);
+            return []; // 返回空数组表示该源搜索失败
+        }
+    });
+    
+    try {
+        // 并行执行所有搜索请求
+        const resultsArray = await Promise.all(searchPromises);
+        
+        // 合并所有结果
+        let allResults = [];
+        resultsArray.forEach(results => {
+            if (Array.isArray(results) && results.length > 0) {
+                allResults = allResults.concat(results);
+            }
+        });
+        
+        // 如果没有搜索结果，返回空结果
+        if (allResults.length === 0) {
+            return JSON.stringify({
+                code: 200,
+                list: [],
+                msg: '所有自定义API源均无搜索结果'
+            });
+        }
+        
+        // 去重（根据vod_id和api_url组合）
+        const uniqueResults = [];
+        const seen = new Set();
+        
+        allResults.forEach(item => {
+            const key = `${item.api_url || ''}_${item.vod_id}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueResults.push(item);
+            }
+        });
+        
+        return JSON.stringify({
+            code: 200,
+            list: uniqueResults,
+        });
+    } catch (error) {
+        console.error('自定义API聚合搜索处理错误:', error);
+        return JSON.stringify({
+            code: 400,
+            msg: '自定义API聚合搜索处理失败: ' + error.message,
+            list: []
+        });
+    }
+}
+
+// 拦截API请求
+(function() {
+    const originalFetch = window.fetch;
+    
+    window.fetch = async function(input, init) {
+        const requestUrl = typeof input === 'string' ? new URL(input, window.location.origin) : input.url;
+        
+        if (requestUrl.pathname.startsWith('/api/')) {
+            // 移除密码验证检查，允许所有API请求通过
+            try {
+                const data = await handleApiRequest(requestUrl);
+                return new Response(data, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*',
+                    },
+                });
+            } catch (error) {
+                return new Response(JSON.stringify({
+                    code: 500,
+                    msg: '服务器内部错误',
+                }), {
+                    status: 500,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+            }
+        }
+        
+        // 非API请求使用原始fetch
+        return originalFetch.apply(this, arguments);
+    };
+})();
+
+async function testSiteAvailability(apiUrl) {
+    try {
+        // 使用更简单的测试查询
+        const response = await fetch('/api/search?wd=test&customApi=' + encodeURIComponent(apiUrl), {
+            // 添加超时
+            signal: AbortSignal.timeout(5000)
+        });
+        
+        // 检查响应状态
+        if (!response.ok) {
+            return false;
         }
         
         const data = await response.json();
-        if (!data || !Array.isArray(data) || data.length === 0) {
-            throw new Error('未找到相关推荐');
-        }
-
-        const firstResult = data[0];
-        document.getElementById('searchInput').value = firstResult.title;
-        await search(firstResult.title);
-    } catch (error) {
-        console.error('Douban recommendation failed:', error);
-        showToast(`获取推荐失败: ${error.message}`, 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// 重置到首页
-function resetToHome() {
-    const searchInput = document.getElementById('searchInput');
-    if (searchInput) searchInput.value = '';
-    
-    const resultsArea = document.getElementById('resultsArea');
-    if (resultsArea) resultsArea.classList.add('hidden');
-    
-    // 恢复搜索区域的样式
-    const searchArea = document.getElementById('searchArea');
-    if (searchArea) {
-        searchArea.classList.add('flex-1');
-        searchArea.classList.remove('mb-8');
-    }
-    
-    // 更新豆瓣区域可见性，但不重新加载内容
-    const doubanArea = document.getElementById('doubanArea');
-    if (doubanArea) {
-        const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
-        if (isEnabled) {
-            doubanArea.classList.remove('hidden');
-            // 重新初始化懒加载，确保图片正确加载
-            reinitializeLazyLoading();
-        } else {
-            doubanArea.classList.add('hidden');
-        }
-    }
-    
-    // 更新URL，移除搜索参数
-    try {
-        window.history.pushState({}, 'YTPPTV', '/');
-        document.title = 'YTPPTV';
-    } catch (e) {
-        console.error('更新浏览器历史失败:', e);
-    }
-}
-
-// 加载豆瓣首页内容
-document.addEventListener('DOMContentLoaded', initDouban);
-
-// 监听窗口大小变化，动态调整滚动条显示
-window.addEventListener('resize', function() {
-    // 获取所有豆瓣内容容器
-    const containers = document.querySelectorAll('[class^="douban-"]');
-    containers.forEach(container => {
-        const isMobile = window.innerWidth <= 767;
-        const threshold = isMobile ? 3 : 7;
         
-        if (container.children.length > threshold) {
-            container.classList.add('scrollable');
-        } else {
-            container.classList.remove('scrollable');
-        }
-    });
-});
-
-// 处理豆瓣推荐内容点击事件
-function handleDoubanItemClick(title) {
-    if (!title) return;
-    
-    // 获取所有启用的API
-    const enabledAPIs = Object.entries(API_SITES)
-        .filter(([_, site]) => site.enabled && !site.adult)
-        .map(([code, _]) => code);
-    
-    if (enabledAPIs.length === 0) {
-        showToast('请先在设置中启用至少一个数据源');
-        return;
+        // 检查API响应的有效性
+        return data && data.code !== 400 && Array.isArray(data.list);
+    } catch (error) {
+        console.error('站点可用性测试失败:', error);
+        return false;
     }
-    
-    // 构建搜索URL
-    const searchParams = new URLSearchParams({
-        keyword: title,
-        apis: enabledAPIs.join(',')
-    });
-    
-    // 跳转到搜索结果页
-    window.location.href = `search.html?${searchParams.toString()}`;
 }
-
-// 渲染豆瓣推荐内容
-function renderDoubanContent(items) {
-    const container = document.getElementById('doubanContent');
-    if (!container) return;
-    
-    container.innerHTML = items.map(item => `
-        <div class="douban-item" onclick="handleDoubanItemClick('${item.title}')">
-            <div class="douban-item-poster">
-                <img src="${item.poster}" alt="${item.title}" loading="lazy">
-            </div>
-            <div class="douban-item-info">
-                <h3 class="douban-item-title">${item.title}</h3>
-                <div class="douban-item-rating">${item.rating}</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-// 导出函数
-export { fillAndSearchWithDouban };
