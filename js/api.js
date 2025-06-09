@@ -475,9 +475,10 @@ async function handleAggregatedSearch(searchQuery) {
 // 处理多个自定义API源的聚合搜索
 async function handleMultipleCustomSearch(searchQuery, customApiUrls) {
     // 解析自定义API列表
-    const apiUrls = customApiUrls.split(',')
+    const apiUrls = customApiUrls.split(CUSTOM_API_CONFIG.separator)
         .map(url => url.trim())
-        .filter(url => url.length > 0 && /^https?:\/\//.test(url));
+        .filter(url => url.length > 0 && /^https?:\/\//.test(url))
+        .slice(0, CUSTOM_API_CONFIG.maxSources);
     
     if (apiUrls.length === 0) {
         throw new Error('没有提供有效的自定义API地址');
@@ -512,7 +513,7 @@ async function handleMultipleCustomSearch(searchQuery, customApiUrls) {
             // 为搜索结果添加源信息
             const results = data.list.map(item => ({
                 ...item,
-                source_name: `自定义源${index+1}`,
+                source_name: `${CUSTOM_API_CONFIG.namePrefix}${index+1}`,
                 source_code: 'custom',
                 api_url: apiUrl // 保存API URL以便详情获取
             }));
