@@ -1444,22 +1444,12 @@ function renderResourceSelector() {
     // 获取当前source_code
     const urlParams = new URLSearchParams(window.location.search);
     const currentSource = urlParams.get('source_code') || '';
-
-    // 过滤掉adult资源
-    const resourceOptions = Object.entries(API_SITES)
-        .filter(([key, val]) => !val.adult)
-        .map(([key, val]) => ({ key, name: val.name }));
-
-    // 当前资源信息（可根据实际数据补充视频数等）
-    const currentResource = API_SITES[currentSource] || resourceOptions[0];
+    // 当前资源信息
+    const currentResource = API_SITES[currentSource];
     const resourceName = currentResource ? currentResource.name : '未知资源';
-    // 视频数可根据实际集数或API返回数据动态获取
-    let videoCount = (typeof currentEpisodes !== 'undefined' && currentEpisodes.length) ? currentEpisodes.length : '';
-    let videoCountText = videoCount ? `${videoCount}个视频` : '';
-
-    // 顶部资源信息与切换按钮
+    // 只保留资源名和切换按钮，不显示集数
     let html = `<div class="resource-selector-bar">
-        <span class="resource-info">${resourceName} ${videoCountText}</span>
+        <span class="resource-info">${resourceName}</span>
         <button class="switch-resource-btn" id="switchResourceBtn">
             <span class="switch-resource-icon" style="display:inline-block;">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 4v12m0 0l-4-4m4 4l4-4" stroke="#a67c2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1467,35 +1457,7 @@ function renderResourceSelector() {
             切换资源
         </button>
     </div>`;
-
-    // 下方资源卡片按钮
-    html += '<div class="resource-card-list">';
-    resourceOptions.forEach(opt => {
-        html += `<button class="resource-card${opt.key === currentSource ? ' active' : ''}" data-key="${opt.key}">${opt.name}</button>`;
-    });
-    html += '</div>';
     container.innerHTML = html;
-
-    // 资源卡片点击切换
-    container.querySelectorAll('.resource-card').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const newSource = btn.getAttribute('data-key');
-            if (newSource === currentSource) return;
-            const url = new URL(window.location.href);
-            url.searchParams.set('source_code', newSource);
-            // 可选：如不同源集数数目不同，可重置index为0
-            // url.searchParams.set('index', 0);
-            window.location.href = url.toString();
-        });
-    });
-    // 切换资源按钮（可做刷新或弹窗扩展）
-    const switchBtn = document.getElementById('switchResourceBtn');
-    if (switchBtn) {
-        switchBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            showResourceModal();
-        });
-    }
 }
 
 // 页面加载后渲染资源选择卡片
@@ -1503,14 +1465,15 @@ window.addEventListener('DOMContentLoaded', function () {
     renderResourceSelector();
 });
 
-// 弹窗式资源切换逻辑
+// 弹窗式资源切换逻辑（保持当前集数索引）
 function showResourceModal() {
     const modal = document.getElementById('resourceModal');
     const list = document.getElementById('resourceModalList');
     if (!modal || !list || typeof API_SITES === 'undefined') return;
-    // 获取当前source_code
+    // 获取当前source_code和当前集数index
     const urlParams = new URLSearchParams(window.location.search);
     const currentSource = urlParams.get('source_code') || '';
+    const currentIndex = parseInt(urlParams.get('index') || '0', 10);
     // 过滤掉adult资源
     const resourceOptions = Object.entries(API_SITES)
         .filter(([key, val]) => !val.adult)
@@ -1532,16 +1495,21 @@ function showResourceModal() {
             try {
                 const searchResult = await searchResourceByApiAndTitle(newSource, title);
                 if (searchResult && searchResult.length > 0) {
-                    // 默认选第一个资源的第一集
-                    const first = searchResult[0];
-                    const firstEpisodeUrl = first.vod_play_url_list && first.vod_play_url_list[0] ? first.vod_play_url_list[0].url : '';
-                    if (firstEpisodeUrl) {
+                    // 优先跳转到同index集，如无则跳第1集
+                    let targetIndex = currentIndex;
+                    const episodeList = searchResult[0].vod_play_url_list.map(item => item.url);
+                    if (targetIndex >= episodeList.length) targetIndex = 0;
+                    const targetEpisode = episodeList[targetIndex];
+                    if (targetEpisode) {
+                        // 自动赋值currentEpisodes并刷新
+                        window.currentEpisodes = episodeList;
+                        window.currentEpisodeIndex = targetIndex;
+                        renderEpisodes();
                         // 跳转到新player.html并自动播放
-                        window.location.href = `player.html?url=${encodeURIComponent(firstEpisodeUrl)}&title=${encodeURIComponent(first.vod_name)}&source_code=${newSource}&index=0`;
+                        window.location.href = `player.html?url=${encodeURIComponent(targetEpisode)}&title=${encodeURIComponent(searchResult[0].vod_name)}&source_code=${newSource}&index=${targetIndex}`;
                         return;
                     }
                 }
-                // 未找到同名资源，提示
                 showToast('未找到同名资源', 'warning');
             } catch (e) {
                 showToast('资源搜索失败', 'error');
@@ -1550,10 +1518,12 @@ function showResourceModal() {
     });
     modal.style.display = 'flex';
 }
+
 function hideResourceModal() {
     const modal = document.getElementById('resourceModal');
     if (modal) modal.style.display = 'none';
 }
+
 // 搜索指定API下的同名资源
 async function searchResourceByApiAndTitle(apiKey, title) {
     // 复用api.js的API_SITES和API_CONFIG
@@ -1576,6 +1546,7 @@ async function searchResourceByApiAndTitle(apiKey, title) {
     }
     return [];
 }
+
 // 绑定弹窗事件
 window.addEventListener('DOMContentLoaded', function () {
     // ...原有代码...
@@ -1600,5 +1571,23 @@ window.addEventListener('DOMContentLoaded', function () {
         modal.addEventListener('click', function(e) {
             if (e.target === modal) hideResourceModal();
         });
+    }
+});
+
+// 页面初始化时，若有currentEpisodes未赋值，则根据url参数自动拉取并赋值并渲染
+window.addEventListener('DOMContentLoaded', async function () {
+    if ((!window.currentEpisodes || window.currentEpisodes.length === 0) && typeof API_SITES !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sourceCode = urlParams.get('source_code') || '';
+        const title = urlParams.get('title') || '';
+        if (sourceCode && title) {
+            try {
+                const searchResult = await searchResourceByApiAndTitle(sourceCode, title);
+                if (searchResult && searchResult.length > 0) {
+                    window.currentEpisodes = searchResult[0].vod_play_url_list.map(item => item.url);
+                    renderEpisodes();
+                }
+            } catch (e) {}
+        }
     }
 });
