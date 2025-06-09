@@ -615,20 +615,42 @@ async function search() {
     if (!resultsArea || !resultsGrid) return;
     resultsArea.classList.remove('hidden');
     if (flatResults.length === 0) {
-        resultsGrid.innerHTML = '<div class="text-center text-gray-400 py-8">未找到可播放资源</div>';
+        resultsGrid.innerHTML = `<div class="col-span-full text-center py-16">
+            <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 class="mt-2 text-lg font-medium text-gray-400">没有找到匹配的结果</h3>
+            <p class="mt-1 text-sm text-gray-500">请尝试其他关键词或更换数据源</p>
+        </div>`;
         document.getElementById('searchResultsCount').textContent = '0';
         return;
     }
     document.getElementById('searchResultsCount').textContent = flatResults.length;
-    // 渲染所有API的结果，每个资源可点击直接播放
+    // 渲染所有API的结果为横向大卡片
     resultsGrid.innerHTML = flatResults.map((item, idx) => {
-        const playUrls = (item.vod_play_url && typeof item.vod_play_url === 'string') ?
-            item.vod_play_url.split('#').map((s, i) => ({ url: s.split('$')[1] || '', name: s.split('$')[0] || `第${i+1}集` })) : [];
-        const firstUrl = playUrls.length > 0 ? playUrls[0].url : '';
-        return `<div class="search-result-item card-hover" style="margin-bottom:18px;cursor:pointer;" onclick="window.location.href='player.html?url=${encodeURIComponent(firstUrl)}&title=${encodeURIComponent(item.vod_name || item.name || query)}&source_code=${item._apiKey}&index=0'">
-            <div style='font-weight:bold;font-size:1.1em;'>${item.vod_name || item.name || '未知资源'}</div>
-            <div style='font-size:0.95em;color:#00ccff;'>${item._apiName}</div>
-            <div style='font-size:0.9em;color:#aaa;'>${playUrls.length}集</div>
+        const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
+        const safeName = (item.vod_name || item.name || '未知资源').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const sourceInfo = item._apiName ? `<span class=\"bg-[#222] text-xs px-1.5 py-0.5 rounded-full\">${item._apiName}</span>` : '';
+        const typeLabel = item.type_name ? `<span class=\"text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300\">${item.type_name}</span>` : '';
+        const yearLabel = item.vod_year ? `<span class=\"text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300\">${item.vod_year}</span>` : '';
+        const remarks = (item.vod_remarks || '暂无介绍').toString().replace(/</g, '&lt;');
+        const cover = item.vod_pic && item.vod_pic.startsWith('http') ? item.vod_pic : 'https://via.placeholder.com/300x450?text=无封面';
+        return `
+        <div class=\"search-result-item card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md\" onclick=\"showDetails('${safeId}','${safeName}','${item._apiKey}')\">
+            <div class=\"flex h-full\">
+                <div class=\"relative flex-shrink-0 search-card-img-container\" style=\"width:90px;min-width:90px;max-width:90px;height:135px;\">
+                    <img src=\"${cover}\" alt=\"${safeName}\" class=\"h-full w-full object-cover transition-transform hover:scale-110\" onerror=\"this.onerror=null; this.src='https://via.placeholder.com/300x450?text=无封面'; this.classList.add('object-contain');\" loading=\"lazy\">
+                    <div class=\"absolute inset-0 bg-gradient-to-r from-black/30 to-transparent\"></div>
+                </div>
+                <div class=\"p-2 flex flex-col flex-grow\">
+                    <div class=\"flex-grow\">
+                        <h3 class=\"font-semibold mb-2 break-words line-clamp-2\" title=\"${safeName}\">${safeName}</h3>
+                        <div class=\"flex flex-wrap gap-1 mb-2\">${typeLabel}${yearLabel}</div>
+                        <p class=\"text-gray-400 line-clamp-2 overflow-hidden mb-2\">${remarks}</p>
+                    </div>
+                    <div class=\"flex justify-between items-center mt-1 pt-1 border-t border-gray-800\">${sourceInfo}<div></div></div>
+                </div>
+            </div>
         </div>`;
     }).join('');
 }
