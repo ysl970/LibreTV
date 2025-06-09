@@ -182,3 +182,67 @@ input:checked + .slider:before {
         margin-bottom: 4px;
     }
 }
+
+/* 资源选择卡片区域样式 */
+.resource-selector-bar {
+    display: flex;
+    align-items: center;
+    background: #f3f4f6;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    padding: 12px 20px;
+    margin-bottom: 12px;
+    gap: 16px;
+}
+.resource-info {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #222;
+    flex: 1;
+}
+.switch-resource-btn {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: #a67c2d;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+.switch-resource-btn:hover {
+    background: #f5e9d7;
+}
+.switch-resource-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    transition: transform 0.3s;
+}
+.resource-card-list {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+.resource-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    padding: 8px 18px;
+    font-size: 1rem;
+    color: #222;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border 0.2s, background 0.2s;
+}
+.resource-card.active, .resource-card:active {
+    border: 2px solid #a67c2d;
+    background: #f5e9d7;
+    color: #a67c2d;
+    font-weight: bold;
+}
