@@ -1491,9 +1491,9 @@ function renderResourceSelector() {
     // 切换资源按钮（可做刷新或弹窗扩展）
     const switchBtn = document.getElementById('switchResourceBtn');
     if (switchBtn) {
-        switchBtn.addEventListener('click', function() {
-            // 这里可扩展为弹窗/下拉选择等，当前实现为刷新当前资源
-            window.location.reload();
+        switchBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            showResourceModal();
         });
     }
 }
@@ -1501,4 +1501,104 @@ function renderResourceSelector() {
 // 页面加载后渲染资源选择卡片
 window.addEventListener('DOMContentLoaded', function () {
     renderResourceSelector();
+});
+
+// 弹窗式资源切换逻辑
+function showResourceModal() {
+    const modal = document.getElementById('resourceModal');
+    const list = document.getElementById('resourceModalList');
+    if (!modal || !list || typeof API_SITES === 'undefined') return;
+    // 获取当前source_code
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentSource = urlParams.get('source_code') || '';
+    // 过滤掉adult资源
+    const resourceOptions = Object.entries(API_SITES)
+        .filter(([key, val]) => !val.adult)
+        .map(([key, val]) => ({ key, name: val.name }));
+    // 渲染资源列表
+    list.innerHTML = resourceOptions.map(opt =>
+        `<div class="resource-modal-item${opt.key === currentSource ? ' active' : ''}" data-key="${opt.key}">${opt.name}</div>`
+    ).join('');
+    // 绑定点击事件
+    list.querySelectorAll('.resource-modal-item').forEach(item => {
+        item.addEventListener('click', async function() {
+            const newSource = item.getAttribute('data-key');
+            if (!newSource) return;
+            modal.style.display = 'none';
+            // 获取当前剧名
+            const title = urlParams.get('title') || document.getElementById('videoTitle').textContent || '';
+            if (!title) return;
+            // 搜索同名资源
+            try {
+                const searchResult = await searchResourceByApiAndTitle(newSource, title);
+                if (searchResult && searchResult.length > 0) {
+                    // 默认选第一个资源的第一集
+                    const first = searchResult[0];
+                    const firstEpisodeUrl = first.vod_play_url_list && first.vod_play_url_list[0] ? first.vod_play_url_list[0].url : '';
+                    if (firstEpisodeUrl) {
+                        // 跳转到新player.html并自动播放
+                        window.location.href = `player.html?url=${encodeURIComponent(firstEpisodeUrl)}&title=${encodeURIComponent(first.vod_name)}&source_code=${newSource}&index=0`;
+                        return;
+                    }
+                }
+                // 未找到同名资源，提示
+                showToast('未找到同名资源', 'warning');
+            } catch (e) {
+                showToast('资源搜索失败', 'error');
+            }
+        });
+    });
+    modal.style.display = 'flex';
+}
+function hideResourceModal() {
+    const modal = document.getElementById('resourceModal');
+    if (modal) modal.style.display = 'none';
+}
+// 搜索指定API下的同名资源
+async function searchResourceByApiAndTitle(apiKey, title) {
+    // 复用api.js的API_SITES和API_CONFIG
+    if (typeof API_SITES === 'undefined' || typeof API_CONFIG === 'undefined') return [];
+    const api = API_SITES[apiKey];
+    if (!api) return [];
+    const url = api.api + API_CONFIG.search.path + encodeURIComponent(title);
+    const resp = await fetch('/proxy/' + encodeURIComponent(url));
+    const data = await resp.json();
+    if (data && data.list && Array.isArray(data.list)) {
+        // 兼容不同API返回结构
+        return data.list.map(item => {
+            // 兼容不同API字段
+            return {
+                vod_name: item.vod_name || item.name || '',
+                vod_play_url_list: (item.vod_play_url && typeof item.vod_play_url === 'string') ?
+                    item.vod_play_url.split('#').map((s, i) => ({ url: s.split('$')[1] || '', name: s.split('$')[0] || `第${i+1}集` })) : [],
+            };
+        });
+    }
+    return [];
+}
+// 绑定弹窗事件
+window.addEventListener('DOMContentLoaded', function () {
+    // ...原有代码...
+    // 切换资源按钮弹窗
+    const switchBtn = document.getElementById('switchResourceBtn');
+    if (switchBtn) {
+        switchBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            showResourceModal();
+        });
+    }
+    // 关闭弹窗
+    const closeBtn = document.getElementById('closeResourceModal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            hideResourceModal();
+        });
+    }
+    // 点击遮罩关闭
+    const modal = document.getElementById('resourceModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) hideResourceModal();
+        });
+    }
 });
