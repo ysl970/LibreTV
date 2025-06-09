@@ -600,7 +600,7 @@ async function search() {
     saveSearchHistory(query);
     showLoading('正在搜索...');
     resetSearchArea();
-    document.getElementById('doubanArea').classList.add('hidden'); // 隐藏豆瓣推荐
+    document.getElementById('doubanArea').classList.add('hidden');
 
     const selectedApiKeys = getSelectedAPIs();
     if (selectedApiKeys.length === 0) {
@@ -612,17 +612,18 @@ async function search() {
     try {
         // 构建完整的API URL
         const apiUrl = API_SITES[selectedApiKeys[0]].api + API_CONFIG.search.path + encodeURIComponent(query);
-        console.log('Search URL:', apiUrl); // 添加日志
+        console.log('Search URL:', apiUrl);
 
         // 使用代理发送请求，添加超时处理
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
 
         const response = await fetch(`/proxy/${encodeURIComponent(apiUrl)}`, {
             signal: controller.signal,
             headers: {
                 'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
+                'Cache-Control': 'no-cache',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
         });
         
@@ -633,17 +634,19 @@ async function search() {
         }
 
         const data = await response.json();
+        console.log('Search response:', data);
+
         hideLoading();
 
         if (data.code === 200 && data.list && data.list.length > 0) {
-            showResultsModal('搜索结果'); // 显示模态框并设置标题
-            renderSearchResults(data.list); // 渲染搜索结果
+            showResultsModal('搜索结果');
+            renderSearchResults(data.list);
         } else {
             showToast(data.msg || '未找到相关视频', 'info');
         }
     } catch (error) {
+        console.error('Search error:', error);
         hideLoading();
-        console.error('搜索失败:', error);
         if (error.name === 'AbortError') {
             showToast('搜索请求超时，请稍后重试', 'error');
         } else {
@@ -674,26 +677,47 @@ function closeResultsModal() {
 
 // 新增：渲染搜索结果列表
 function renderSearchResults(results) {
-    const listContainer = document.getElementById('searchResultsList');
-    listContainer.innerHTML = results.map(item => `
-        <div class="search-result-item bg-[#222] p-3 rounded-lg shadow-md cursor-pointer hover:bg-[#333] transition-colors"
-             data-id="${item.vod_id}" data-source="${item.source_code}" data-title="${item.vod_name}" data-custom-api="${item.api_url || ''}">
-            <h4 class="text-white font-bold truncate">${item.vod_name}</h4>
-            <p class="text-gray-400 text-sm truncate">${item.type_name || '未知类型'} · ${item.vod_year || '未知年份'}</p>
-            <p class="text-gray-500 text-xs mt-1">来源: ${item.source_name}</p>
-        </div>
-    `).join('');
+    const resultsList = document.getElementById('searchResultsList');
+    resultsList.innerHTML = '';
 
-    listContainer.querySelectorAll('.search-result-item').forEach(item => {
-        item.addEventListener('click', function() {
-            const resource = {
-                id: this.dataset.id,
-                sourceCode: this.dataset.source,
-                title: this.dataset.title,
-                customApi: this.dataset.customApi
-            };
-            handleResourceSelection(resource);
-        });
+    if (!results || results.length === 0) {
+        resultsList.innerHTML = '<div class="col-span-2 text-center text-gray-500 py-8">未找到相关视频</div>';
+        return;
+    }
+
+    results.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'bg-[#151515] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300';
+        
+        const cover = item.vod_pic || 'image/default-cover.jpg';
+        const title = item.vod_name || '未知标题';
+        const type = item.type_name || '未知类型';
+        const year = item.vod_year || '未知年份';
+        const area = item.vod_area || '未知地区';
+        const remarks = item.vod_remarks || '';
+        const source = item.source_name || '未知来源';
+
+        card.innerHTML = `
+            <div class="relative">
+                <img src="${cover}" alt="${title}" class="w-full h-48 object-cover" onerror="this.src='image/default-cover.jpg'">
+                ${remarks ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">${remarks}</span>` : ''}
+            </div>
+            <div class="p-4">
+                <h3 class="text-lg font-semibold mb-2 line-clamp-2">${title}</h3>
+                <div class="text-sm text-gray-400 space-y-1">
+                    <p>类型：${type}</p>
+                    <p>年份：${year}</p>
+                    <p>地区：${area}</p>
+                    <p>来源：${source}</p>
+                </div>
+                <button onclick="showEpisodes('${item.vod_id}', '${item.source_code}', '${encodeURIComponent(title)}')" 
+                        class="mt-3 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white rounded-lg py-2 transition-all duration-300">
+                    查看详情
+                </button>
+            </div>
+        `;
+
+        resultsList.appendChild(card);
     });
 }
 
