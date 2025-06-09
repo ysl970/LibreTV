@@ -38,6 +38,8 @@ const AGGREGATED_SEARCH_CONFIG = {
 const API_CONFIG = {
     search: {
         path: '/?wd=',
+        pagePath: '/?wd={query}&pg={page}',
+        maxPages: 5, // 最多获取5页
         headers: {
             'Accept': 'application/json',
             'Cache-Control': 'no-cache',
