@@ -610,20 +610,19 @@ async function search() {
     }
 
     try {
-        // 构建完整的API URL
-        const apiUrl = API_SITES[selectedApiKeys[0]].api + API_CONFIG.search.path + encodeURIComponent(query);
+        // 使用内置API接口进行搜索
+        const apiUrl = `/api/search?wd=${encodeURIComponent(query)}&source=${selectedApiKeys[0]}`;
         console.log('Search URL:', apiUrl);
 
-        // 使用代理发送请求，添加超时处理
+        // 添加超时处理
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-        const response = await fetch(`/proxy/${encodeURIComponent(apiUrl)}`, {
+        const response = await fetch(apiUrl, {
             signal: controller.signal,
             headers: {
                 'Accept': 'application/json',
-                'Cache-Control': 'no-cache',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'Cache-Control': 'no-cache'
             }
         });
         
@@ -701,7 +700,7 @@ function renderSearchResults(results) {
             <div class="relative">
                 <img src="${cover}" alt="${title}" class="w-full h-48 object-cover" onerror="this.src='image/default-cover.jpg'">
                 ${remarks ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">${remarks}</span>` : ''}
-            </div>
+        </div>
             <div class="p-4">
                 <h3 class="text-lg font-semibold mb-2 line-clamp-2">${title}</h3>
                 <div class="text-sm text-gray-400 space-y-1">
