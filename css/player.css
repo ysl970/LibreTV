@@ -204,25 +204,41 @@ input:checked + .slider:before {
 .switch-resource-btn {
     display: flex;
     align-items: center;
-    background: none;
-    border: none;
-    color: #a67c2d;
-    font-weight: bold;
-    font-size: 1rem;
+    justify-content: center;
+    background: linear-gradient(135deg, #232a36 60%, #1c2939 100%);
+    border-radius: 14px;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: #fff;
+    min-height: 48px;
+    min-width: 120px;
+    box-shadow: 0 2px 8px #0002;
     cursor: pointer;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    transition: background 0.2s;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
+    user-select: none;
+    border: 2px solid transparent;
+    position: relative;
+    z-index: 1;
+    padding: 0 20px;
 }
 .switch-resource-btn:hover {
-    background: #f5e9d7;
+    border: 2px solid #00ccff;
+    box-shadow: 0 8px 24px #00ccff44;
+    transform: translateY(-2px) scale(1.03);
+}
+.switch-resource-btn:active {
+    background: var(--ytpptv-gradient);
+    color: #fff;
+    font-weight: bold;
+    border: 2px solid #fff0;
+    box-shadow: 0 6px 24px #00ccff33;
+    z-index: 2;
 }
 .switch-resource-icon {
-    display: inline-block;
     width: 20px;
     height: 20px;
-    vertical-align: middle;
+    margin-right: 8px;
+    color: #fff;
     transition: transform 0.3s;
 }
 .resource-card-list {
@@ -347,23 +363,41 @@ input:checked + .slider:before {
 .resource-switch-btn {
   display: flex;
   align-items: center;
-  font-size: 1.7rem;
-  font-weight: bold;
-  color: #181818;
-  background: none;
-  border: none;
+  justify-content: center;
+  background: linear-gradient(135deg, #232a36 60%, #1c2939 100%);
+  border-radius: 14px;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #fff;
+  min-height: 48px;
+  min-width: 120px;
+  box-shadow: 0 2px 8px #0002;
   cursor: pointer;
-  outline: none;
-  transition: color 0.2s;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
+  user-select: none;
+  border: 2px solid transparent;
+  position: relative;
+  z-index: 1;
+  padding: 0 20px;
 }
 .resource-switch-btn:hover {
-  color: #a67c2d;
+  border: 2px solid #00ccff;
+  box-shadow: 0 8px 24px #00ccff44;
+  transform: translateY(-2px) scale(1.03);
+}
+.resource-switch-btn:active {
+  background: var(--ytpptv-gradient);
+  color: #fff;
+  font-weight: bold;
+  border: 2px solid #fff0;
+  box-shadow: 0 6px 24px #00ccff33;
+  z-index: 2;
 }
 .resource-switch-icon {
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 20px;
   margin-right: 8px;
-  color: #a67c2d;
+  color: #fff;
   transition: transform 0.3s;
 }
 
