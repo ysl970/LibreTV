@@ -199,12 +199,10 @@ async function handleApiRequest(url) {
 
         throw new Error('未知的API路径');
     } catch (error) {
-        console.error('API处理错误:', error);
+        console.error('API请求处理错误:', error);
         return JSON.stringify({
-            code: 400,
-            msg: error.message || '请求处理失败',
-            list: [],
-            episodes: [],
+            code: 500,
+            msg: error.message || '未知错误'
         });
     }
 }
