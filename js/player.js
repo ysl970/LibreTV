@@ -429,7 +429,7 @@ function initPlayer(videoUrl) {
         isLive: false,
         muted: false,
         autoplay: true,
-        pip: true,
+        pip: false,
         autoSize: false,
         autoMini: true,
         screenshot: true,
@@ -990,28 +990,34 @@ function copyLinks() {
 
 // 切换集数排序
 function toggleEpisodeOrder() {
-    episodesReversed = !episodesReversed;
-
+    window.episodesReversed = !window.episodesReversed;
+    
     // 保存到localStorage
-    localStorage.setItem('episodesReversed', episodesReversed);
-
+    localStorage.setItem('episodesReversed', window.episodesReversed);
+    
     // 重新渲染集数列表
-    renderEpisodes();
-
+    renderEpisodeCards();
+    
     // 更新排序按钮
-    updateOrderButton();
-}
-
-// 更新排序按钮状态
-function updateOrderButton() {
-    const orderText = document.getElementById('orderText');
-    const orderIcon = document.getElementById('orderIcon');
-
-    if (orderText && orderIcon) {
-        orderText.textContent = episodesReversed ? '正序排列' : '倒序排列';
-        orderIcon.style.transform = episodesReversed ? 'rotate(180deg)' : '';
+    const toggleBtn = document.querySelector('.episode-order-btn');
+    if (toggleBtn) {
+        toggleBtn.innerHTML = window.episodesReversed ? 
+            '<span>正序排列</span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 4v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' :
+            '<span>倒序排列</span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 4v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     }
 }
+
+// 页面加载时恢复排序状态
+window.addEventListener('DOMContentLoaded', function () {
+    // 从localStorage恢复排序状态
+    const savedOrder = localStorage.getItem('episodesReversed');
+    if (savedOrder !== null) {
+        window.episodesReversed = savedOrder === 'true';
+    }
+    
+    renderResourceInfoBar();
+    renderEpisodeCards();
+});
 
 // 设置进度条准确点击处理
 function setupProgressBarPreciseClicks() {
