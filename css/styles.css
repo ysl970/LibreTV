@@ -933,11 +933,12 @@ body {
 
 /* 详情模态框样式优化 */
 #modal .modal-detail-info {
-    background: linear-gradient(135deg, #0a0a0a, #111);
-    border: 1px solid #222;
+    background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end));
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 1rem;
     margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 #modal .detail-grid {
