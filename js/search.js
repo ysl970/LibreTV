@@ -1,15 +1,17 @@
 // API配置
 const API_CONFIG = {
     search: {
-        path: '/?wd=',
+        path: '?ac=videolist&wd=',
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
         }
     },
     detail: {
-        path: '/api/detail?source=',
+        path: '?ac=videolist&ids=',
         headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
         }
     }
 };
@@ -55,7 +57,19 @@ async function performSearch(keyword, apis) {
             if (result) results.push(...result);
         });
 
-        renderSearchResults(results);
+        // 去重（根据vod_id和source_code组合）
+        const uniqueResults = [];
+        const seen = new Set();
+        
+        results.forEach(item => {
+            const key = `${item.source_code}_${item.vod_id}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueResults.push(item);
+            }
+        });
+
+        renderSearchResults(uniqueResults);
     } catch (error) {
         console.error('搜索失败:', error);
         showToast('搜索失败，请稍后重试');
@@ -73,16 +87,22 @@ function renderSearchResults(results) {
     }
 
     resultsContainer.innerHTML = results.map(item => {
+        const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
+        const safeName = (item.vod_name || item.name || '未知资源').toString()
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        
         return `
-            <div class="search-result-item" onclick="playFirstEpisode('${item.source_code}', '${item.vod_id}', '${item.vod_name}')">
+            <div class="search-result-item" onclick="playFirstEpisode('${item.source_code}', '${safeId}', '${safeName}')">
                 <div class="relative">
-                    <img src="${item.vod_pic || 'image/default.jpg'}" alt="${item.vod_name}" class="w-full h-48 object-cover rounded-lg">
+                    <img src="${item.vod_pic || 'image/default.jpg'}" alt="${safeName}" class="w-full h-48 object-cover rounded-lg">
                     <div class="absolute top-2 right-2 bg-black bg-opacity-50 px-2 py-1 rounded text-white text-sm">
                         ${item.vod_remarks || ''}
                     </div>
                 </div>
                 <div class="p-4">
-                    <h3 class="text-lg font-semibold line-clamp-1">${item.vod_name}</h3>
+                    <h3 class="text-lg font-semibold line-clamp-1">${safeName}</h3>
                     <div class="text-gray-400 text-sm mt-2">
                         <span class="bg-[#222]">${item.source_name}</span>
                         ${item.vod_remarks ? `<span class="bg-[#222]">${item.vod_remarks}</span>` : ''}
@@ -154,11 +174,11 @@ function initSearch() {
     const urlParams = new URLSearchParams(window.location.search);
     const keyword = urlParams.get('keyword');
     const apis = urlParams.get('apis')?.split(',') || [];
-    
+
     if (keyword && apis.length > 0) {
         performSearch(keyword, apis);
     }
 }
 
 // 页面加载完成后初始化搜索
-window.addEventListener('DOMContentLoaded', initSearch); 
+document.addEventListener('DOMContentLoaded', initSearch); 
