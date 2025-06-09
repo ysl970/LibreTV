@@ -1027,3 +1027,73 @@ body {
         font-size: 0.8rem;
     }
 }
+
+/* 新增：搜索结果/详情模态框样式 */
+#resultsModal {
+    animation: fadeInModal 0.3s ease-out forwards;
+}
+
+#resultsModal.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#resultsModal > div {
+    transform: translateY(20px);
+    animation: slideInModal 0.3s ease-out forwards;
+}
+
+#resultsModal.hidden > div {
+    transform: translateY(-20px);
+    animation: slideOutModal 0.3s ease-out forwards;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInModal {
+    from { transform: translateY(20px); }
+    to { transform: translateY(0); }
+}
+
+@keyframes slideOutModal {
+    from { transform: translateY(0); opacity: 1; }
+    to { transform: translateY(-20px); opacity: 0; }
+}
+
+/* 搜索结果项样式 */
+.search-result-item {
+    border: 1px solid var(--border-color);
+    background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+}
+
+.search-result-item:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* 集数选择按钮样式 */
+.episode-select-btn {
+    border: 1px solid var(--border-color);
+    background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.episode-select-btn:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, var(--card-gradient-end), var(--card-gradient-start));
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
