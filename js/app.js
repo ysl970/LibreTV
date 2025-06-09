@@ -589,70 +589,33 @@ function getCustomApiInfo(customApiIndex) {
     return customAPIs[index];
 }
 
-// 聚合搜索所有API，展示所有API结果，选择资源后直接播放
+// 覆盖/增强原search函数，实现自动播放第一个资源
 async function search() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) return;
-    // 获取所有API源
+    // 默认用第一个API源
     const apiKeys = Object.keys(API_SITES).filter(key => !API_SITES[key].adult);
-    // 并行请求所有API
-    const allResults = await Promise.all(apiKeys.map(async apiKey => {
-        const api = API_SITES[apiKey];
-        const url = api.api + API_CONFIG.search.path + encodeURIComponent(query);
-        try {
-            const resp = await fetch('/proxy/' + encodeURIComponent(url));
-            const data = await resp.json();
-            if (data && data.list && data.list.length > 0) {
-                return data.list.map(item => ({ ...item, _apiKey: apiKey, _apiName: api.name }));
-            }
-        } catch (e) {}
-        return [];
-    }));
-    // 合并所有API结果
-    const flatResults = allResults.flat();
-    const resultsArea = document.getElementById('resultsArea');
-    const resultsGrid = document.getElementById('results');
-    if (!resultsArea || !resultsGrid) return;
-    resultsArea.classList.remove('hidden');
-    if (flatResults.length === 0) {
-        resultsGrid.innerHTML = `<div class="col-span-full text-center py-16">
-            <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <h3 class="mt-2 text-lg font-medium text-gray-400">没有找到匹配的结果</h3>
-            <p class="mt-1 text-sm text-gray-500">请尝试其他关键词或更换数据源</p>
-        </div>`;
-        document.getElementById('searchResultsCount').textContent = '0';
-        return;
+    const firstApiKey = apiKeys[0];
+    if (!firstApiKey) return;
+    const api = API_SITES[firstApiKey];
+    const url = api.api + API_CONFIG.search.path + encodeURIComponent(query);
+    try {
+        const resp = await fetch('/proxy/' + encodeURIComponent(url));
+        const data = await resp.json();
+        if (data && data.list && data.list.length > 0) {
+            // 默认选第一个资源的第一集
+            const first = data.list[0];
+            const playUrls = (first.vod_play_url && typeof first.vod_play_url === 'string') ?
+                first.vod_play_url.split('#').map((s, i) => ({ url: s.split('$')[1] || '', name: s.split('$')[0] || `第${i+1}集` })) : [];
+            if (playUrls.length > 0) {
+                window.location.href = `player.html?url=${encodeURIComponent(playUrls[0].url)}&title=${encodeURIComponent(first.vod_name || first.name || query)}&source_code=${firstApiKey}&index=0`;
+            return;
+        }
+        }
+        showToast('未找到可播放资源', 'warning');
+        } catch (e) {
+        showToast('搜索失败', 'error');
     }
-    document.getElementById('searchResultsCount').textContent = flatResults.length;
-    // 渲染所有API的结果为横向大卡片
-    resultsGrid.innerHTML = flatResults.map((item, idx) => {
-        const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
-        const safeName = (item.vod_name || item.name || '未知资源').toString().replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        const sourceInfo = item._apiName ? `<span class=\"bg-[#222] text-xs px-1.5 py-0.5 rounded-full\">${item._apiName}</span>` : '';
-        const typeLabel = item.type_name ? `<span class=\"text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300\">${item.type_name}</span>` : '';
-        const yearLabel = item.vod_year ? `<span class=\"text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300\">${item.vod_year}</span>` : '';
-        const remarks = (item.vod_remarks || '暂无介绍').toString().replace(/</g, '&lt;');
-        const cover = item.vod_pic && item.vod_pic.startsWith('http') ? item.vod_pic : 'https://via.placeholder.com/300x450?text=无封面';
-        return `
-        <div class=\"search-result-item card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md\" onclick=\"showDetails('${safeId}','${safeName}','${item._apiKey}')\">
-            <div class=\"flex h-full\">
-                <div class=\"relative flex-shrink-0 search-card-img-container\" style=\"width:90px;min-width:90px;max-width:90px;height:135px;\">
-                    <img src=\"${cover}\" alt=\"${safeName}\" class=\"h-full w-full object-cover transition-transform hover:scale-110\" onerror=\"this.onerror=null; this.src='https://via.placeholder.com/300x450?text=无封面'; this.classList.add('object-contain');\" loading=\"lazy\">
-                    <div class=\"absolute inset-0 bg-gradient-to-r from-black/30 to-transparent\"></div>
-                </div>
-                <div class=\"p-2 flex flex-col flex-grow\">
-                    <div class=\"flex-grow\">
-                        <h3 class=\"font-semibold mb-2 break-words line-clamp-2\" title=\"${safeName}\">${safeName}</h3>
-                        <div class=\"flex flex-wrap gap-1 mb-2\">${typeLabel}${yearLabel}</div>
-                        <p class=\"text-gray-400 line-clamp-2 overflow-hidden mb-2\">${remarks}</p>
-                    </div>
-                    <div class=\"flex justify-between items-center mt-1 pt-1 border-t border-gray-800\">${sourceInfo}<div></div></div>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
 }
 
 // 切换清空按钮的显示状态
@@ -922,23 +885,16 @@ function handlePlayerError() {
 }
 
 // 辅助函数用于渲染剧集按钮（使用当前的排序状态）
-function renderEpisodes(title, sourceCode, vodId) {
-    if (!title || !sourceCode || !vodId) return '';
-    
-    // 获取当前视频的剧集列表
-    const episodes = window.currentEpisodes || [];
-    if (!episodes.length) return '';
-    
-    // 根据排序状态处理剧集列表
-    const sortedEpisodes = episodesReversed ? [...episodes].reverse() : [...episodes];
-    
-    return sortedEpisodes.map((episode, index) => {
-        const isActive = index === parseInt(window.location.search.split('index=')[1] || '0');
+function renderEpisodes(vodName, sourceCode, vodId) {
+    const episodes = episodesReversed ? [...currentEpisodes].reverse() : currentEpisodes;
+    return episodes.map((episode, index) => {
+        // 根据倒序状态计算真实的剧集索引
+        const realIndex = episodesReversed ? currentEpisodes.length - 1 - index : index;
         return `
-            <div class="episode-card ${isActive ? 'active' : ''}" 
-                 onclick="playVideo('${sourceCode}', '${vodId}', '${title}', ${index})">
-                <span class="episode-label">${episode.label || `第${index + 1}集`}</span>
-            </div>
+            <button id="episode-${realIndex}" onclick="playVideo('${episode}','${vodName.replace(/"/g, '&quot;')}', '${sourceCode}', ${realIndex}, '${vodId}')" 
+                    class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors text-center episode-btn">
+                ${realIndex + 1}
+            </button>
         `;
     }).join('');
 }
@@ -955,27 +911,22 @@ function copyLinks() {
 }
 
 // 切换排序状态的函数
-function toggleEpisodeOrder() {
+function toggleEpisodeOrder(sourceCode, vodId) {
     episodesReversed = !episodesReversed;
-    
-    // 获取当前视频信息
-    const urlParams = new URLSearchParams(window.location.search);
-    const sourceCode = urlParams.get('source_code');
-    const vodId = urlParams.get('vod_id');
-    const title = urlParams.get('title');
-    
-    // 重新渲染剧集区域
+    // 重新渲染剧集区域，使用 currentVideoTitle 作为视频标题
     const episodesGrid = document.getElementById('episodesGrid');
-    if (episodesGrid && title) {
-        episodesGrid.innerHTML = renderEpisodes(title, sourceCode, vodId);
+    if (episodesGrid) {
+        episodesGrid.innerHTML = renderEpisodes(currentVideoTitle, sourceCode, vodId);
     }
     
     // 更新按钮文本和箭头方向
-    const orderText = document.getElementById('orderText');
-    const orderIcon = document.getElementById('orderIcon');
-    if (orderText && orderIcon) {
-        orderText.textContent = episodesReversed ? '正序排列' : '倒序排列';
-        orderIcon.style.transform = episodesReversed ? 'rotate(180deg)' : 'rotate(0deg)';
+    const toggleBtn = document.querySelector(`button[onclick="toggleEpisodeOrder('${sourceCode}', '${vodId}')"]`);
+    if (toggleBtn) {
+        toggleBtn.querySelector('span').textContent = episodesReversed ? '正序排列' : '倒序排列';
+        const arrowIcon = toggleBtn.querySelector('svg');
+        if (arrowIcon) {
+            arrowIcon.style.transform = episodesReversed ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
     }
 }
 
