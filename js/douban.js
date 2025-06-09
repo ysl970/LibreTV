@@ -24,6 +24,14 @@ const contentCategories = {
 // 默认每个分类显示的数量，固定为7个
 const doubanPageSize = 7;
 
+// 添加内容加载状态跟踪
+const doubanLoadStatus = {
+    initialized: false,
+    priorityLoaded: false,
+    secondaryLoaded: false,
+    finalLoaded: false
+};
+
 // 初始化豆瓣功能
 function initDouban() {
     // 设置豆瓣开关的初始状态
@@ -67,7 +75,11 @@ function initDouban() {
     
     // 初始加载各分类内容
     if (localStorage.getItem('doubanEnabled') === 'true') {
-        loadAllCategoryContent();
+        // 只有在未初始化时才加载内容
+        if (!doubanLoadStatus.initialized) {
+            loadAllCategoryContent();
+            doubanLoadStatus.initialized = true;
+        }
     }
     
     // 设置"更多"按钮点击事件
@@ -94,11 +106,26 @@ function updateDoubanVisibility() {
     // 只有在启用且没有搜索结果显示时才显示豆瓣区域
     if (isEnabled && !isSearching) {
         doubanArea.classList.remove('hidden');
-        // 如果豆瓣结果为空，重新加载
-        loadAllCategoryContent();
+        
+        // 检查是否需要初始化内容
+        if (!doubanLoadStatus.initialized) {
+            loadAllCategoryContent();
+            doubanLoadStatus.initialized = true;
+        } else {
+            // 重新初始化懒加载，确保图片正确加载
+            reinitializeLazyLoading();
+        }
     } else {
         doubanArea.classList.add('hidden');
     }
+}
+
+// 重新初始化所有容器中的懒加载图片
+function reinitializeLazyLoading() {
+    const containers = document.querySelectorAll('[class^="douban-"]');
+    containers.forEach(container => {
+        initLazyLoading(container);
+    });
 }
 
 // 加载所有分类内容
@@ -110,6 +137,8 @@ function loadAllCategoryContent() {
         
         // 2. 热门电视剧
         fetchCategoryContent('tv', 'hot', '热门');
+        
+        doubanLoadStatus.priorityLoaded = true;
     };
     
     // 第二批加载（稍后加载）
@@ -122,6 +151,8 @@ function loadAllCategoryContent() {
         
         // 5. 新片榜单
         fetchCategoryContent('movie', 'new', '最新');
+        
+        doubanLoadStatus.secondaryLoaded = true;
     };
     
     // 最后加载（用户可能需要滚动才能看到的内容）
@@ -140,39 +171,48 @@ function loadAllCategoryContent() {
         
         // 10. Top250电影
         fetchCategoryContent('movie', 'top250', '豆瓣高分');
+        
+        doubanLoadStatus.finalLoaded = true;
     };
 
-    // 立即加载首屏内容
-    priorityLoad();
+    // 立即加载首屏内容（如果尚未加载）
+    if (!doubanLoadStatus.priorityLoaded) {
+        priorityLoad();
+    }
     
-    // 100ms后加载第二批
-    setTimeout(secondaryLoad, 100);
+    // 第二批内容（如果尚未加载）
+    if (!doubanLoadStatus.secondaryLoaded) {
+        setTimeout(secondaryLoad, 100);
+    }
     
-    // 使用IntersectionObserver检测何时加载剩余内容
-    if ('IntersectionObserver' in window) {
-        // 创建一个观察点，当用户滚动到第二批内容时加载剩余内容
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    finalLoad();
-                    observer.disconnect(); // 只需触发一次
-                }
+    // 最后一批内容（如果尚未加载）
+    if (!doubanLoadStatus.finalLoaded) {
+        // 使用IntersectionObserver检测何时加载剩余内容
+        if ('IntersectionObserver' in window) {
+            // 创建一个观察点，当用户滚动到第二批内容时加载剩余内容
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        finalLoad();
+                        observer.disconnect(); // 只需触发一次
+                    }
+                });
             });
-        });
-        
-        // 观察第二批内容的最后一个元素
-        setTimeout(() => {
-            const target = document.querySelector('.douban-movie-new');
-            if (target) {
-                observer.observe(target);
-            } else {
-                // 如果找不到目标元素，延迟加载剩余内容
-                setTimeout(finalLoad, 300);
-            }
-        }, 150);
-    } else {
-        // 不支持IntersectionObserver的浏览器，使用延迟加载
-        setTimeout(finalLoad, 300);
+            
+            // 观察第二批内容的最后一个元素
+            setTimeout(() => {
+                const target = document.querySelector('.douban-movie-new');
+                if (target) {
+                    observer.observe(target);
+                } else {
+                    // 如果找不到目标元素，延迟加载剩余内容
+                    setTimeout(finalLoad, 300);
+                }
+            }, 150);
+        } else {
+            // 不支持IntersectionObserver的浏览器，使用延迟加载
+            setTimeout(finalLoad, 300);
+        }
     }
 }
 
@@ -874,7 +914,25 @@ function resetToHome() {
     const resultsArea = document.getElementById('resultsArea');
     if (resultsArea) resultsArea.classList.add('hidden');
     
-    updateDoubanVisibility();
+    // 恢复搜索区域的样式
+    const searchArea = document.getElementById('searchArea');
+    if (searchArea) {
+        searchArea.classList.add('flex-1');
+        searchArea.classList.remove('mb-8');
+    }
+    
+    // 更新豆瓣区域可见性，但不重新加载内容
+    const doubanArea = document.getElementById('doubanArea');
+    if (doubanArea) {
+        const isEnabled = localStorage.getItem('doubanEnabled') === 'true';
+        if (isEnabled) {
+            doubanArea.classList.remove('hidden');
+            // 重新初始化懒加载，确保图片正确加载
+            reinitializeLazyLoading();
+        } else {
+            doubanArea.classList.add('hidden');
+        }
+    }
     
     // 更新URL，移除搜索参数
     try {
