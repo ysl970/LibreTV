@@ -1470,16 +1470,13 @@ function showResourceModal() {
     const modal = document.getElementById('resourceModal');
     const list = document.getElementById('resourceModalList');
     if (!modal || !list || typeof API_SITES === 'undefined') return;
-    // 获取当前source_code和当前集数index
     const urlParams = new URLSearchParams(window.location.search);
     const currentSource = urlParams.get('source_code') || '';
     const currentIndex = parseInt(urlParams.get('index') || '0', 10);
     const title = urlParams.get('title') || document.getElementById('videoTitle').textContent || '';
-    // 过滤掉adult资源
     const resourceOptions = Object.entries(API_SITES)
         .filter(([key, val]) => !val.adult)
         .map(([key, val]) => ({ key, name: val.name }));
-    // 异步获取所有资源的视频数
     Promise.all(resourceOptions.map(async opt => {
         let count = '';
         try {
@@ -1500,31 +1497,31 @@ function showResourceModal() {
                 <span style="color:#a67c2d;font-size:0.95em;min-width:3em;text-align:right;">${opt.count !== '' ? opt.count + '个视频' : ''}</span>
             </div>`
         ).join('');
-        // 绑定点击事件
         list.querySelectorAll('.resource-modal-item').forEach(item => {
             item.addEventListener('click', async function() {
                 const newSource = item.getAttribute('data-key');
                 if (!newSource) return;
                 modal.style.display = 'none';
-                // 搜索同名资源
                 try {
                     const searchResult = await searchResourceByApiAndTitle(newSource, title);
+                    let episodeList = [];
                     if (searchResult && searchResult.length > 0) {
-                        // 优先跳转到同index集，如无则跳第1集
-                        let targetIndex = currentIndex;
-                        const episodeList = searchResult[0].vod_play_url_list.map(item => item.url);
-                        if (targetIndex >= episodeList.length) targetIndex = 0;
-                        const targetEpisode = episodeList[targetIndex];
-                        if (targetEpisode) {
-                            window.currentEpisodes = episodeList;
-                            window.currentEpisodeIndex = targetIndex;
-                            renderEpisodes();
-                            window.location.href = `player.html?url=${encodeURIComponent(targetEpisode)}&title=${encodeURIComponent(searchResult[0].vod_name)}&source_code=${newSource}&index=${targetIndex}`;
-                            return;
-                        }
+                        episodeList = searchResult[0].vod_play_url_list.map(item => item.url);
+                    }
+                    window.currentEpisodes = episodeList;
+                    renderEpisodes();
+                    let targetIndex = currentIndex;
+                    if (targetIndex >= episodeList.length) targetIndex = 0;
+                    const targetEpisode = episodeList[targetIndex];
+                    if (targetEpisode) {
+                        window.currentEpisodeIndex = targetIndex;
+                        window.location.href = `player.html?url=${encodeURIComponent(targetEpisode)}&title=${encodeURIComponent(searchResult[0].vod_name)}&source_code=${newSource}&index=${targetIndex}`;
+                        return;
                     }
                     showToast('未找到同名资源', 'warning');
                 } catch (e) {
+                    window.currentEpisodes = [];
+                    renderEpisodes();
                     showToast('资源搜索失败', 'error');
                 }
             });
@@ -1588,27 +1585,22 @@ window.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-// 页面初始化时，若有currentEpisodes未赋值，则根据url参数自动拉取并赋值并渲染
+// 页面初始化时，拉取分集并渲染集数按钮
 window.addEventListener('DOMContentLoaded', async function () {
-    if ((!window.currentEpisodes || window.currentEpisodes.length === 0) && typeof API_SITES !== 'undefined') {
-        const urlParams = new URLSearchParams(window.location.search);
-        const sourceCode = urlParams.get('source_code') || '';
-        const title = urlParams.get('title') || '';
-        if (sourceCode && title) {
-            try {
-                const searchResult = await searchResourceByApiAndTitle(sourceCode, title);
-                if (searchResult && searchResult.length > 0) {
-                    window.currentEpisodes = searchResult[0].vod_play_url_list.map(item => item.url);
-                    renderEpisodes();
-                } else {
-                    // 没有分集也要刷新UI，显示"没有可用的集数"
-                    window.currentEpisodes = [];
-                    renderEpisodes();
-                }
-            } catch (e) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sourceCode = urlParams.get('source_code') || '';
+    const title = urlParams.get('title') || '';
+    if (typeof API_SITES !== 'undefined' && sourceCode && title) {
+        try {
+            const searchResult = await searchResourceByApiAndTitle(sourceCode, title);
+            if (searchResult && searchResult.length > 0) {
+                window.currentEpisodes = searchResult[0].vod_play_url_list.map(item => item.url);
+            } else {
                 window.currentEpisodes = [];
-                renderEpisodes();
             }
+        } catch (e) {
+            window.currentEpisodes = [];
         }
+        renderEpisodes();
     }
 });
