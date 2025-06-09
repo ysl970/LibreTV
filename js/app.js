@@ -589,33 +589,44 @@ function getCustomApiInfo(customApiIndex) {
     return customAPIs[index];
 }
 
-// 覆盖/增强原search函数，实现自动播放第一个资源
+// 聚合搜索所有API，展示所有API结果，选择资源后直接播放
 async function search() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) return;
-    // 默认用第一个API源
+    // 获取所有API源
     const apiKeys = Object.keys(API_SITES).filter(key => !API_SITES[key].adult);
-    const firstApiKey = apiKeys[0];
-    if (!firstApiKey) return;
-    const api = API_SITES[firstApiKey];
-    const url = api.api + API_CONFIG.search.path + encodeURIComponent(query);
-    try {
-        const resp = await fetch('/proxy/' + encodeURIComponent(url));
-        const data = await resp.json();
-        if (data && data.list && data.list.length > 0) {
-            // 默认选第一个资源的第一集
-            const first = data.list[0];
-            const playUrls = (first.vod_play_url && typeof first.vod_play_url === 'string') ?
-                first.vod_play_url.split('#').map((s, i) => ({ url: s.split('$')[1] || '', name: s.split('$')[0] || `第${i+1}集` })) : [];
-            if (playUrls.length > 0) {
-                window.location.href = `player.html?url=${encodeURIComponent(playUrls[0].url)}&title=${encodeURIComponent(first.vod_name || first.name || query)}&source_code=${firstApiKey}&index=0`;
-                return;
+    // 并行请求所有API
+    const allResults = await Promise.all(apiKeys.map(async apiKey => {
+        const api = API_SITES[apiKey];
+        const url = api.api + API_CONFIG.search.path + encodeURIComponent(query);
+        try {
+            const resp = await fetch('/proxy/' + encodeURIComponent(url));
+            const data = await resp.json();
+            if (data && data.list && data.list.length > 0) {
+                return data.list.map(item => ({ ...item, _apiKey: apiKey, _apiName: api.name }));
             }
-        }
-        showToast('未找到可播放资源', 'warning');
-    } catch (e) {
-        showToast('搜索失败', 'error');
+        } catch (e) {}
+        return [];
+    }));
+    // 合并所有API结果
+    const flatResults = allResults.flat();
+    const resultsArea = document.getElementById('resultsArea');
+    if (!resultsArea) return;
+    if (flatResults.length === 0) {
+        resultsArea.innerHTML = '<div class="text-center text-gray-400 py-8">未找到可播放资源</div>';
+        return;
     }
+    // 渲染所有API的结果，每个资源可点击直接播放
+    resultsArea.innerHTML = flatResults.map((item, idx) => {
+        const playUrls = (item.vod_play_url && typeof item.vod_play_url === 'string') ?
+            item.vod_play_url.split('#').map((s, i) => ({ url: s.split('$')[1] || '', name: s.split('$')[0] || `第${i+1}集` })) : [];
+        const firstUrl = playUrls.length > 0 ? playUrls[0].url : '';
+        return `<div class="search-result-item card-hover" style="margin-bottom:18px;cursor:pointer;" onclick="window.location.href='player.html?url=${encodeURIComponent(firstUrl)}&title=${encodeURIComponent(item.vod_name || item.name || query)}&source_code=${item._apiKey}&index=0'">
+            <div style='font-weight:bold;font-size:1.1em;'>${item.vod_name || item.name || '未知资源'}</div>
+            <div style='font-size:0.95em;color:#00ccff;'>${item._apiName}</div>
+            <div style='font-size:0.9em;color:#aaa;'>${playUrls.length}集</div>
+        </div>`;
+    }).join('');
 }
 
 // 切换清空按钮的显示状态
