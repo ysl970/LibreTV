@@ -13,6 +13,11 @@ let currentVideoTitle = '';
 // 全局变量用于倒序状态
 let episodesReversed = false;
 
+// 导入共享函数
+import { getSelectedAPIs, saveSelectedAPIs, showLoading, hideLoading, showToast } from './common.js';
+import { handleApiRequest } from './api.js';
+import { fillAndSearchWithDouban } from './douban.js';
+
 // 页面初始化
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化API复选框
@@ -589,7 +594,7 @@ function getCustomApiInfo(customApiIndex) {
     return customAPIs[index];
 }
 
-// 覆盖/增强原search函数，实现自动播放第一个资源
+// 搜索函数
 async function search() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) {
@@ -1275,4 +1280,5 @@ function saveStringAsFile(content, fileName) {
     window.URL.revokeObjectURL(url);
 }
 
-// 移除Node.js的require语句，因为这是在浏览器环境中运行的
+// 导出函数
+export { search, init };
