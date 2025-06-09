@@ -368,38 +368,47 @@ input:checked + .slider:before {
 
 /* 集数卡片区 */
 #episodeCardsContainer {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 18px;
   margin-bottom: 18px;
 }
 .episode-card {
-  flex: 1 1 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f3f4f6;
-  border-radius: 16px;
-  font-size: 2rem;
-  font-weight: bold;
-  color: #181818;
-  padding: 24px 0;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-  position: relative;
+  background: #232a36;
+  border-radius: 14px;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: #fff;
+  min-height: 48px;
   min-width: 0;
+  box-shadow: 0 2px 8px #0002;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
+  user-select: none;
+  border: 2px solid transparent;
+}
+.episode-card:hover {
+  background: #2d3646;
+  box-shadow: 0 4px 16px #0003;
+  transform: translateY(-2px) scale(1.03);
 }
 .episode-card.active {
   background: #a67c2d;
   color: #fff;
-}
-.episode-card .episode-icon {
-  position: absolute;
-  left: 18px;
-  font-size: 2.2rem;
-  color: #2d225a;
+  font-weight: bold;
+  border-color: #a67c2d;
+  box-shadow: 0 6px 24px #a67c2d33;
+  z-index: 2;
 }
 .episode-card .episode-label {
-  margin-left: 32px;
+  margin-left: 0;
+  font-size: 1.1em;
+}
+.episode-card .episode-icon {
+  margin-right: 8px;
 }
 
 /* 移动端适配 */
@@ -410,11 +419,96 @@ input:checked + .slider:before {
     padding: 18px 12px;
   }
   #episodeCardsContainer {
-    flex-direction: column;
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(48vw, 1fr));
+    gap: 10px;
   }
   .episode-card {
-    font-size: 1.2rem;
-    padding: 16px 0;
+    font-size: 1rem;
+    min-height: 38px;
+    padding: 0 2px;
   }
+  .resource-modal {
+    min-width: 90vw;
+    padding: 0 0 8px 0;
+  }
+  .resource-modal-header {
+    padding: 12px 10px 6px 10px;
+    font-size: 1rem;
+  }
+  .resource-modal-list {
+    padding: 0 8px;
+  }
+  .resource-modal-item {
+    font-size: 1rem;
+    padding: 12px 0;
+  }
+}
+
+/* 资源切换弹窗优化 */
+#resourceModal {
+  background: rgba(20,24,32,0.85);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+.resource-modal {
+  background: #232a36;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px #0008;
+  min-width: 320px;
+  max-width: 96vw;
+  padding: 0 0 12px 0;
+  animation: fadeInModal 0.25s;
+}
+@keyframes fadeInModal {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: none; }
+}
+.resource-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px 8px 24px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #fff;
+}
+.resource-modal-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.resource-modal-close:hover {
+  color: #a67c2d;
+}
+.resource-modal-list {
+  padding: 0 18px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.resource-modal-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+  padding: 18px 0;
+  color: #fff;
+  border-bottom: 1px solid #2d3646;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.resource-modal-item:last-child {
+  border-bottom: none;
+}
+.resource-modal-item.active, .resource-modal-item:hover {
+  background: #2d225a;
+  color: #ffd700;
+}
+.resource-modal-item span {
+  font-weight: 500;
 }
