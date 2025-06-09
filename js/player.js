@@ -951,6 +951,13 @@ function playEpisode(index) {
 
     // 三秒后保存到历史记录
     setTimeout(() => saveToHistory(), 3000);
+
+    // 自动跳转到对应集数的URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const title = urlParams.get('title') || '';
+    if (url) {
+        window.location.href = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&source_code=${sourceCode}&index=${index}`;
+    }
 }
 
 // 播放上一集
@@ -1683,6 +1690,14 @@ const _oldPlayEpisode = window.playEpisode;
 window.playEpisode = function(index) {
     if (typeof _oldPlayEpisode === 'function') _oldPlayEpisode(index);
     renderEpisodeCards();
+    // 自动跳转到对应集数的URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const sourceCode = urlParams.get('source_code') || '';
+    const title = urlParams.get('title') || '';
+    const episodeUrl = window.currentEpisodes[index];
+    if (episodeUrl) {
+        window.location.href = `player.html?url=${encodeURIComponent(episodeUrl)}&title=${encodeURIComponent(title)}&source_code=${sourceCode}&index=${index}`;
+    }
 };
 
 // 页面初始化时渲染新UI
