@@ -1,5 +1,3 @@
-import { getSelectedAPIs, showLoading, hideLoading, showToast } from './common.js';
-
 // 改进的API请求处理函数
 async function handleApiRequest(url) {
     const customApi = url.searchParams.get('customApi') || '';
@@ -602,45 +600,3 @@ async function testSiteAvailability(apiUrl) {
         return false;
     }
 }
-
-// API请求处理函数
-async function handleApiRequest(query, apiKey) {
-    if (!query) {
-        showToast('请输入搜索内容', 'warning');
-        return null;
-    }
-
-    const selectedApis = getSelectedAPIs();
-    if (!selectedApis.includes(apiKey)) {
-        showToast('无效的API源', 'error');
-        return null;
-    }
-
-    try {
-        showLoading('正在搜索...');
-        const response = await fetch(`/proxy/${encodeURIComponent(API_SITES[apiKey].api + API_CONFIG.search.path + encodeURIComponent(query))}`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        if (!data || !Array.isArray(data)) {
-            throw new Error('Invalid response format');
-        }
-
-        return data.map(item => ({
-            ...item,
-            source: apiKey
-        }));
-    } catch (error) {
-        console.error(`API request failed for ${apiKey}:`, error);
-        showToast(`搜索失败: ${error.message}`, 'error');
-        return null;
-    } finally {
-        hideLoading();
-    }
-}
-
-// 导出函数
-export { handleApiRequest };
