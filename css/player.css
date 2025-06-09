@@ -182,3 +182,91 @@ input:checked + .slider:before {
         margin-bottom: 4px;
     }
 }
+
+/* API源选择和集数选择样式 */
+#apiSourceSelect {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+}
+
+#apiSourceSelect:focus {
+    border-color: #00ccff;
+    box-shadow: 0 0 0 2px rgba(0, 204, 255, 0.2);
+}
+
+#episodeGrid {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+#episodeGrid button {
+    min-width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+#episodeGrid button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#episodeGrid button.active {
+    background-color: #00ccff;
+    color: white;
+    border-color: #00ccff;
+}
+
+/* 响应式调整 */
+@media (max-width: 640px) {
+    #episodeGrid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    #apiSourceSelect {
+        font-size: 0.875rem;
+    }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+    #episodeGrid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+
+@media (min-width: 1025px) {
+    #episodeGrid {
+        grid-template-columns: repeat(8, 1fr);
+    }
+}
+
+/* 滚动条美化 */
+#episodeGrid {
+    scrollbar-width: thin;
+    scrollbar-color: #00ccff #222;
+}
+
+#episodeGrid::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+#episodeGrid::-webkit-scrollbar-track {
+    background: #222;
+    border-radius: 3px;
+}
+
+#episodeGrid::-webkit-scrollbar-thumb {
+    background-color: #00ccff;
+    border-radius: 3px;
+}
