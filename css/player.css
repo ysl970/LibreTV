@@ -266,135 +266,65 @@ input:checked + .slider:before {
 
 /* 资源信息卡片区 */
 #resourceInfoBarContainer {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #232a36 60%, #1c2939 100%); /* 与集数卡片保持一致的背景 */
+  border-radius: 16px;
+  padding: 12px 20px; /* 调整内边距以匹配图片布局 */
   margin-bottom: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-
 .resource-info-bar-left {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #232a36 60%, #1c2939 100%);
-  border-radius: 14px;
-  font-size: 1.15rem;
-  font-weight: 500;
-  color: #fff;
-  min-height: 48px;
-  min-width: 0;
-  box-shadow: 0 2px 8px #0002;
-  padding: 0 20px;
-  border: 2px solid transparent;
-  position: relative;
-  z-index: 1;
+  font-size: 1.1rem; /* 调整字体大小 */
+  font-weight: bold;
+  color: #fff; /* 白色字体 */
+  flex: 1;
 }
-
 .resource-info-bar-videos {
-  font-size: 1.1em;
-  background: var(--ytpptv-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-fill-color: transparent;
-  font-weight: bold;
-  margin-left: 8px;
+  font-size: 1rem; /* 调整字体大小 */
+  font-weight: normal;
+  margin-left: 10px;
+  color: rgba(255, 255, 255, 0.7); /* 稍浅的白色 */
 }
-
-/* 资源切换弹窗样式 */
-.resource-modal-overlay {
-  position: fixed;
-  left: 0; top: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.85);
-  z-index: 9999;
+.resource-switch-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.resource-modal {
-  background: linear-gradient(135deg, #232a36 60%, #1c2939 100%);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  min-width: 320px;
-  max-width: 90vw;
-  padding: 0 0 18px 0;
-  animation: fadeIn 0.2s;
-}
-
-.resource-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px 8px 24px;
-  font-size: 1.1rem;
+  background: none; /* 移除背景 */
+  border: none; /* 移除边框 */
+  color: #a67c2d; /* 恢复原图标颜色 */
   font-weight: bold;
-  color: #fff;
-}
-
-.resource-modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #fff;
+  font-size: 1rem;
   cursor: pointer;
-  border-radius: 50%;
-  width: 32px; height: 32px;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
   transition: background 0.2s;
 }
-
-.resource-modal-close:hover {
-  background: rgba(255,255,255,0.1);
+.resource-switch-btn:hover {
+  background: rgba(255, 255, 255, 0.1); /* 调整悬停背景色 */
 }
-
-.resource-modal-list {
-  padding: 0 24px;
-  max-height: 320px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.resource-switch-btn:active {
+  background: rgba(255, 255, 255, 0.2); /* 调整点击背景色 */
 }
-
-.resource-modal-item {
-  background: rgba(255,255,255,0.1);
-  border-radius: 10px;
-  padding: 12px 18px;
-  font-size: 1rem;
-  color: #fff;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: border 0.2s, background 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.resource-modal-item:hover {
-  border: 2px solid #00ccff;
-  box-shadow: 0 8px 24px #00ccff44;
-  transform: translateY(-2px) scale(1.03);
-}
-
-.resource-modal-item.active {
-  background: var(--ytpptv-gradient);
-  color: #fff;
-  font-weight: bold;
-  border: 2px solid #fff0;
-  box-shadow: 0 6px 24px #00ccff33;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+.resource-switch-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 0; /* 使用gap控制间距 */
+  color: #a67c2d; /* 恢复原图标颜色 */
+  vertical-align: middle;
+  transition: transform 0.3s;
 }
 
 /* 集数卡片区 */
 #episodeCardsContainer {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, 120px); /* 固定宽度120px */
   gap: 18px;
   margin-bottom: 18px;
+  justify-content: flex-start; /* 靠左对齐 */
 }
 .episode-card {
   display: flex;
@@ -454,7 +384,7 @@ input:checked + .slider:before {
     padding: 18px 12px;
   }
   #episodeCardsContainer {
-    grid-template-columns: repeat(auto-fit, minmax(48vw, 1fr));
+    grid-template-columns: repeat(4, 1fr); /* 移动端每行显示4个集数 */
     gap: 10px;
   }
   .episode-card {
