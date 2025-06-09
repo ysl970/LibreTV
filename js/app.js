@@ -591,13 +591,13 @@ function getCustomApiInfo(customApiIndex) {
 
 // 覆盖/增强原search函数，实现自动播放第一个资源
 async function search() {
-    // 密码保护校验
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            showPasswordModal && showPasswordModal();
-            return;
-        }
-    }
+    // 移除密码保护校验，让搜索功能不再需要密码验证
+    // if (window.isPasswordProtected && window.isPasswordVerified) {
+    //     if (window.isPasswordProtected() && !window.isPasswordVerified()) {
+    //         showPasswordModal && showPasswordModal();
+    //         return;
+    //     }
+    // }
     const query = document.getElementById('searchInput').value.trim();
     
     if (!query) {
@@ -1062,13 +1062,13 @@ document.addEventListener('DOMContentLoaded', hookInput);
 
 // 显示详情 - 修改为支持自定义API并直接播放第一集
 async function showDetails(id, vod_name, sourceCode) {
-    // 密码保护校验
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            showPasswordModal && showPasswordModal();
-            return;
-        }
-    }
+    // 移除密码保护校验，让详情查看功能不再需要密码验证
+    // if (window.isPasswordProtected && window.isPasswordVerified) {
+    //     if (window.isPasswordProtected() && !window.isPasswordVerified()) {
+    //         showPasswordModal && showPasswordModal();
+    //         return;
+    //     }
+    // }
     if (!id) {
         showToast('视频ID无效', 'error');
         return;
