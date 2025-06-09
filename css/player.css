@@ -203,19 +203,28 @@ input:checked + .slider:before {
 .switch-resource-btn {
     display: flex;
     align-items: center;
-    background: none;
-    border: none;
-    color: #00ccff;
-    font-weight: bold;
+    background: linear-gradient(135deg, #232a36 60%, #1c2939 100%);
+    border: 2px solid transparent;
+    color: #fff;
+    font-weight: 500;
     font-size: 1rem;
     cursor: pointer;
     gap: 6px;
-    padding: 6px 12px;
-    border-radius: 8px;
-    transition: background 0.2s;
+    padding: 8px 16px;
+    border-radius: 14px;
+    transition: all 0.2s;
 }
 .switch-resource-btn:hover {
-    background: rgba(0, 204, 255, 0.1);
+    border: 2px solid #00ccff;
+    box-shadow: 0 8px 24px #00ccff44;
+    transform: translateY(-2px) scale(1.03);
+}
+.switch-resource-btn:active {
+    background: var(--ytpptv-gradient);
+    color: #fff;
+    font-weight: bold;
+    border: 2px solid #fff0;
+    box-shadow: 0 6px 24px #00ccff33;
 }
 .switch-resource-icon {
     display: inline-block;
