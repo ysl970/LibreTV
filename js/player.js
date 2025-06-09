@@ -1472,7 +1472,7 @@ window.addEventListener('DOMContentLoaded', function () {
     renderResourceSelector();
 });
 
-// 优化后的集数卡片渲染（当前集左侧加播放icon）
+// 优化后的集数卡片渲染（icon只在当前集左侧）
 function renderEpisodeCards() {
     const container = document.getElementById('episodeCardsContainer');
     if (!container) return;
@@ -1487,7 +1487,7 @@ function renderEpisodeCards() {
         const realIndex = window.episodesReversed ? window.currentEpisodes.length - 1 - idx : idx;
         const isActive = realIndex === window.currentEpisodeIndex;
         html += `<div class="episode-card${isActive ? ' active' : ''}" onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集">
-          ${isActive ? '<span class=\"episode-icon\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 22 22\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><circle cx=\"11\" cy=\"11\" r=\"11\" fill=\"#00ccff\"/><polygon points=\"8,6 16,11 8,16\" fill=\"#fff\"/></svg></span>' : ''}
+          ${isActive ? '<span class=\"episode-icon\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"2\" y=\"2\" width=\"16\" height=\"16\" rx=\"3\" fill=\"#00ccff\"/><rect x=\"5\" y=\"5\" width=\"10\" height=\"10\" rx=\"2\" fill=\"#ff3c78\"/></svg></span>' : ''}
           <span class="episode-label">第${realIndex+1}集</span>
         </div>`;
     });
