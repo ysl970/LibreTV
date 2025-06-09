@@ -190,9 +190,13 @@
             </div>
         </div>
 
-        <!-- 资源切换卡片区域（仿图片UI） -->
-        <div class="player-container mb-2" id="resourceSelectorContainer">
-            <!-- 资源卡片、切换按钮、资源信息将由JS动态渲染 -->
+        <!-- 资源信息卡片区（仿图片UI） -->
+        <div class="player-container mb-2" id="resourceInfoBarContainer">
+            <!-- 资源信息卡片、切换按钮、视频数将由JS动态渲染 -->
+        </div>
+        <!-- 集数卡片区（仿图片UI） -->
+        <div class="player-container mb-2" id="episodeCardsContainer">
+            <!-- 集数卡片将由JS动态渲染 -->
         </div>
 
         <!-- 集数导航 -->
@@ -252,16 +256,6 @@
                                 d="M15 11V7a3 3 0 00-6 0v4m-3 4h12v6H6v-6z" />
                         </svg>
                     </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 集数网格 -->
-        <div class="player-container">
-            <div class="episode-grid" id="episodesGrid">
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2" id="episodesList">
-                    <!-- 集数将在这里动态加载 -->
-                    <div class="col-span-full text-center text-gray-400 py-8">加载中...</div>
                 </div>
             </div>
         </div>
