@@ -37,21 +37,21 @@ const AGGREGATED_SEARCH_CONFIG = {
 // API配置
 const API_CONFIG = {
     search: {
-        path: '/?wd=',
-        pagePath: '/?wd={query}&pg={page}',
+        path: '?ac=videolist&wd=',
+        pagePath: '?ac=videolist&wd={query}&pg={page}',
         maxPages: 5, // 最多获取5页
         headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Accept': 'application/json',
-            'Cache-Control': 'no-cache',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'Cache-Control': 'no-cache'
         }
     },
     detail: {
-        path: '/?ac=detail&ids=',
+        path: '?ac=videolist&ids=',
         headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
             'Accept': 'application/json',
-            'Cache-Control': 'no-cache',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'Cache-Control': 'no-cache'
         }
     }
 };
@@ -96,8 +96,12 @@ const SECURITY_CONFIG = {
 const CUSTOM_API_CONFIG = {
     separator: ',',           // 分隔符
     maxSources: 5,            // 最大允许的自定义源数量
-    defaultName: '自定义源',   // 默认名称
-    storageKey: 'customAPIs'  // 存储键名
+    testTimeout: 5000,        // 测试超时时间(毫秒)
+    namePrefix: 'Custom-',    // 自定义源名称前缀
+    validateUrl: true,        // 验证URL格式
+    cacheResults: true,       // 缓存测试结果
+    cacheExpiry: 5184000000,  // 缓存过期时间(2个月)
+    adultPropName: 'isAdult'  // 用于标记成人内容的属性名
 };
 
 // 添加视频历史记录配置
