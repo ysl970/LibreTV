@@ -134,12 +134,20 @@ async function playFirstEpisode(sourceCode, vodId, title) {
             return;
         }
 
-        // 构建播放URL（默认播放第一集）
+        // 获取第一集的播放地址
+        const firstEpisodeUrl = playUrls[0].split('$')[1];
+        if (!firstEpisodeUrl) {
+            showToast('无法获取播放地址');
+            return;
+        }
+
+        // 构建播放URL
         const playUrl = new URL('player.html', window.location.href);
         playUrl.searchParams.set('source_code', sourceCode);
         playUrl.searchParams.set('vod_id', vodId);
         playUrl.searchParams.set('title', title);
-        playUrl.searchParams.set('index', '0'); // 设置播放第一集
+        playUrl.searchParams.set('url', firstEpisodeUrl);
+        playUrl.searchParams.set('index', '0');
 
         // 跳转到播放页面
         window.location.href = playUrl.toString();
