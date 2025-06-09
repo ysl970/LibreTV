@@ -246,3 +246,76 @@ input:checked + .slider:before {
     color: #a67c2d;
     font-weight: bold;
 }
+
+/* 资源切换弹窗样式 */
+.resource-modal-overlay {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.resource-modal {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  min-width: 320px;
+  max-width: 90vw;
+  padding: 0 0 18px 0;
+  animation: fadeIn 0.2s;
+}
+.resource-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px 8px 24px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #222;
+}
+.resource-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #888;
+  cursor: pointer;
+  border-radius: 50%;
+  width: 32px; height: 32px;
+  transition: background 0.2s;
+}
+.resource-modal-close:hover {
+  background: #f3f4f6;
+}
+.resource-modal-list {
+  padding: 0 24px;
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.resource-modal-item {
+  background: #f3f4f6;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 1rem;
+  color: #222;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.resource-modal-item.active, .resource-modal-item:active {
+  border: 2px solid #a67c2d;
+  background: #f5e9d7;
+  color: #a67c2d;
+  font-weight: bold;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
