@@ -1462,9 +1462,9 @@ function renderEpisodeCards() {
         // 真实索引
         const realIndex = window.episodesReversed ? window.currentEpisodes.length - 1 - idx : idx;
         const isActive = realIndex === window.currentEpisodeIndex;
-        html += `<div class="episode-card${isActive ? ' active' : ''}" onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集">
-          ${isActive ? '<span class="episode-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-2-4l4-2-4-2v4z" fill="#00ccff"/></svg></span>' : ''}
-          <span class="episode-label">第${realIndex+1}集</span>
+        html += `<div class="episode-card${isActive ? ' active' : ''}" onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
+          ${isActive ? '<span class="episode-icon" style="margin-right:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="white" stroke-width="1.5"/><path d="M15.4 12.5l-5.8 3.86V8.64l5.8 3.86z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
+          <span class="episode-label">${isActive ? '当前播放: ' : ''}第${realIndex+1}集</span>
         </div>`;
     });
     container.innerHTML = html;
@@ -1633,8 +1633,28 @@ function renderResourceInfoBar() {
     const currentSource = urlParams.get('source_code') || '';
     const currentIndex = parseInt(urlParams.get('index') || '0', 10);
     const title = urlParams.get('title') || document.getElementById('videoTitle').textContent || '';
-    const currentResource = API_SITES[currentSource];
-    const resourceName = currentResource ? currentResource.name : '未知资源';
+    
+    // 获取当前资源名称
+    let resourceName = '未知资源';
+    
+    // 首先尝试从API_SITES获取资源名称
+    if (currentSource && API_SITES[currentSource]) {
+        resourceName = API_SITES[currentSource].name;
+    } 
+    // 如果是自定义API源
+    else if (currentSource && currentSource.startsWith('custom_')) {
+        try {
+            // 尝试从localStorage读取自定义API配置
+            const customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]');
+            const customIndex = parseInt(currentSource.replace('custom_', ''), 10);
+            if (customAPIs[customIndex]) {
+                resourceName = customAPIs[customIndex].name || '自定义资源';
+            }
+        } catch (e) {
+            console.error('获取自定义API信息失败:', e);
+        }
+    }
+    
     // 视频数
     let videoCount = window.currentEpisodes && window.currentEpisodes.length ? window.currentEpisodes.length : 0;
     // HTML结构
