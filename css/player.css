@@ -274,9 +274,10 @@ input:checked + .slider:before {
   background: var(--ytpptv-gradient);
   color: #fff;
   font-weight: bold;
-  border: 2px solid #fff0;
-  box-shadow: 0 6px 24px #00ccff33;
+  border: 2px solid #00ccff;
+  box-shadow: 0 6px 24px #00ccff77;
   z-index: 2;
+  transform: translateY(-2px) scale(1.03);
 }
 .episode-card .episode-label {
   margin-left: 0;
@@ -299,10 +300,41 @@ input:checked + .slider:before {
 /* 移动端适配 */
 @media (max-width: 600px) {
   #resourceInfoBarContainer {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 18px 12px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    gap: 8px;
   }
+  
+  .resource-info-bar-left {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .resource-info-bar-left span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .resource-switch-btn {
+    padding: 6px 8px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .resource-info-bar-videos {
+    margin-left: 6px;
+    font-size: 0.9rem;
+  }
+  
   #episodeCardsContainer {
     grid-template-columns: repeat(4, 1fr); /* 移动端每行显示4个集数，保持不变 */
     gap: 10px;
