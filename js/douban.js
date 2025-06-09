@@ -103,35 +103,77 @@ function updateDoubanVisibility() {
 
 // 加载所有分类内容
 function loadAllCategoryContent() {
-    // 1. 热门电视剧
-    fetchCategoryContent('tv', 'hot', '热门');
+    // 优先加载的内容（首屏可见内容）
+    const priorityLoad = () => {
+        // 1. 热门电影（最受关注）
+        fetchCategoryContent('movie', 'hot', '热门');
+        
+        // 2. 热门电视剧
+        fetchCategoryContent('tv', 'hot', '热门');
+    };
     
-    // 2. 热门综艺
-    fetchCategoryContent('variety', 'hot', '热门');
+    // 第二批加载（稍后加载）
+    const secondaryLoad = () => {
+        // 3. 热门综艺
+        fetchCategoryContent('variety', 'hot', '热门');
+        
+        // 4. 热门动画
+        fetchCategoryContent('movie', 'animation', '动画');
+        
+        // 5. 新片榜单
+        fetchCategoryContent('movie', 'new', '最新');
+    };
     
-    // 3. 热门电影
-    fetchCategoryContent('movie', 'hot', '热门');
+    // 最后加载（用户可能需要滚动才能看到的内容）
+    const finalLoad = () => {
+        // 6. 热门美剧
+        fetchCategoryContent('tv', 'us', '美剧');
+        
+        // 7. 热门港剧
+        fetchCategoryContent('tv', 'hk', '港剧');
+        
+        // 8. 热门韩剧
+        fetchCategoryContent('tv', 'kr', '韩剧');
+        
+        // 9. 热门日剧
+        fetchCategoryContent('tv', 'jp', '日剧');
+        
+        // 10. Top250电影
+        fetchCategoryContent('movie', 'top250', '豆瓣高分');
+    };
+
+    // 立即加载首屏内容
+    priorityLoad();
     
-    // 4. 热门动画
-    fetchCategoryContent('movie', 'animation', '动画');
+    // 100ms后加载第二批
+    setTimeout(secondaryLoad, 100);
     
-    // 5. 新片榜单
-    fetchCategoryContent('movie', 'new', '最新');
-    
-    // 6. 热门美剧
-    fetchCategoryContent('tv', 'us', '美剧');
-    
-    // 7. 热门港剧
-    fetchCategoryContent('tv', 'hk', '港剧');
-    
-    // 8. 热门韩剧
-    fetchCategoryContent('tv', 'kr', '韩剧');
-    
-    // 9. 热门日剧
-    fetchCategoryContent('tv', 'jp', '日剧');
-    
-    // 10. Top250电影
-    fetchCategoryContent('movie', 'top250', '豆瓣高分');
+    // 使用IntersectionObserver检测何时加载剩余内容
+    if ('IntersectionObserver' in window) {
+        // 创建一个观察点，当用户滚动到第二批内容时加载剩余内容
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    finalLoad();
+                    observer.disconnect(); // 只需触发一次
+                }
+            });
+        });
+        
+        // 观察第二批内容的最后一个元素
+        setTimeout(() => {
+            const target = document.querySelector('.douban-movie-new');
+            if (target) {
+                observer.observe(target);
+            } else {
+                // 如果找不到目标元素，延迟加载剩余内容
+                setTimeout(finalLoad, 300);
+            }
+        }, 150);
+    } else {
+        // 不支持IntersectionObserver的浏览器，使用延迟加载
+        setTimeout(finalLoad, 300);
+    }
 }
 
 // 设置"更多"按钮点击事件
@@ -531,34 +573,21 @@ async function fetchCategoryContent(type, category, categoryName) {
 
 // 渲染分类内容
 function renderCategoryContent(data, container) {
+    // 清空容器
+    container.innerHTML = '';
+    
     if (!data || !data.subjects || data.subjects.length === 0) {
         container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">暂无内容</div>';
         return;
     }
     
-    // 清空容器
-    container.innerHTML = '';
+    // 创建一个文档片段，减少DOM操作次数
+    const fragment = document.createDocumentFragment();
     
-    // 渲染每个项目
     data.subjects.forEach(item => {
+        // 创建卡片元素
         const card = document.createElement('div');
         card.className = 'bg-[#111] hover:bg-[#222] transition-all duration-300 rounded-lg overflow-hidden flex flex-col transform hover:scale-105 shadow-md hover:shadow-lg';
-        
-        // 评分显示
-        let ratingHtml = '';
-        if (item.rate && item.rate !== '0') {
-            const rating = parseFloat(item.rate);
-            ratingHtml = `
-                <div class="absolute bottom-2 left-2 bg-black/70 text-yellow-400 px-2 py-1 text-xs font-bold rounded-sm flex items-center h-6">
-                    <span class="text-yellow-400">★</span> ${rating}
-                </div>
-            `;
-        } else {
-            // 为没有评分的项目添加一个占位符，保持卡片高度一致
-            ratingHtml = `
-                <div class="absolute bottom-2 left-2 bg-transparent px-2 py-1 h-6"></div>
-            `;
-        }
         
         // 安全处理标题，防止XSS
         const safeTitle = item.title
@@ -566,11 +595,28 @@ function renderCategoryContent(data, container) {
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
         
+        // 评分处理
+        let ratingHtml = '';
+        if (item.rate && parseFloat(item.rate) > 0) {
+            const rating = parseFloat(item.rate);
+            const ratingClass = rating >= 8 ? 'text-green-500' : (rating >= 6 ? 'text-yellow-500' : 'text-red-500');
+            ratingHtml = `
+                <div class="absolute top-2 right-2 bg-black/70 ${ratingClass} text-xs px-2 py-1 rounded-sm">
+                    ${rating}分
+                </div>
+            `;
+        }
+        
+        // 使用data-src代替src，实现懒加载
+        const thumbnailPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450"%3E%3Crect width="300" height="450" fill="%23333"%3E%3C/rect%3E%3C/svg%3E';
+        
         // 构建卡片HTML
         card.innerHTML = `
             <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                <img src="${item.cover}" alt="${safeTitle}" 
-                    class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                <img src="${thumbnailPlaceholder}" 
+                    data-src="${item.cover}" 
+                    alt="${safeTitle}" 
+                    class="w-full h-full object-cover transition-transform duration-500 hover:scale-110 lazy-image"
                     onerror="this.onerror=null; this.src='${PROXY_URL + encodeURIComponent(item.cover)}'; this.classList.add('object-contain');"
                     loading="lazy" referrerpolicy="no-referrer">
                 <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
@@ -590,9 +636,12 @@ function renderCategoryContent(data, container) {
             </div>
         `;
         
-        // 添加到容器
-        container.appendChild(card);
+        // 添加到文档片段
+        fragment.appendChild(card);
     });
+    
+    // 一次性添加所有元素到DOM
+    container.appendChild(fragment);
     
     // 检查子元素数量，根据屏幕宽度决定何时添加scrollable类
     const isMobile = window.innerWidth <= 767;
@@ -603,13 +652,67 @@ function renderCategoryContent(data, container) {
     } else {
         container.classList.remove('scrollable');
     }
+    
+    // 初始化懒加载
+    initLazyLoading(container);
+}
+
+// 初始化图片懒加载
+function initLazyLoading(container) {
+    if ('IntersectionObserver' in window) {
+        const lazyImageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const lazyImage = entry.target;
+                    lazyImage.src = lazyImage.dataset.src;
+                    lazyImage.classList.remove('lazy-image');
+                    lazyImageObserver.unobserve(lazyImage);
+                    
+                    // 预加载下一个图片（如果有）
+                    const nextImage = lazyImage.parentElement.parentElement.nextElementSibling;
+                    if (nextImage) {
+                        const img = nextImage.querySelector('img.lazy-image');
+                        if (img && img.dataset.src) {
+                            setTimeout(() => {
+                                const preloadImg = new Image();
+                                preloadImg.src = img.dataset.src;
+                            }, 100);
+                        }
+                    }
+                }
+            });
+        });
+        
+        const lazyImages = container.querySelectorAll('img.lazy-image');
+        lazyImages.forEach(lazyImage => {
+            lazyImageObserver.observe(lazyImage);
+        });
+    } else {
+        // 不支持IntersectionObserver的浏览器回退到立即加载
+        const lazyImages = container.querySelectorAll('img.lazy-image');
+        lazyImages.forEach(img => {
+            img.src = img.dataset.src;
+            img.classList.remove('lazy-image');
+        });
+    }
 }
 
 // 从豆瓣API获取数据
+// 添加缓存对象
+const doubanCache = {};
+const CACHE_EXPIRY = 30 * 60 * 1000; // 缓存30分钟
+
 async function fetchDoubanData(url) {
+    // 检查缓存
+    const now = Date.now();
+    if (doubanCache[url] && doubanCache[url].expiry > now) {
+        console.log("从缓存获取豆瓣数据:", url);
+        return doubanCache[url].data;
+    }
+    
     // 添加超时控制
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+    const timeoutId = setTimeout(() => controller.abort(), 6000); // 减少超时时间到6秒
     
     // 设置请求选项，包括信号和头部
     const fetchOptions = {
@@ -630,9 +733,31 @@ async function fetchDoubanData(url) {
             throw new Error(`HTTP error! Status: ${response.status}`);
         }
         
-        return await response.json();
+        const data = await response.json();
+        
+        // 保存到缓存
+        doubanCache[url] = {
+            data: data,
+            expiry: now + CACHE_EXPIRY
+        };
+        
+        return data;
     } catch (err) {
         console.error("豆瓣 API 请求失败（直接代理）：", err);
+        
+        // 如果是超时错误，尝试从localStorage获取
+        const cacheKey = `douban_${url.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        
+        if (cachedData) {
+            try {
+                console.log("从localStorage恢复豆瓣数据:", url);
+                const parsedData = JSON.parse(cachedData);
+                return parsedData;
+            } catch (e) {
+                console.error("解析缓存数据失败:", e);
+            }
+        }
         
         // 失败后尝试备用方法：作为备选
         const fallbackUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
@@ -648,7 +773,16 @@ async function fetchDoubanData(url) {
             
             // 解析原始内容
             if (data && data.contents) {
-                return JSON.parse(data.contents);
+                const parsedData = JSON.parse(data.contents);
+                
+                // 保存到localStorage作为备用缓存
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify(parsedData));
+                } catch (e) {
+                    console.error("保存到localStorage失败:", e);
+                }
+                
+                return parsedData;
             } else {
                 throw new Error("无法获取有效数据");
             }
