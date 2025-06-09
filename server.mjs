@@ -120,11 +120,12 @@ function isValidUrl(urlString) {
 app.get('/proxy/:encodedUrl', async (req, res) => {
     try {
         const targetUrl = decodeURIComponent(req.params.encodedUrl);
-        console.log('Proxy request:', targetUrl);
+        console.log('代理请求:', targetUrl);
         
         // 验证URL
         if (!isValidUrl(targetUrl)) {
-            throw new Error('Invalid URL');
+            console.error('无效的URL:', targetUrl);
+            throw new Error('无效的URL');
         }
 
         // 获取请求头
@@ -136,20 +137,27 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
             'Pragma': 'no-cache'
         };
 
+        console.log('请求头:', headers);
+
         // 添加重试机制
         let retries = 0;
         const maxRetries = config.maxRetries;
         
         while (retries <= maxRetries) {
             try {
+                console.log(`尝试请求 (${retries + 1}/${maxRetries + 1}):`, targetUrl);
+                
                 // 发送请求
                 const response = await fetch(targetUrl, { 
                     headers,
                     timeout: config.timeout
                 });
                 
+                console.log('响应状态:', response.status);
+                console.log('响应头:', Object.fromEntries(response.headers.entries()));
+
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`HTTP错误: ${response.status}`);
                 }
 
                 // 设置响应头
@@ -163,19 +171,24 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
                 response.body.pipe(res);
                 return;
             } catch (error) {
+                console.error(`请求失败 (${retries + 1}/${maxRetries + 1}):`, error);
+                
                 if (retries === maxRetries) {
                     throw error;
                 }
+                
                 retries++;
-                console.log(`Retry ${retries}/${maxRetries} for ${targetUrl}`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+                const delay = 1000 * retries;
+                console.log(`等待 ${delay}ms 后重试...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
     } catch (error) {
-        console.error('Proxy error:', error);
+        console.error('代理错误:', error);
         res.status(500).json({
-            error: 'Proxy request failed',
-            message: error.message
+            error: '代理请求失败',
+            message: error.message,
+            details: error.stack
         });
     }
 });
