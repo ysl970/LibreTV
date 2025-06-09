@@ -184,92 +184,12 @@ input:checked + .slider:before {
     }
 }
 
-/* 资源选择卡片区域样式 */
-.resource-selector-bar {
-    display: flex;
-    align-items: center;
-    background: #f3f4f6;
-    border-radius: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    padding: 12px 20px;
-    margin-bottom: 32px; /* 增大下方间距，防止重叠 */
-    gap: 16px;
-}
-.resource-info {
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: #222;
-    flex: 1;
-}
-.switch-resource-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #232a36 60%, #1c2939 100%);
-    border-radius: 14px;
-    font-size: 1.15rem;
-    font-weight: 500;
-    color: #fff;
-    min-height: 48px;
-    min-width: 120px;
-    box-shadow: 0 2px 8px #0002;
-    cursor: pointer;
-    transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
-    user-select: none;
-    border: 2px solid transparent;
-    position: relative;
-    z-index: 1;
-    padding: 0 20px;
-}
-.switch-resource-btn:hover {
-    border: 2px solid #00ccff;
-    box-shadow: 0 8px 24px #00ccff44;
-    transform: translateY(-2px) scale(1.03);
-}
-.switch-resource-btn:active {
-    background: var(--ytpptv-gradient);
-    color: #fff;
-    font-weight: bold;
-    border: 2px solid #fff0;
-    box-shadow: 0 6px 24px #00ccff33;
-    z-index: 2;
-}
-.switch-resource-icon {
-    width: 20px;
-    height: 20px;
-    margin-right: 8px;
-    color: #fff;
-    transition: transform 0.3s;
-}
-.resource-card-list {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-}
-.resource-card {
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-    padding: 8px 18px;
-    font-size: 1rem;
-    color: #222;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: border 0.2s, background 0.2s;
-}
-.resource-card.active, .resource-card:active {
-    border: 2px solid #a67c2d;
-    background: #f5e9d7;
-    color: #a67c2d;
-    font-weight: bold;
-}
-
 /* 资源信息卡片区 */
 #resourceInfoBarContainer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #232a36 60%, #1c2939 100%); /* 与集数卡片保持一致的背景 */
+  background: #f3f4f6; /* 浅灰色背景，与图片一致 */
   border-radius: 16px;
   padding: 12px 20px; /* 调整内边距以匹配图片布局 */
   margin-bottom: 18px;
@@ -280,14 +200,14 @@ input:checked + .slider:before {
   align-items: center;
   font-size: 1.1rem; /* 调整字体大小 */
   font-weight: bold;
-  color: #fff; /* 白色字体 */
+  color: #222; /* 深色字体，与图片一致 */
   flex: 1;
 }
 .resource-info-bar-videos {
   font-size: 1rem; /* 调整字体大小 */
   font-weight: normal;
   margin-left: 10px;
-  color: rgba(255, 255, 255, 0.7); /* 稍浅的白色 */
+  color: #666; /* 稍浅的深色，与图片一致 */
 }
 .resource-switch-btn {
   display: flex;
@@ -304,10 +224,10 @@ input:checked + .slider:before {
   transition: background 0.2s;
 }
 .resource-switch-btn:hover {
-  background: rgba(255, 255, 255, 0.1); /* 调整悬停背景色 */
+  background: #f5e9d7; /* 调整悬停背景色 */
 }
 .resource-switch-btn:active {
-  background: rgba(255, 255, 255, 0.2); /* 调整点击背景色 */
+  background: #f5e9d7; /* 调整点击背景色 */
 }
 .resource-switch-icon {
   width: 20px;
@@ -321,7 +241,7 @@ input:checked + .slider:before {
 /* 集数卡片区 */
 #episodeCardsContainer {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 120px); /* 固定宽度120px */
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* 允许集数卡片均匀拉伸以填充可用空间，实现左右对齐 */
   gap: 18px;
   margin-bottom: 18px;
   justify-content: flex-start; /* 靠左对齐 */
@@ -384,7 +304,7 @@ input:checked + .slider:before {
     padding: 18px 12px;
   }
   #episodeCardsContainer {
-    grid-template-columns: repeat(4, 1fr); /* 移动端每行显示4个集数 */
+    grid-template-columns: repeat(4, 1fr); /* 移动端每行显示4个集数，保持不变 */
     gap: 10px;
   }
   .episode-card {
@@ -409,26 +329,27 @@ input:checked + .slider:before {
   }
 }
 
-/* 资源切换弹窗优化 */
-#resourceModal {
-  background: rgba(20,24,32,0.85);
-  z-index: 1000;
+/* 资源切换弹窗样式 */
+.resource-modal-overlay {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 99999; /* 确保在最上层 */
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s;
 }
 .resource-modal {
   background: linear-gradient(135deg, #232a36 60%, #1c2939 100%);
   border-radius: 16px;
-  box-shadow: 0 8px 32px #0008;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   min-width: 320px;
-  max-width: 96vw;
-  padding: 0 0 12px 0;
+  max-width: 90vw;
+  padding: 0 0 18px 0;
   animation: fadeInModal 0.25s;
 }
 @keyframes fadeInModal {
-  from { opacity: 0; transform: translateY(40px); }
+  from { opacity: 0; transform: none; } /* 确保弹窗在动画开始时位于正确居中位置 */
   to { opacity: 1; transform: none; }
 }
 .resource-modal-header {
