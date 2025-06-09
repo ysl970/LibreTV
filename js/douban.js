@@ -961,3 +961,45 @@ window.addEventListener('resize', function() {
         }
     });
 });
+
+// 处理豆瓣推荐内容点击事件
+function handleDoubanItemClick(title) {
+    if (!title) return;
+    
+    // 获取所有启用的API
+    const enabledAPIs = Object.entries(API_SITES)
+        .filter(([_, site]) => site.enabled && !site.adult)
+        .map(([code, _]) => code);
+    
+    if (enabledAPIs.length === 0) {
+        showToast('请先在设置中启用至少一个数据源');
+        return;
+    }
+    
+    // 构建搜索URL
+    const searchParams = new URLSearchParams({
+        keyword: title,
+        apis: enabledAPIs.join(',')
+    });
+    
+    // 跳转到搜索结果页
+    window.location.href = `search.html?${searchParams.toString()}`;
+}
+
+// 渲染豆瓣推荐内容
+function renderDoubanContent(items) {
+    const container = document.getElementById('doubanContent');
+    if (!container) return;
+    
+    container.innerHTML = items.map(item => `
+        <div class="douban-item" onclick="handleDoubanItemClick('${item.title}')">
+            <div class="douban-item-poster">
+                <img src="${item.poster}" alt="${item.title}" loading="lazy">
+            </div>
+            <div class="douban-item-info">
+                <h3 class="douban-item-title">${item.title}</h3>
+                <div class="douban-item-rating">${item.rating}</div>
+            </div>
+        </div>
+    `).join('');
+}
