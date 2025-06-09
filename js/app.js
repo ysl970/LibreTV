@@ -739,15 +739,29 @@ async function search() {
             }
         });
         
-        hideLoading();
+        // 更新搜索结果计数
+        const searchResultsCount = document.getElementById('searchResultsCount');
+        if (searchResultsCount) {
+            searchResultsCount.textContent = allResults.length;
+        }
+        
+        // 显示结果区域，调整搜索区域
+        document.getElementById('searchArea').classList.remove('flex-1');
+        document.getElementById('searchArea').classList.add('mb-8');
+        document.getElementById('resultsArea').classList.remove('hidden');
+        
+        // 隐藏豆瓣推荐区域（如果存在）
+        const doubanArea = document.getElementById('doubanArea');
+        if (doubanArea) {
+            doubanArea.classList.add('hidden');
+            // 不需要清空内容，只需隐藏
+        }
+        
+        const resultsDiv = document.getElementById('results');
         
         // 如果没有结果
         if (!allResults || allResults.length === 0) {
-            document.getElementById('searchArea').classList.remove('flex-1');
-            document.getElementById('searchArea').classList.add('mb-8');
-            const resultsArea = document.getElementById('resultsArea');
-            resultsArea.classList.remove('hidden');
-            resultsArea.innerHTML = `
+            resultsDiv.innerHTML = `
                 <div class="col-span-full text-center py-16">
                     <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -757,60 +771,116 @@ async function search() {
                     <p class="mt-1 text-sm text-gray-500">请尝试其他关键词或更换数据源</p>
                 </div>
             `;
+            hideLoading();
             return;
         }
 
-        // --- 新的播放流程 ---
-
-        // 1. 获取第一个结果的名称
-        const firstResultName = allResults[0].vod_name;
-
-        // 2. 筛选出所有同名结果作为播放源
-        const sourceList = allResults.filter(r => r.vod_name === firstResultName);
-        
-        // 3. 默认播放第一个源
-        const primaryResult = sourceList[0];
-        
-        showLoading('正在准备播放...');
-
-        // 4. 获取视频详情和剧集列表
-        let detailUrl;
-        const sourceCode = primaryResult.source_code;
-        const vodId = primaryResult.vod_id;
-        let apiUrl = sourceCode.startsWith('custom_')
-            ? getCustomApiInfo(sourceCode.replace('custom_', ''))?.url
-            : API_SITES[sourceCode]?.api;
-
-        if (!apiUrl) {
-            throw new Error(`未找到 API: ${sourceCode}`);
-        }
-        detailUrl = `${apiUrl}${API_CONFIG.detail.path.replace('{ids}', vodId)}`;
-
-        const detailResponse = await fetch(`${PROXY_URL}${encodeURIComponent(detailUrl)}`);
-        if (!detailResponse.ok) throw new Error('无法获取视频详情');
-
-        const detailData = await detailResponse.json();
-        const videoDetail = detailData?.list?.[0];
-        if (!videoDetail?.vod_play_url) throw new Error('未找到可播放的剧集');
-
-        const playSources = videoDetail.vod_play_url.split('$$$');
-        const mainSourceEpisodes = playSources[0].split('#');
-        const firstEpisodeUrl = mainSourceEpisodes[0].split('$')[1];
-        if (!firstEpisodeUrl) throw new Error('无法解析播放地址');
-
-        // 将获取到的详情附加到源列表中
-        const primarySourceIndex = sourceList.findIndex(s => s.source_code === primaryResult.source_code && s.vod_id === primaryResult.vod_id);
-        if (primarySourceIndex !== -1) {
-            sourceList[primarySourceIndex].detail = videoDetail;
+        // 有搜索结果时，才更新URL
+        try {
+            // 使用URI编码确保特殊字符能够正确显示
+            const encodedQuery = encodeURIComponent(query);
+            // 使用HTML5 History API更新URL，不刷新页面
+            window.history.pushState(
+                { search: query }, 
+                `搜索: ${query} - YTPPTV`, 
+                `/s=${encodedQuery}`
+            );
+            // 更新页面标题
+            document.title = `搜索: ${query} - YTPPTV`;
+        } catch (e) {
+            console.error('更新浏览器历史失败:', e);
+            // 如果更新URL失败，继续执行搜索
         }
 
-        // 5. 调用播放函数，并传递播放源列表
-        playVideo(firstEpisodeUrl, primaryResult.vod_name, primaryResult.source_code, 0, primaryResult.vod_id, sourceList);
+        // 处理搜索结果过滤：如果启用了黄色内容过滤，则过滤掉分类含有敏感内容的项目
+        const yellowFilterEnabled = localStorage.getItem('yellowFilterEnabled') === 'true';
+        if (yellowFilterEnabled) {
+            const banned = ['伦理片','福利','里番动漫','门事件','萝莉少女','制服诱惑','国产传媒','cosplay','黑丝诱惑','无码','日本无码','有码','日本有码','SWAG','网红主播', '色情片','同性片','福利视频','福利片'];
+            allResults = allResults.filter(item => {
+                const typeName = item.type_name || '';
+                return !banned.some(keyword => typeName.includes(keyword));
+            });
+        }
 
+        // 添加XSS保护，使用textContent和属性转义
+        const safeResults = allResults.map(item => {
+            const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
+            const safeName = (item.vod_name || '').toString()
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+            const sourceInfo = item.source_name ? 
+                `<span class="bg-[#222] text-xs px-1.5 py-0.5 rounded-full">${item.source_name}</span>` : '';
+            const sourceCode = item.source_code || '';
+            
+            // 添加API URL属性，用于详情获取
+            const apiUrlAttr = item.api_url ? 
+                `data-api-url="${item.api_url.replace(/"/g, '&quot;')}"` : '';
+            
+            // 修改为水平卡片布局，图片在左侧，文本在右侧，并优化样式
+            const hasCover = item.vod_pic && item.vod_pic.startsWith('http');
+            
+            return `
+                <div class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md" 
+                     onclick="showDetails('${safeId}','${safeName}','${sourceCode}')" ${apiUrlAttr}>
+                    <div class="flex h-full">
+                        ${hasCover ? `
+                        <div class="relative flex-shrink-0 search-card-img-container">
+                            <img src="${item.vod_pic}" alt="${safeName}" 
+                                 class="h-full w-full object-cover transition-transform hover:scale-110" 
+                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/300x450?text=无封面'; this.classList.add('object-contain');" 
+                                 loading="lazy">
+                            <div class="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent"></div>
+                        </div>` : ''}
+                        
+                        <div class="p-2 flex flex-col flex-grow">
+                            <div class="flex-grow">
+                                <h3 class="font-semibold mb-2 break-words line-clamp-2 ${hasCover ? '' : 'text-center'}" title="${safeName}">${safeName}</h3>
+                                
+                                <div class="flex flex-wrap ${hasCover ? '' : 'justify-center'} gap-1 mb-2">
+                                    ${(item.type_name || '').toString().replace(/</g, '&lt;') ? 
+                                      `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300">
+                                          ${(item.type_name || '').toString().replace(/</g, '&lt;')}
+                                      </span>` : ''}
+                                    ${(item.vod_year || '') ? 
+                                      `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300">
+                                          ${item.vod_year}
+                                      </span>` : ''}
+                                </div>
+                                <p class="text-gray-400 line-clamp-2 overflow-hidden ${hasCover ? '' : 'text-center'} mb-2">
+                                    ${(item.vod_remarks || '暂无介绍').toString().replace(/</g, '&lt;')}
+                                </p>
+                            </div>
+                            
+                            <div class="flex justify-between items-center mt-1 pt-1 border-t border-gray-800">
+                                ${sourceInfo ? `<div>${sourceInfo}</div>` : '<div></div>'}
+                                <!-- 接口名称过长会被挤变形
+                                <div>
+                                    <span class="text-gray-500 flex items-center hover:text-blue-400 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        </svg>
+                                        播放
+                                    </span>
+                                </div>
+                                -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        resultsDiv.innerHTML = safeResults;
     } catch (error) {
-        console.error('搜索或播放准备错误:', error);
+        console.error('搜索错误:', error);
+        if (error.name === 'AbortError') {
+            showToast('搜索请求超时，请检查网络连接', 'error');
+        } else {
+            showToast('搜索请求失败，请稍后重试', 'error');
+        }
+    } finally {
         hideLoading();
-        showToast(error.message || '搜索或播放失败', 'error');
     }
 }
 
@@ -984,18 +1054,13 @@ async function showDetails(id, vod_name, sourceCode) {
 }
 
 // 更新播放视频函数，修改为使用/watch路径而不是直接打开player.html
-function playVideo(url, vod_name, sourceCode, episodeIndex = 0, vodId = '', sourceList = []) {
+function playVideo(url, vod_name, sourceCode, episodeIndex = 0, vodId = '') {
     // 获取当前路径作为返回页面
     let currentPath = window.location.href;
     
     // 构建播放页面URL，使用watch.html作为中间跳转页
     let watchUrl = `watch.html?id=${vodId || ''}&source=${sourceCode || ''}&url=${encodeURIComponent(url)}&index=${episodeIndex}&title=${encodeURIComponent(vod_name || '')}`;
     
-    // 将 sourceList 编码后添加到 URL
-    if (sourceList && sourceList.length > 0) {
-        watchUrl += `&sourceList=${encodeURIComponent(JSON.stringify(sourceList))}`;
-    }
-
     // 添加返回URL参数
     if (currentPath.includes('index.html') || currentPath.endsWith('/')) {
         watchUrl += `&back=${encodeURIComponent(currentPath)}`;
