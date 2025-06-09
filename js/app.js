@@ -922,16 +922,23 @@ function handlePlayerError() {
 }
 
 // 辅助函数用于渲染剧集按钮（使用当前的排序状态）
-function renderEpisodes(vodName, sourceCode, vodId) {
-    const episodes = episodesReversed ? [...currentEpisodes].reverse() : currentEpisodes;
-    return episodes.map((episode, index) => {
-        // 根据倒序状态计算真实的剧集索引
-        const realIndex = episodesReversed ? currentEpisodes.length - 1 - index : index;
+function renderEpisodes(title, sourceCode, vodId) {
+    if (!title || !sourceCode || !vodId) return '';
+    
+    // 获取当前视频的剧集列表
+    const episodes = window.currentEpisodes || [];
+    if (!episodes.length) return '';
+    
+    // 根据排序状态处理剧集列表
+    const sortedEpisodes = episodesReversed ? [...episodes].reverse() : [...episodes];
+    
+    return sortedEpisodes.map((episode, index) => {
+        const isActive = index === parseInt(window.location.search.split('index=')[1] || '0');
         return `
-            <button id="episode-${realIndex}" onclick="playVideo('${episode}','${vodName.replace(/"/g, '&quot;')}', '${sourceCode}', ${realIndex}, '${vodId}')" 
-                    class="px-4 py-2 bg-[#222] hover:bg-[#333] border border-[#333] rounded-lg transition-colors text-center episode-btn">
-                ${realIndex + 1}
-            </button>
+            <div class="episode-card ${isActive ? 'active' : ''}" 
+                 onclick="playVideo('${sourceCode}', '${vodId}', '${title}', ${index})">
+                <span class="episode-label">${episode.label || `第${index + 1}集`}</span>
+            </div>
         `;
     }).join('');
 }
