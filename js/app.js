@@ -592,30 +592,130 @@ function getCustomApiInfo(customApiIndex) {
 // 覆盖/增强原search函数，实现自动播放第一个资源
 async function search() {
     const query = document.getElementById('searchInput').value.trim();
-    if (!query) return;
-    // 默认用第一个API源
-    const apiKeys = Object.keys(API_SITES).filter(key => !API_SITES[key].adult);
-    const firstApiKey = apiKeys[0];
-    if (!firstApiKey) return;
-    const api = API_SITES[firstApiKey];
-    const url = api.api + API_CONFIG.search.path + encodeURIComponent(query);
-    try {
-        const resp = await fetch('/proxy/' + encodeURIComponent(url));
-        const data = await resp.json();
-        if (data && data.list && data.list.length > 0) {
-            // 默认选第一个资源的第一集
-            const first = data.list[0];
-            const playUrls = (first.vod_play_url && typeof first.vod_play_url === 'string') ?
-                first.vod_play_url.split('#').map((s, i) => ({ url: s.split('$')[1] || '', name: s.split('$')[0] || `第${i+1}集` })) : [];
-            if (playUrls.length > 0) {
-                window.location.href = `player.html?url=${encodeURIComponent(playUrls[0].url)}&title=${encodeURIComponent(first.vod_name || first.name || query)}&source_code=${firstApiKey}&index=0`;
-            return;
-        }
-        }
-        showToast('未找到可播放资源', 'warning');
-        } catch (e) {
-        showToast('搜索失败', 'error');
+    if (!query) {
+        showToast('请输入搜索内容', 'warning');
+        return;
     }
+
+    saveSearchHistory(query);
+    showLoading('正在搜索...');
+    resetSearchArea();
+    document.getElementById('doubanArea').classList.add('hidden'); // 隐藏豆瓣推荐
+
+    const selectedApiKeys = getSelectedAPIs();
+    if (selectedApiKeys.length === 0) {
+        hideLoading();
+        showToast('请至少选择一个数据源', 'warning');
+        return;
+    }
+
+    try {
+        // 修改为使用代理路径
+        const response = await fetch(`/proxy/${encodeURIComponent(API_SITES[selectedApiKeys[0]].api + API_CONFIG.search.path + encodeURIComponent(query))}`);
+        const data = await response.json();
+
+        hideLoading();
+
+        if (data.code === 200 && data.list && data.list.length > 0) {
+            showResultsModal('搜索结果'); // 显示模态框并设置标题
+            renderSearchResults(data.list); // 渲染搜索结果
+        } else {
+            showToast(data.msg || '未找到相关视频', 'info');
+        }
+    } catch (error) {
+        hideLoading();
+        showToast('搜索失败，请稍后重试', 'error');
+        console.error('搜索失败:', error);
+    }
+}
+
+// 新增：显示搜索结果模态框
+function showResultsModal(title) {
+    const modal = document.getElementById('resultsModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const searchResultsList = document.getElementById('searchResultsList');
+    const episodesSelectionList = document.getElementById('episodesSelectionList');
+
+    modalTitle.textContent = title;
+    searchResultsList.innerHTML = ''; // 清空之前的结果
+    episodesSelectionList.innerHTML = ''; // 清空之前的集数
+    searchResultsList.classList.remove('hidden');
+    episodesSelectionList.classList.add('hidden');
+    modal.classList.remove('hidden');
+}
+
+// 新增：关闭搜索结果模态框
+function closeResultsModal() {
+    document.getElementById('resultsModal').classList.add('hidden');
+}
+
+// 新增：渲染搜索结果列表
+function renderSearchResults(results) {
+    const listContainer = document.getElementById('searchResultsList');
+    listContainer.innerHTML = results.map(item => `
+        <div class="search-result-item bg-[#222] p-3 rounded-lg shadow-md cursor-pointer hover:bg-[#333] transition-colors"
+             data-id="${item.vod_id}" data-source="${item.source_code}" data-title="${item.vod_name}" data-custom-api="${item.api_url || ''}">
+            <h4 class="text-white font-bold truncate">${item.vod_name}</h4>
+            <p class="text-gray-400 text-sm truncate">${item.type_name || '未知类型'} · ${item.vod_year || '未知年份'}</p>
+            <p class="text-gray-500 text-xs mt-1">来源: ${item.source_name}</p>
+        </div>
+    `).join('');
+
+    listContainer.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const resource = {
+                id: this.dataset.id,
+                sourceCode: this.dataset.source,
+                title: this.dataset.title,
+                customApi: this.dataset.customApi
+            };
+            handleResourceSelection(resource);
+        });
+    });
+}
+
+// 新增：处理搜索结果项选择
+async function handleResourceSelection(resource) {
+    showLoading('正在获取剧集信息...');
+    const searchResultsList = document.getElementById('searchResultsList');
+    const episodesSelectionList = document.getElementById('episodesSelectionList');
+    const modalTitle = document.getElementById('modalTitle');
+
+    try {
+        let apiUrl = `/api/detail?id=${encodeURIComponent(resource.id)}&source=${encodeURIComponent(resource.sourceCode)}`;
+        if (resource.customApi) {
+            apiUrl += `&customApi=${encodeURIComponent(resource.customApi)}`;
+        }
+
+        const response = await fetch(apiUrl);
+        const data = await response.json();
+
+        hideLoading();
+
+        if (data.code === 200 && data.episodes && data.episodes.length > 0) {
+            modalTitle.textContent = resource.title; // 更新模态框标题为视频名称
+            searchResultsList.classList.add('hidden');
+            episodesSelectionList.classList.remove('hidden');
+            renderEpisodesList(data.episodes, data.videoInfo); // 渲染集数列表
+        } else {
+            showToast(data.msg || '未找到该视频的剧集信息', 'info');
+        }
+    } catch (error) {
+        hideLoading();
+        showToast('获取剧集信息失败，请稍后重试', 'error');
+        console.error('获取剧集信息失败:', error);
+    }
+}
+
+// 新增：渲染集数列表
+function renderEpisodesList(episodes, videoInfo) {
+    const listContainer = document.getElementById('episodesSelectionList');
+    listContainer.innerHTML = episodes.map((url, index) => `
+        <button class="episode-select-btn bg-[#222] p-3 rounded-lg shadow-md text-white cursor-pointer hover:bg-[#333] transition-colors"
+                onclick="playVideo('${url}', '${videoInfo.title.replace(/'/g, '\'')}', '${videoInfo.source_code}', ${index}, '${videoInfo.vod_id || ''}')">
+            第${index + 1}集
+        </button>
+    `).join('');
 }
 
 // 切换清空按钮的显示状态
