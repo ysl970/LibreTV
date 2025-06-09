@@ -95,6 +95,7 @@ Artplayer.FULLSCREEN_WEB_IN_BODY = true;
 document.addEventListener('DOMContentLoaded', function () {
     // 移除密码验证检查，直接初始化页面内容
     initializePageContent();
+    renderResourceSelector();
 });
 
 // 初始化页面内容
@@ -1432,4 +1433,40 @@ function closeEmbeddedPlayer() {
         console.error('尝试关闭嵌入式播放器失败:', e);
     }
     return false;
+}
+
+// 渲染资源选择框
+function renderResourceSelector() {
+    if (typeof API_SITES === 'undefined') return;
+    const container = document.getElementById('resourceSelectorContainer');
+    if (!container) return;
+
+    // 获取当前source_code
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentSource = urlParams.get('source_code') || '';
+
+    // 过滤掉adult资源
+    const resourceOptions = Object.entries(API_SITES)
+        .filter(([key, val]) => !val.adult)
+        .map(([key, val]) => ({ key, name: val.name }));
+
+    let html = '<label for="resourceSelector" style="margin-right:8px;">切换资源：</label>';
+    html += '<select id="resourceSelector" class="px-2 py-1 border rounded">';
+    resourceOptions.forEach(opt => {
+        html += `<option value="${opt.key}" ${opt.key === currentSource ? 'selected' : ''}>${opt.name}</option>`;
+    });
+    html += '</select>';
+    container.innerHTML = html;
+
+    // 监听切换
+    const selector = document.getElementById('resourceSelector');
+    selector.addEventListener('change', function(e) {
+        const newSource = e.target.value;
+        // 保持当前集数索引
+        const url = new URL(window.location.href);
+        url.searchParams.set('source_code', newSource);
+        // 可选：如不同源集数数目不同，可重置index为0
+        // url.searchParams.set('index', 0);
+        window.location.href = url.toString();
+    });
 }
