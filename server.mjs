@@ -6,11 +6,16 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import { createRequire } from 'module';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
+
+// 导入共享的API站点配置
+const API_SITES = require('./js/api-sites.js');
 
 const config = {
   port: process.env.PORT || 8080,
@@ -146,34 +151,34 @@ app.use('/proxy', async (req, res) => {
 
         while (retries <= config.maxRetries) {
             try {
-        // 设置超时
-        const controller = new AbortController();
+                // 设置超时
+                const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), config.timeout);
 
                 console.log(`Attempt ${retries + 1} for ${targetUrl}`); // 添加重试日志
 
-        const response = await fetch(targetUrl, {
-            headers,
-            signal: controller.signal
-        });
+                const response = await fetch(targetUrl, {
+                    headers,
+                    signal: controller.signal
+                });
 
-        clearTimeout(timeoutId);
+                clearTimeout(timeoutId);
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
-        const contentType = response.headers.get('content-type');
+                const contentType = response.headers.get('content-type');
                 console.log('Response content-type:', contentType); // 添加响应类型日志
 
-        if (contentType && contentType.includes('application/json')) {
-            const data = await response.json();
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
                     console.log('Response data:', data); // 添加响应数据日志
                     return res.json(data);
-        } else {
-            const text = await response.text();
+                } else {
+                    const text = await response.text();
                     return res.send(text);
-        }
+                }
             } catch (error) {
                 lastError = error;
                 console.error(`Attempt ${retries + 1} failed:`, error); // 添加错误日志
@@ -198,6 +203,27 @@ app.use('/proxy', async (req, res) => {
     }
 });
 
+// 辅助函数：直接发送代理请求
+async function sendProxyRequest(url, headers = {}) {
+    const proxyUrl = `/proxy/${encodeURIComponent(url)}`;
+    
+    // 构建完整URL（使用相对路径方式）
+    const response = await fetch(url, {
+        headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache',
+            'User-Agent': config.userAgent,
+            ...headers
+        }
+    });
+    
+    if (!response.ok) {
+        throw new Error(`API请求失败: ${response.status}`);
+    }
+    
+    return await response.json();
+}
+
 // 添加API路由处理
 app.get('/api/search', async (req, res) => {
     try {
@@ -208,94 +234,6 @@ app.get('/api/search', async (req, res) => {
         if (!searchQuery) {
             return res.status(400).json({ code: 400, msg: '缺少搜索参数' });
         }
-        
-        // 验证API源
-        const API_SITES = {
-            heimuer: {
-                api: 'https://json.heimuer.xyz/api.php/provide/vod',
-                name: '黑木耳',
-                detail: 'https://heimuer.tv', 
-            },
-            dyttzy:  {
-                api: 'http://caiji.dyttzyapi.com/api.php/provide/vod',
-                name: '电影天堂资源',
-                detail: 'http://caiji.dyttzyapi.com', 
-            },
-            ruyi: {
-                api: 'https://cj.rycjapi.com/api.php/provide/vod',
-                name: '如意资源',
-            },
-            bfzy: {
-                api: 'https://bfzyapi.com/api.php/provide/vod',
-                name: '暴风资源',
-            },
-            tyyszy: {
-                api: 'https://tyyszy.com/api.php/provide/vod',
-                name: '天涯资源',
-            },
-            ffzy: {
-                api: 'http://ffzy5.tv/api.php/provide/vod',
-                name: '非凡影视',
-                detail: 'http://ffzy5.tv', 
-            },
-            zy360: {
-                api: 'https://360zy.com/api.php/provide/vod',
-                name: '360资源',
-            },
-            iqiyi: {
-                api: 'https://www.iqiyizyapi.com/api.php/provide/vod',
-                name: 'iqiyi资源',
-            },
-            wolong: {
-                api: 'https://wolongzyw.com/api.php/provide/vod',
-                name: '卧龙资源',
-            },
-            hwba: {
-                api: 'https://cjhwba.com/api.php/provide/vod',
-                name: '华为吧资源',
-            },
-            jisu: {
-                api: 'https://jszyapi.com/api.php/provide/vod',
-                name: '极速资源',
-                detail: 'https://jszyapi.com', 
-            },
-            dbzy: {
-                api: 'https://dbzy.com/api.php/provide/vod',
-                name: '豆瓣资源',
-            },
-            mozhua: {
-                api: 'https://mozhuazy.com/api.php/provide/vod',
-                name: '魔爪资源',
-            },
-            mdzy: {
-                api: 'https://www.mdzyapi.com/api.php/provide/vod',
-                name: '魔都资源',
-            },
-            zuid: {
-                api: 'https://api.zuidapi.com/api.php/provide/vod',
-                name: '最大资源'
-            },
-            yinghua: {
-                api: 'https://m3u8.apiyhzy.com/api.php/provide/vod',
-                name: '樱花资源'
-            },
-            baidu: {
-                api: 'https://api.apibdzy.com/api.php/provide/vod',
-                name: '百度云资源'
-            },
-            wujin: {
-                api: 'https://api.wujinapi.me/api.php/provide/vod',
-                name: '无尽资源'
-            },
-            wwzy: {
-                api: 'https://wwzy.tv/api.php/provide/vod',
-                name: '旺旺短剧'
-            },
-            ikun: {
-                api: 'https://ikunzyapi.com/api.php/provide/vod',
-                name: 'iKun资源'
-            }
-        };
         
         if (source === 'custom' && !customApi) {
             return res.status(400).json({ code: 400, msg: '使用自定义API时必须提供API地址' });
@@ -312,41 +250,45 @@ app.get('/api/search', async (req, res) => {
         
         console.log('Search API URL:', apiUrl);
         
-        // 使用代理请求API
-        const proxyUrl = `/proxy/${encodeURIComponent(apiUrl)}`;
-        const proxyResponse = await fetch(`http://localhost:${config.port}${proxyUrl}`, {
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache',
-                'User-Agent': config.userAgent
+        try {
+            // 使用代理请求API
+            const response = await fetch(apiUrl, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'User-Agent': config.userAgent
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status}`);
             }
-        });
-        
-        if (!proxyResponse.ok) {
-            throw new Error(`API请求失败: ${proxyResponse.status}`);
-        }
-        
-        const data = await proxyResponse.json();
-        
-        // 检查JSON格式的有效性
-        if (!data || !Array.isArray(data.list)) {
-            throw new Error('API返回的数据格式无效');
-        }
-        
-        // 添加源信息到每个结果
-        data.list.forEach(item => {
-            item.source_name = source === 'custom' ? '自定义源' : API_SITES[source].name;
-            item.source_code = source;
-            // 对于自定义源，添加API URL信息
-            if (source === 'custom') {
-                item.api_url = customApi;
+            
+            const data = await response.json();
+            
+            // 检查JSON格式的有效性
+            if (!data || !Array.isArray(data.list)) {
+                throw new Error('API返回的数据格式无效');
             }
-        });
-        
-        return res.json({
-            code: 200,
-            list: data.list || [],
-        });
+            
+            // 添加源信息到每个结果
+            data.list.forEach(item => {
+                item.source_name = source === 'custom' ? '自定义源' : API_SITES[source].name;
+                item.source_code = source;
+                // 对于自定义源，添加API URL信息
+                if (source === 'custom') {
+                    item.api_url = customApi;
+                }
+            });
+            
+            return res.json({
+                code: 200,
+                list: data.list || [],
+            });
+        } catch (error) {
+            console.error('API请求错误:', error);
+            throw error;
+        }
     } catch (error) {
         console.error('Search API Error:', error);
         res.status(500).json({
@@ -372,94 +314,6 @@ app.get('/api/detail', async (req, res) => {
             return res.status(400).json({ code: 400, msg: '无效的视频ID格式' });
         }
         
-        // 验证API源
-        const API_SITES = {
-            heimuer: {
-                api: 'https://json.heimuer.xyz/api.php/provide/vod',
-                name: '黑木耳',
-                detail: 'https://heimuer.tv', 
-            },
-            dyttzy:  {
-                api: 'http://caiji.dyttzyapi.com/api.php/provide/vod',
-                name: '电影天堂资源',
-                detail: 'http://caiji.dyttzyapi.com', 
-            },
-            ruyi: {
-                api: 'https://cj.rycjapi.com/api.php/provide/vod',
-                name: '如意资源',
-            },
-            bfzy: {
-                api: 'https://bfzyapi.com/api.php/provide/vod',
-                name: '暴风资源',
-            },
-            tyyszy: {
-                api: 'https://tyyszy.com/api.php/provide/vod',
-                name: '天涯资源',
-            },
-            ffzy: {
-                api: 'http://ffzy5.tv/api.php/provide/vod',
-                name: '非凡影视',
-                detail: 'http://ffzy5.tv', 
-            },
-            zy360: {
-                api: 'https://360zy.com/api.php/provide/vod',
-                name: '360资源',
-            },
-            iqiyi: {
-                api: 'https://www.iqiyizyapi.com/api.php/provide/vod',
-                name: 'iqiyi资源',
-            },
-            wolong: {
-                api: 'https://wolongzyw.com/api.php/provide/vod',
-                name: '卧龙资源',
-            },
-            hwba: {
-                api: 'https://cjhwba.com/api.php/provide/vod',
-                name: '华为吧资源',
-            },
-            jisu: {
-                api: 'https://jszyapi.com/api.php/provide/vod',
-                name: '极速资源',
-                detail: 'https://jszyapi.com', 
-            },
-            dbzy: {
-                api: 'https://dbzy.com/api.php/provide/vod',
-                name: '豆瓣资源',
-            },
-            mozhua: {
-                api: 'https://mozhuazy.com/api.php/provide/vod',
-                name: '魔爪资源',
-            },
-            mdzy: {
-                api: 'https://www.mdzyapi.com/api.php/provide/vod',
-                name: '魔都资源',
-            },
-            zuid: {
-                api: 'https://api.zuidapi.com/api.php/provide/vod',
-                name: '最大资源'
-            },
-            yinghua: {
-                api: 'https://m3u8.apiyhzy.com/api.php/provide/vod',
-                name: '樱花资源'
-            },
-            baidu: {
-                api: 'https://api.apibdzy.com/api.php/provide/vod',
-                name: '百度云资源'
-            },
-            wujin: {
-                api: 'https://api.wujinapi.me/api.php/provide/vod',
-                name: '无尽资源'
-            },
-            wwzy: {
-                api: 'https://wwzy.tv/api.php/provide/vod',
-                name: '旺旺短剧'
-            },
-            ikun: {
-                api: 'https://ikunzyapi.com/api.php/provide/vod',
-                name: 'iKun资源'
-            }
-        };
-        
         if (source === 'custom' && !customApi) {
             return res.status(400).json({ code: 400, msg: '使用自定义API时必须提供API地址' });
         }
@@ -475,78 +329,82 @@ app.get('/api/detail', async (req, res) => {
         
         console.log('Detail API URL:', apiUrl);
         
-        // 使用代理请求API
-        const proxyUrl = `/proxy/${encodeURIComponent(apiUrl)}`;
-        const proxyResponse = await fetch(`http://localhost:${config.port}${proxyUrl}`, {
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache',
-                'User-Agent': config.userAgent
-            }
-        });
-        
-        if (!proxyResponse.ok) {
-            throw new Error(`API请求失败: ${proxyResponse.status}`);
-        }
-        
-        const data = await proxyResponse.json();
-        
-        // 检查返回的数据是否有效
-        if (!data || !data.list || !Array.isArray(data.list) || data.list.length === 0) {
-            throw new Error('获取到的详情内容无效');
-        }
-        
-        // 获取第一个匹配的视频详情
-        const videoDetail = data.list[0];
-        
-        // 提取播放地址
-        let episodes = [];
-        
-        if (videoDetail.vod_play_url) {
-            // 分割不同播放源
-            const playSources = videoDetail.vod_play_url.split('$$$');
+        try {
+            // 直接请求API
+            const response = await fetch(apiUrl, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache',
+                    'User-Agent': config.userAgent
+                }
+            });
             
-            // 提取第一个播放源的集数（通常为主要源）
-            if (playSources.length > 0) {
-                const mainSource = playSources[0];
-                const episodeList = mainSource.split('#');
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // 检查返回的数据是否有效
+            if (!data || !data.list || !Array.isArray(data.list) || data.list.length === 0) {
+                throw new Error('获取到的详情内容无效');
+            }
+            
+            // 获取第一个匹配的视频详情
+            const videoDetail = data.list[0];
+            
+            // 提取播放地址
+            let episodes = [];
+            
+            if (videoDetail.vod_play_url) {
+                // 分割不同播放源
+                const playSources = videoDetail.vod_play_url.split('$$$');
                 
-                // 从每个集数中提取URL
-                episodes = episodeList.map(ep => {
-                    const parts = ep.split('$');
-                    // 返回URL部分(通常是第二部分，如果有的话)
-                    return parts.length > 1 ? parts[1] : '';
-                }).filter(url => url && (url.startsWith('http://') || url.startsWith('https://')));
+                // 提取第一个播放源的集数（通常为主要源）
+                if (playSources.length > 0) {
+                    const mainSource = playSources[0];
+                    const episodeList = mainSource.split('#');
+                    
+                    // 从每个集数中提取URL
+                    episodes = episodeList.map(ep => {
+                        const parts = ep.split('$');
+                        // 返回URL部分(通常是第二部分，如果有的话)
+                        return parts.length > 1 ? parts[1] : '';
+                    }).filter(url => url && (url.startsWith('http://') || url.startsWith('https://')));
+                }
             }
-        }
-        
-        // 如果没有找到播放地址，尝试使用正则表达式查找m3u8链接
-        const M3U8_PATTERN = /\$https?:\/\/[^"'\s]+?\.m3u8/g;
-        if (episodes.length === 0 && videoDetail.vod_content) {
-            const matches = videoDetail.vod_content.match(M3U8_PATTERN) || [];
-            episodes = matches.map(link => link.replace(/^\$/, ''));
-        }
-        
-        return res.json({
-            code: 200,
-            episodes: episodes,
-            detailUrl: apiUrl,
-            videoInfo: {
-                title: videoDetail.vod_name,
-                cover: videoDetail.vod_pic,
-                desc: videoDetail.vod_content,
-                type: videoDetail.type_name,
-                year: videoDetail.vod_year,
-                area: videoDetail.vod_area,
-                director: videoDetail.vod_director,
-                actor: videoDetail.vod_actor,
-                remarks: videoDetail.vod_remarks,
-                // 添加源信息
-                source_name: source === 'custom' ? '自定义源' : API_SITES[source].name,
-                source_code: source,
-                vod_id: id
+            
+            // 如果没有找到播放地址，尝试使用正则表达式查找m3u8链接
+            const M3U8_PATTERN = /\$https?:\/\/[^"'\s]+?\.m3u8/g;
+            if (episodes.length === 0 && videoDetail.vod_content) {
+                const matches = videoDetail.vod_content.match(M3U8_PATTERN) || [];
+                episodes = matches.map(link => link.replace(/^\$/, ''));
             }
-        });
+            
+            return res.json({
+                code: 200,
+                episodes: episodes,
+                detailUrl: apiUrl,
+                videoInfo: {
+                    title: videoDetail.vod_name,
+                    cover: videoDetail.vod_pic,
+                    desc: videoDetail.vod_content,
+                    type: videoDetail.type_name,
+                    year: videoDetail.vod_year,
+                    area: videoDetail.vod_area,
+                    director: videoDetail.vod_director,
+                    actor: videoDetail.vod_actor,
+                    remarks: videoDetail.vod_remarks,
+                    // 添加源信息
+                    source_name: source === 'custom' ? '自定义源' : API_SITES[source].name,
+                    source_code: source,
+                    vod_id: id
+                }
+            });
+        } catch (error) {
+            console.error('API请求错误:', error);
+            throw error;
+        }
     } catch (error) {
         console.error('Detail API Error:', error);
         res.status(500).json({
