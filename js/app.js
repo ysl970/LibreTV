@@ -948,22 +948,27 @@ function copyLinks() {
 }
 
 // 切换排序状态的函数
-function toggleEpisodeOrder(sourceCode, vodId) {
+function toggleEpisodeOrder() {
     episodesReversed = !episodesReversed;
-    // 重新渲染剧集区域，使用 currentVideoTitle 作为视频标题
+    
+    // 获取当前视频信息
+    const urlParams = new URLSearchParams(window.location.search);
+    const sourceCode = urlParams.get('source_code');
+    const vodId = urlParams.get('vod_id');
+    const title = urlParams.get('title');
+    
+    // 重新渲染剧集区域
     const episodesGrid = document.getElementById('episodesGrid');
-    if (episodesGrid) {
-        episodesGrid.innerHTML = renderEpisodes(currentVideoTitle, sourceCode, vodId);
+    if (episodesGrid && title) {
+        episodesGrid.innerHTML = renderEpisodes(title, sourceCode, vodId);
     }
     
     // 更新按钮文本和箭头方向
-    const toggleBtn = document.querySelector(`button[onclick="toggleEpisodeOrder('${sourceCode}', '${vodId}')"]`);
-    if (toggleBtn) {
-        toggleBtn.querySelector('span').textContent = episodesReversed ? '正序排列' : '倒序排列';
-        const arrowIcon = toggleBtn.querySelector('svg');
-        if (arrowIcon) {
-            arrowIcon.style.transform = episodesReversed ? 'rotate(180deg)' : 'rotate(0deg)';
-        }
+    const orderText = document.getElementById('orderText');
+    const orderIcon = document.getElementById('orderIcon');
+    if (orderText && orderIcon) {
+        orderText.textContent = episodesReversed ? '正序排列' : '倒序排列';
+        orderIcon.style.transform = episodesReversed ? 'rotate(180deg)' : 'rotate(0deg)';
     }
 }
 
