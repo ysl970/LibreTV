@@ -18,8 +18,15 @@ function toggleSettings(e) {
     }
     // 阻止事件冒泡，防止触发document的点击事件
     e && e.stopPropagation();
+    
+    // 获取设置面板
     const panel = document.getElementById('settingsPanel');
+    
+    // 切换设置面板的显示状态
     panel.classList.toggle('show');
+    
+    // 不再需要在这里处理豆瓣内容的显示状态
+    // 豆瓣内容的显示状态应该只在搜索和返回首页时改变
 }
 
 // 改进的Toast显示函数 - 支持队列显示多个Toast
@@ -316,6 +323,9 @@ function toggleHistory(e) {
         if (settingsPanel && settingsPanel.classList.contains('show')) {
             settingsPanel.classList.remove('show');
         }
+        
+        // 不再需要在这里处理豆瓣内容的显示状态
+        // 豆瓣内容的显示状态应该只在搜索和返回首页时改变
     }
 }
 
