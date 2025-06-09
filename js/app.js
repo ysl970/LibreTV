@@ -13,11 +13,6 @@ let currentVideoTitle = '';
 // 全局变量用于倒序状态
 let episodesReversed = false;
 
-// 导入共享函数
-import { getSelectedAPIs, saveSelectedAPIs, showLoading, hideLoading, showToast } from './common.js';
-import { handleApiRequest } from './api.js';
-import { fillAndSearchWithDouban } from './douban.js';
-
 // 页面初始化
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化API复选框
@@ -594,7 +589,7 @@ function getCustomApiInfo(customApiIndex) {
     return customAPIs[index];
 }
 
-// 搜索函数
+// 覆盖/增强原search函数，实现自动播放第一个资源
 async function search() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) {
@@ -605,7 +600,7 @@ async function search() {
     saveSearchHistory(query);
     showLoading('正在搜索...');
     resetSearchArea();
-    document.getElementById('doubanArea').classList.add('hidden');
+    document.getElementById('doubanArea').classList.add('hidden'); // 隐藏豆瓣推荐
 
     const selectedApiKeys = getSelectedAPIs();
     if (selectedApiKeys.length === 0) {
@@ -615,44 +610,23 @@ async function search() {
     }
 
     try {
-        // 获取选中的API配置
-        const selectedApi = API_SITES[selectedApiKeys[0]];
-        if (!selectedApi || !selectedApi.api) {
-            throw new Error('无效的API配置');
-        }
-
         // 构建完整的API URL
-        const apiUrl = `${selectedApi.api}${API_CONFIG.search.path}${encodeURIComponent(query)}`;
-        console.log('搜索请求URL:', apiUrl);
+        const apiUrl = API_SITES[selectedApiKeys[0]].api + API_CONFIG.search.path + encodeURIComponent(query);
+        console.log('Search URL:', apiUrl); // 添加日志
 
-        // 构建代理URL
-        const proxyUrl = `/proxy/${encodeURIComponent(apiUrl)}`;
-        console.log('代理请求URL:', proxyUrl);
-
-        // 发送请求
-        const response = await fetch(proxyUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
-        });
-
-        console.log('响应状态:', response.status);
-        console.log('响应头:', Object.fromEntries(response.headers.entries()));
-
+        // 使用代理发送请求
+        const response = await fetch(`/proxy/${encodeURIComponent(apiUrl)}`);
+        
         if (!response.ok) {
-            throw new Error(`HTTP错误: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log('响应数据:', data);
-
         hideLoading();
 
         if (data.code === 200 && data.list && data.list.length > 0) {
-            showResultsModal('搜索结果');
-            renderSearchResults(data.list);
+            showResultsModal('搜索结果'); // 显示模态框并设置标题
+            renderSearchResults(data.list); // 渲染搜索结果
         } else {
             showToast(data.msg || '未找到相关视频', 'info');
         }
@@ -1280,5 +1254,4 @@ function saveStringAsFile(content, fileName) {
     window.URL.revokeObjectURL(url);
 }
 
-// 导出函数
-export { search, init };
+// 移除Node.js的require语句，因为这是在浏览器环境中运行的
