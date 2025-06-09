@@ -600,7 +600,7 @@ async function search() {
     saveSearchHistory(query);
     showLoading('正在搜索...');
     resetSearchArea();
-    document.getElementById('doubanArea').classList.add('hidden'); // 隐藏豆瓣推荐
+    document.getElementById('doubanArea').classList.add('hidden');
 
     const selectedApiKeys = getSelectedAPIs();
     if (selectedApiKeys.length === 0) {
@@ -610,23 +610,44 @@ async function search() {
     }
 
     try {
-        // 构建完整的API URL
-        const apiUrl = API_SITES[selectedApiKeys[0]].api + API_CONFIG.search.path + encodeURIComponent(query);
-        console.log('Search URL:', apiUrl); // 添加日志
+        // 获取选中的API配置
+        const selectedApi = API_SITES[selectedApiKeys[0]];
+        if (!selectedApi || !selectedApi.api) {
+            throw new Error('无效的API配置');
+        }
 
-        // 使用代理发送请求
-        const response = await fetch(`/proxy/${encodeURIComponent(apiUrl)}`);
-        
+        // 构建完整的API URL
+        const apiUrl = `${selectedApi.api}${API_CONFIG.search.path}${encodeURIComponent(query)}`;
+        console.log('搜索请求URL:', apiUrl);
+
+        // 构建代理URL
+        const proxyUrl = `/proxy/${encodeURIComponent(apiUrl)}`;
+        console.log('代理请求URL:', proxyUrl);
+
+        // 发送请求
+        const response = await fetch(proxyUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+
+        console.log('响应状态:', response.status);
+        console.log('响应头:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP错误: ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('响应数据:', data);
+
         hideLoading();
 
         if (data.code === 200 && data.list && data.list.length > 0) {
-            showResultsModal('搜索结果'); // 显示模态框并设置标题
-            renderSearchResults(data.list); // 渲染搜索结果
+            showResultsModal('搜索结果');
+            renderSearchResults(data.list);
         } else {
             showToast(data.msg || '未找到相关视频', 'info');
         }
