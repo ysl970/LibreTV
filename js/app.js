@@ -609,111 +609,191 @@ async function search() {
     }
 
     try {
-        let results = [];
-        let hasCustomApi = false;
-        let customApiUrls = [];
+        // 从所有选中的API源搜索
+        let allResults = [];
         
-        // 检查是否有自定义API
-        for (const apiKey of selectedAPIs) {
-            if (apiKey.startsWith('custom_')) {
-                hasCustomApi = true;
-                const customIndex = parseInt(apiKey.split('_')[1]);
-                if (!isNaN(customIndex) && customAPIs[customIndex]) {
-                    customApiUrls.push(customAPIs[customIndex].url);
+        // 处理内置API和自定义API
+        const searchPromises = selectedAPIs.map(async (apiId) => {
+            try {
+                let apiUrl, apiName, apiBaseUrl;
+                
+                // 处理自定义API
+                if (apiId.startsWith('custom_')) {
+                    const customIndex = apiId.replace('custom_', '');
+                    const customApi = getCustomApiInfo(customIndex);
+                    if (!customApi) return [];
+                    
+                    apiBaseUrl = customApi.url;
+                    apiUrl = apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
+                    apiName = customApi.name;
+                } else {
+                    // 内置API
+                    if (!API_SITES[apiId]) return [];
+                    apiBaseUrl = API_SITES[apiId].api;
+                    apiUrl = apiBaseUrl + API_CONFIG.search.path + encodeURIComponent(query);
+                    apiName = API_SITES[apiId].name;
                 }
-            }
-        }
-        
-        // 处理自定义API的情况
-        if (hasCustomApi && customApiUrls.length > 0) {
-            // 如果有多个自定义API，使用逗号分隔的列表
-            const customApiUrlsStr = customApiUrls.join(',');
-            const customApiUrl = `/api/search?wd=${encodeURIComponent(query)}&source=custom&customApi=${encodeURIComponent(customApiUrlsStr)}`;
-            
-            // 添加超时处理
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const customResponse = await fetch(customApiUrl, {
-                signal: controller.signal,
-                headers: {
-                    'Accept': 'application/json',
-                    'Cache-Control': 'no-cache'
-                }
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (customResponse.ok) {
-                const customData = await customResponse.json();
-                if (customData.code === 200 && customData.list && customData.list.length > 0) {
-                    results = results.concat(customData.list);
-                }
-            }
-        }
-        
-        // 处理内置API的情况
-        const builtinApis = selectedAPIs.filter(api => !api.startsWith('custom_'));
-        if (builtinApis.length > 0) {
-            // 如果是聚合搜索，使用aggregated作为source
-            if (builtinApis.length > 1) {
-                const aggregatedUrl = `/api/search?wd=${encodeURIComponent(query)}&source=aggregated`;
                 
                 // 添加超时处理
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 15000); // 聚合搜索需要更长时间
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
                 
-                const aggregatedResponse = await fetch(aggregatedUrl, {
-                    signal: controller.signal,
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
+                const response = await fetch(PROXY_URL + encodeURIComponent(apiUrl), {
+                    headers: API_CONFIG.search.headers,
+                    signal: controller.signal
                 });
                 
                 clearTimeout(timeoutId);
                 
-                if (aggregatedResponse.ok) {
-                    const aggregatedData = await aggregatedResponse.json();
-                    if (aggregatedData.code === 200 && aggregatedData.list && aggregatedData.list.length > 0) {
-                        results = results.concat(aggregatedData.list);
-                    }
+                if (!response.ok) {
+                    return [];
                 }
-            } else {
-                // 单个内置API的情况
-                const singleApiUrl = `/api/search?wd=${encodeURIComponent(query)}&source=${builtinApis[0]}`;
                 
-                // 添加超时处理
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                const data = await response.json();
                 
-                const singleResponse = await fetch(singleApiUrl, {
-                    signal: controller.signal,
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (singleResponse.ok) {
-                    const singleData = await singleResponse.json();
-                    if (singleData.code === 200 && singleData.list && singleData.list.length > 0) {
-                        results = results.concat(singleData.list);
-                    }
+                if (!data || !data.list || !Array.isArray(data.list) || data.list.length === 0) {
+                    return [];
                 }
+                
+                // 处理第一页结果
+                const results = data.list.map(item => ({
+                    ...item,
+                    source_name: apiName,
+                    source_code: apiId,
+                    api_url: apiId.startsWith('custom_') ? getCustomApiInfo(apiId.replace('custom_', ''))?.url : undefined
+                }));
+                
+                // 获取总页数
+                const pageCount = data.pagecount || 1;
+                // 确定需要获取的额外页数 (最多获取5页)
+                const pagesToFetch = Math.min(pageCount - 1, 4); // 最多获取5页(第一页+额外4页)
+                
+                // 如果有额外页数，获取更多页的结果
+                if (pagesToFetch > 0 && API_CONFIG.search.pagePath) {
+                    const additionalPagePromises = [];
+                    
+                    for (let page = 2; page <= pagesToFetch + 1; page++) {
+                        // 构建分页URL
+                        const pageUrl = apiBaseUrl + (API_CONFIG.search.pagePath || '')
+                            .replace('{query}', encodeURIComponent(query))
+                            .replace('{page}', page);
+                        
+                        // 创建获取额外页的Promise
+                        const pagePromise = (async () => {
+                            try {
+                                const pageController = new AbortController();
+                                const pageTimeoutId = setTimeout(() => pageController.abort(), 8000);
+                                
+                                const pageResponse = await fetch(PROXY_URL + encodeURIComponent(pageUrl), {
+                                    headers: API_CONFIG.search.headers,
+                                    signal: pageController.signal
+                                });
+                                
+                                clearTimeout(pageTimeoutId);
+                                
+                                if (!pageResponse.ok) return [];
+                                
+                                const pageData = await pageResponse.json();
+                                
+                                if (!pageData || !pageData.list || !Array.isArray(pageData.list)) return [];
+                                
+                                // 处理当前页结果
+                                return pageData.list.map(item => ({
+                                    ...item,
+                                    source_name: apiName,
+                                    source_code: apiId,
+                                    api_url: apiId.startsWith('custom_') ? getCustomApiInfo(apiId.replace('custom_', ''))?.url : undefined
+                                }));
+                            } catch (error) {
+                                console.warn(`API ${apiId} 第${page}页搜索失败:`, error);
+                                return [];
+                            }
+                        })();
+                        
+                        additionalPagePromises.push(pagePromise);
+                    }
+                    
+                    // 等待所有额外页的结果
+                    const additionalResults = await Promise.all(additionalPagePromises);
+                    
+                    // 合并所有页的结果
+                    additionalResults.forEach(pageResults => {
+                        if (pageResults.length > 0) {
+                            results.push(...pageResults);
+                        }
+                    });
+                }
+                
+                return results;
+            } catch (error) {
+                console.warn(`API ${apiId} 搜索失败:`, error);
+                return [];
             }
-        }
+        });
+        
+        // 等待所有搜索请求完成
+        const resultsArray = await Promise.all(searchPromises);
+        
+        // 合并所有结果
+        resultsArray.forEach(results => {
+            if (Array.isArray(results) && results.length > 0) {
+                allResults = allResults.concat(results);
+            }
+        });
         
         hideLoading();
         
+        // 处理搜索结果过滤：如果启用了黄色内容过滤，则过滤掉分类含有敏感内容的项目
+        const yellowFilterEnabled = localStorage.getItem('yellowFilterEnabled') === 'true';
+        if (yellowFilterEnabled) {
+            const banned = ['伦理片','福利','里番动漫','门事件','萝莉少女','制服诱惑','国产传媒','cosplay','黑丝诱惑','无码','日本无码','有码','日本有码','SWAG','网红主播', '色情片','同性片','福利视频','福利片'];
+            allResults = allResults.filter(item => {
+                const typeName = item.type_name || '';
+                return !banned.some(keyword => typeName.includes(keyword));
+            });
+        }
+        
+        // 去重（根据vod_id和source_code组合）
+        const uniqueResults = [];
+        const seen = new Set();
+        
+        allResults.forEach(item => {
+            const key = `${item.source_code}_${item.vod_id}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniqueResults.push(item);
+            }
+        });
+        
+        // 更新搜索结果计数
+        const searchResultsCount = document.getElementById('searchResultsCount');
+        if (searchResultsCount) {
+            searchResultsCount.textContent = uniqueResults.length;
+        }
+        
         // 显示结果
-        if (results.length > 0) {
+        if (uniqueResults.length > 0) {
             showResultsModal('搜索结果');
-            renderSearchResults(results);
+            renderSearchResults(uniqueResults);
         } else {
             showToast('未找到相关视频', 'info');
+        }
+        
+        // 有搜索结果时，更新URL
+        try {
+            // 使用URI编码确保特殊字符能够正确显示
+            const encodedQuery = encodeURIComponent(query);
+            // 使用HTML5 History API更新URL，不刷新页面
+            window.history.pushState(
+                { search: query }, 
+                `搜索: ${query} - YTPPTV`, 
+                `/?s=${encodedQuery}`
+            );
+            // 更新页面标题
+            document.title = `搜索: ${query} - YTPPTV`;
+        } catch (e) {
+            console.error('更新浏览器历史失败:', e);
+            // 如果更新URL失败，继续执行搜索
         }
     } catch (error) {
         console.error('Search error:', error);
