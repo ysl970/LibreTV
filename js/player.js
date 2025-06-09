@@ -1585,7 +1585,7 @@ window.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-// 页面初始化时，拉取分集并渲染集数按钮
+// 页面初始化时，拉取分集并渲染集数按钮（修正版）
 window.addEventListener('DOMContentLoaded', async function () {
     const urlParams = new URLSearchParams(window.location.search);
     const sourceCode = urlParams.get('source_code') || '';
@@ -1595,14 +1595,26 @@ window.addEventListener('DOMContentLoaded', async function () {
             const searchResult = await searchResourceByApiAndTitle(sourceCode, title);
             if (searchResult && searchResult.length > 0) {
                 window.currentEpisodes = searchResult[0].vod_play_url_list.map(item => item.url);
+                localStorage.setItem('currentEpisodes', JSON.stringify(window.currentEpisodes));
             } else {
                 window.currentEpisodes = [];
+                localStorage.setItem('currentEpisodes', '[]');
             }
+        } catch (e) {
+            window.currentEpisodes = [];
+            localStorage.setItem('currentEpisodes', '[]');
+        }
+    } else {
+        // 兜底：尝试从localStorage恢复
+        try {
+            window.currentEpisodes = JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
         } catch (e) {
             window.currentEpisodes = [];
         }
     }
-    renderEpisodes();
+    renderEpisodeCards();
+    renderResourceInfoBar();
+    updateEpisodeInfo && updateEpisodeInfo();
 });
 
 // ========== 新UI渲染逻辑 =============
