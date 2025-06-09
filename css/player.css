@@ -63,8 +63,10 @@ body, html {
     margin-bottom: 10px;
 }
 .episode-active {
-    background-color: #3b82f6 !important;
-    border-color: #60a5fa !important;
+    background: var(--ytpptv-gradient) !important;
+    border: 2px solid #00ccff !important;
+    color: white !important;
+    box-shadow: 0 6px 24px #00ccff33 !important;
 }
 .episode-grid {
     max-height: 30vh;
@@ -274,7 +276,7 @@ input:checked + .slider:before {
   background: var(--ytpptv-gradient);
   color: #fff;
   font-weight: bold;
-  border: 2px solid #fff0;
+  border: 2px solid #00ccff;
   box-shadow: 0 6px 24px #00ccff33;
   z-index: 2;
 }
