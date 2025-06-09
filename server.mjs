@@ -118,65 +118,47 @@ function isValidUrl(urlString) {
 
 // 代理路由
 app.get('/proxy/:encodedUrl', async (req, res) => {
-  try {
-    const encodedUrl = req.params.encodedUrl;
-    const targetUrl = decodeURIComponent(encodedUrl);
-
-    // 安全验证
-    if (!isValidUrl(targetUrl)) {
-      return res.status(400).send('无效的 URL');
-    }
-
-    log(`代理请求: ${targetUrl}`);
-
-    // 添加请求超时和重试逻辑
-    const maxRetries = config.maxRetries;
-    let retries = 0;
-    
-    const makeRequest = async () => {
-      try {
-        return await axios({
-          method: 'get',
-          url: targetUrl,
-          responseType: 'stream',
-          timeout: config.timeout,
-          headers: {
-            'User-Agent': config.userAgent
-          }
-        });
-      } catch (error) {
-        if (retries < maxRetries) {
-          retries++;
-          log(`重试请求 (${retries}/${maxRetries}): ${targetUrl}`);
-          return makeRequest();
+    try {
+        const targetUrl = decodeURIComponent(req.params.encodedUrl);
+        console.log('Proxy request:', targetUrl);
+        
+        // 验证URL
+        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+            throw new Error('Invalid URL');
         }
-        throw error;
-      }
-    };
 
-    const response = await makeRequest();
+        // 获取请求头
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        };
 
-    // 转发响应头（过滤敏感头）
-    const headers = { ...response.headers };
-    const sensitiveHeaders = (
-      process.env.FILTERED_HEADERS || 
-      'content-security-policy,cookie,set-cookie,x-frame-options,access-control-allow-origin'
-    ).split(',');
-    
-    sensitiveHeaders.forEach(header => delete headers[header]);
-    res.set(headers);
+        // 发送请求
+        const response = await fetch(targetUrl, { headers });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-    // 管道传输响应流
-    response.data.pipe(res);
-  } catch (error) {
-    console.error('代理请求错误:', error.message);
-    if (error.response) {
-      res.status(error.response.status || 500);
-      error.response.data.pipe(res);
-    } else {
-      res.status(500).send(`请求失败: ${error.message}`);
+        // 设置响应头
+        res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+
+        // 流式传输响应
+        response.body.pipe(res);
+    } catch (error) {
+        console.error('Proxy error:', error);
+        res.status(500).json({
+            error: 'Proxy request failed',
+            message: error.message
+        });
     }
-  }
 });
 
 app.use(express.static(path.join(__dirname), {
