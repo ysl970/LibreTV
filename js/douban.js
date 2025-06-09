@@ -835,74 +835,32 @@ async function fetchDoubanData(url) {
 
 // 填充搜索框，确保豆瓣资源API被选中，然后执行搜索
 async function fillAndSearchWithDouban(title) {
-    if (!title) return;
-    
-    // 安全处理标题，防止XSS
-    const safeTitle = title
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    
-    // 关闭模态框
-    const modal = document.getElementById('modal');
-    if (modal && !modal.classList.contains('hidden')) {
-        closeModal();
+    if (!title) {
+        showToast('请输入影视名称', 'warning');
+        return;
     }
-    
-    // 确保豆瓣资源API被选中
-    if (typeof selectedAPIs !== 'undefined' && !selectedAPIs.includes('dbzy')) {
-        // 在设置中勾选豆瓣资源API复选框
-        const doubanCheckbox = document.querySelector('input[id="api_dbzy"]');
-        if (doubanCheckbox) {
-            doubanCheckbox.checked = true;
-            
-            // 触发updateSelectedAPIs函数以更新状态
-            if (typeof updateSelectedAPIs === 'function') {
-                updateSelectedAPIs();
-            } else {
-                // 如果函数不可用，则手动添加到selectedAPIs
-                selectedAPIs.push('dbzy');
-                localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
-                
-                // 更新选中API计数（如果有这个元素）
-                const countEl = document.getElementById('selectedAPICount');
-                if (countEl) {
-                    countEl.textContent = selectedAPIs.length;
-                }
-            }
-            
-            showToast('已自动选择豆瓣资源API', 'info');
-        }
-    }
-    
-    // 填充搜索框并执行搜索
-    const input = document.getElementById('searchInput');
-    if (input) {
-        input.value = safeTitle;
-        await search(); // 使用已有的search函数执行搜索
+
+    try {
+        showLoading('正在获取豆瓣推荐...');
+        const response = await fetch(`/proxy/${encodeURIComponent('https://movie.douban.com/j/subject_suggest?q=' + encodeURIComponent(title))}`);
         
-        // 更新浏览器URL，使其反映当前的搜索状态
-        try {
-            // 使用URI编码确保特殊字符能够正确显示
-            const encodedQuery = encodeURIComponent(safeTitle);
-            // 使用HTML5 History API更新URL，不刷新页面
-            window.history.pushState(
-                { search: safeTitle }, 
-                `搜索: ${safeTitle} - YTPPTV`, 
-                `/s=${encodedQuery}`
-            );
-            // 更新页面标题
-            document.title = `搜索: ${safeTitle} - YTPPTV`;
-        } catch (e) {
-            console.error('更新浏览器历史失败:', e);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            throw new Error('未找到相关推荐');
         }
 
-        if (window.innerWidth <= 768) {
-          window.scrollTo({
-              top: 0,
-              behavior: 'smooth'
-          });
-        }
+        const firstResult = data[0];
+        document.getElementById('searchInput').value = firstResult.title;
+        await search(firstResult.title);
+    } catch (error) {
+        console.error('Douban recommendation failed:', error);
+        showToast(`获取推荐失败: ${error.message}`, 'error');
+    } finally {
+        hideLoading();
     }
 }
 
@@ -1003,3 +961,6 @@ function renderDoubanContent(items) {
         </div>
     `).join('');
 }
+
+// 导出函数
+export { fillAndSearchWithDouban };
