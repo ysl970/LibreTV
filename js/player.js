@@ -1463,7 +1463,7 @@ function renderEpisodeCards() {
         const realIndex = window.episodesReversed ? window.currentEpisodes.length - 1 - idx : idx;
         const isActive = realIndex === window.currentEpisodeIndex;
         html += `<div class="episode-card${isActive ? ' active' : ''}" onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
-          ${isActive ? '<span class="episode-icon" style="margin-right:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="#00ccff" stroke-width="2"/><path d="M15.4 12.5l-5.8 3.86V8.64l5.8 3.86z" fill="#00ccff" stroke="#00ccff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
+          ${isActive ? '<span class="episode-icon" style="margin-right:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="white" stroke-width="1.5"/><path d="M15.4 12.5l-5.8 3.86V8.64l5.8 3.86z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
           <span class="episode-label">${isActive ? '当前播放: ' : ''}第${realIndex+1}集</span>
         </div>`;
     });
