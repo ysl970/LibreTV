@@ -22,25 +22,25 @@ const SITE_CONFIG = {
 // API站点配置
 const API_SITES = {
     heimuer: {
-        api: 'https://json.heimuer.xyz/api.php/provide/vod',
+        api: 'https://json.heimuer.xyz/api.php/provide/vod/',
         name: '黑木耳',
         detail: 'https://heimuer.tv', 
     },
     dyttzy:  {
-        api: 'http://caiji.dyttzyapi.com/api.php/provide/vod',
+        api: 'http://caiji.dyttzyapi.com/api.php/provide/vod/',
         name: '电影天堂资源',
         detail: 'http://caiji.dyttzyapi.com', 
     },
     ruyi: {
-        api: 'https://cj.rycjapi.com/api.php/provide/vod',
+        api: 'https://cj.rycjapi.com/api.php/provide/vod/',
         name: '如意资源',
     },
     bfzy: {
-        api: 'https://bfzyapi.com/api.php/provide/vod',
+        api: 'https://bfzyapi.com/api.php/provide/vod/',
         name: '暴风资源',
     },
     tyyszy: {
-        api: 'https://tyyszy.com/api.php/provide/vod',
+        api: 'https://tyyszy.com/api.php/provide/vod/',
         name: '天涯资源',
     },
     // xiaomaomi: {
@@ -48,65 +48,65 @@ const API_SITES = {
     //     name: '小猫咪资源',
     // },
     ffzy: {
-        api: 'http://ffzy5.tv/api.php/provide/vod',
+        api: 'http://ffzy5.tv/api.php/provide/vod/',
         name: '非凡影视',
         detail: 'http://ffzy5.tv', 
     },
     zy360: {
-        api: 'https://360zy.com/api.php/provide/vod',
+        api: 'https://360zy.com/api.php/provide/vod/',
         name: '360资源',
     },
     iqiyi: {
-        api: 'https://www.iqiyizyapi.com/api.php/provide/vod',
+        api: 'https://www.iqiyizyapi.com/api.php/provide/vod/',
         name: 'iqiyi资源',
     },
     wolong: {
-        api: 'https://wolongzyw.com/api.php/provide/vod',
+        api: 'https://wolongzyw.com/api.php/provide/vod/',
         name: '卧龙资源',
     }, 
     hwba: {
-        api: 'https://cjhwba.com/api.php/provide/vod',
+        api: 'https://cjhwba.com/api.php/provide/vod/',
         name: '华为吧资源',
     },
     jisu: {
-        api: 'https://jszyapi.com/api.php/provide/vod',
+        api: 'https://jszyapi.com/api.php/provide/vod/',
         name: '极速资源',
         detail: 'https://jszyapi.com', 
     },
     dbzy: {
-        api: 'https://dbzy.com/api.php/provide/vod',
+        api: 'https://dbzy.com/api.php/provide/vod/',
         name: '豆瓣资源',
     },
     mozhua: {
-        api: 'https://mozhuazy.com/api.php/provide/vod',
+        api: 'https://mozhuazy.com/api.php/provide/vod/',
         name: '魔爪资源',
     },
     mdzy: {
-        api: 'https://www.mdzyapi.com/api.php/provide/vod',
+        api: 'https://www.mdzyapi.com/api.php/provide/vod/',
         name: '魔都资源',
     },
     zuid: {
-        api: 'https://api.zuidapi.com/api.php/provide/vod',
+        api: 'https://api.zuidapi.com/api.php/provide/vod/',
         name: '最大资源'
     },
     yinghua: {
-        api: 'https://m3u8.apiyhzy.com/api.php/provide/vod',
+        api: 'https://m3u8.apiyhzy.com/api.php/provide/vod/',
         name: '樱花资源'
     },
     baidu: {
-        api: 'https://api.apibdzy.com/api.php/provide/vod',
+        api: 'https://api.apibdzy.com/api.php/provide/vod/',
         name: '百度云资源'
     },
     wujin: {
-        api: 'https://api.wujinapi.me/api.php/provide/vod',
+        api: 'https://api.wujinapi.me/api.php/provide/vod/',
         name: '无尽资源'
     },
     wwzy: {
-        api: 'https://wwzy.tv/api.php/provide/vod',
+        api: 'https://wwzy.tv/api.php/provide/vod/',
         name: '旺旺短剧'
     },
     ikun: {
-        api: 'https://ikunzyapi.com/api.php/provide/vod',
+        api: 'https://ikunzyapi.com/api.php/provide/vod/',
         name: 'iKun资源'
     },
     testSource: {
@@ -191,20 +191,21 @@ const AGGREGATED_SEARCH_CONFIG = {
 // 抽象API请求配置
 const API_CONFIG = {
     search: {
-        // 修改搜索路径配置，移除重复的路径
         path: '?ac=videolist&wd=',
         pagePath: '?ac=videolist&wd={query}&pg={page}',
-        maxPages: 50, // 最大获取页数
+        maxPages: 50,
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
         }
     },
     detail: {
         path: '?ac=videolist&ids=',
         headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-            'Accept': 'application/json'
+            'Accept': 'application/json',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
         }
     }
 };
