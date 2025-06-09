@@ -591,28 +591,33 @@ function getCustomApiInfo(customApiIndex) {
 
 // 覆盖/增强原search函数，实现自动播放第一个资源
 async function search() {
+    // 密码保护校验
+    if (window.isPasswordProtected && window.isPasswordVerified) {
+        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
+            showPasswordModal && showPasswordModal();
+            return;
+        }
+    }
     const query = document.getElementById('searchInput').value.trim();
+    
     if (!query) {
-        showToast('请输入搜索内容', 'warning');
+        showToast('请输入搜索内容', 'info');
         return;
     }
-
-    saveSearchHistory(query);
-    showLoading('正在搜索...');
-    resetSearchArea();
-    document.getElementById('doubanArea').classList.add('hidden');
-
+    
     if (selectedAPIs.length === 0) {
-        hideLoading();
-        showToast('请至少选择一个数据源', 'warning');
+        showToast('请至少选择一个API源', 'warning');
         return;
     }
-
+    
+    showLoading();
+    
     try {
+        // 保存搜索历史
+        saveSearchHistory(query);
+        
         // 从所有选中的API源搜索
         let allResults = [];
-        
-        // 处理内置API和自定义API
         const searchPromises = selectedAPIs.map(async (apiId) => {
             try {
                 let apiUrl, apiName, apiBaseUrl;
@@ -665,16 +670,16 @@ async function search() {
                 
                 // 获取总页数
                 const pageCount = data.pagecount || 1;
-                // 确定需要获取的额外页数 (最多获取5页)
-                const pagesToFetch = Math.min(pageCount - 1, 4); // 最多获取5页(第一页+额外4页)
+                // 确定需要获取的额外页数 (最多获取maxPages页)
+                const pagesToFetch = Math.min(pageCount - 1, API_CONFIG.search.maxPages - 1);
                 
                 // 如果有额外页数，获取更多页的结果
-                if (pagesToFetch > 0 && API_CONFIG.search.pagePath) {
+                if (pagesToFetch > 0) {
                     const additionalPagePromises = [];
                     
                     for (let page = 2; page <= pagesToFetch + 1; page++) {
                         // 构建分页URL
-                        const pageUrl = apiBaseUrl + (API_CONFIG.search.pagePath || '')
+                        const pageUrl = apiBaseUrl + API_CONFIG.search.pagePath
                             .replace('{query}', encodeURIComponent(query))
                             .replace('{page}', page);
                         
@@ -741,8 +746,58 @@ async function search() {
             }
         });
         
-        hideLoading();
+        // 更新搜索结果计数
+        const searchResultsCount = document.getElementById('searchResultsCount');
+        if (searchResultsCount) {
+            searchResultsCount.textContent = allResults.length;
+        }
         
+        // 显示结果区域，调整搜索区域
+        document.getElementById('searchArea').classList.remove('flex-1');
+        document.getElementById('searchArea').classList.add('mb-8');
+        document.getElementById('resultsArea').classList.remove('hidden');
+        
+        // 隐藏豆瓣推荐区域（如果存在）
+        const doubanArea = document.getElementById('doubanArea');
+        if (doubanArea) {
+            doubanArea.classList.add('hidden');
+        }
+        
+        const resultsDiv = document.getElementById('results');
+        
+        // 如果没有结果
+        if (!allResults || allResults.length === 0) {
+            resultsDiv.innerHTML = `
+                <div class="col-span-full text-center py-16">
+                    <svg class="mx-auto h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 class="mt-2 text-lg font-medium text-gray-400">没有找到匹配的结果</h3>
+                    <p class="mt-1 text-sm text-gray-500">请尝试其他关键词或更换数据源</p>
+                </div>
+            `;
+            hideLoading();
+            return;
+        }
+
+        // 有搜索结果时，才更新URL
+        try {
+            // 使用URI编码确保特殊字符能够正确显示
+            const encodedQuery = encodeURIComponent(query);
+            // 使用HTML5 History API更新URL，不刷新页面
+            window.history.pushState(
+                { search: query }, 
+                `搜索: ${query} - YTPPTV`, 
+                `/s=${encodedQuery}`
+            );
+            // 更新页面标题
+            document.title = `搜索: ${query} - YTPPTV`;
+        } catch (e) {
+            console.error('更新浏览器历史失败:', e);
+            // 如果更新URL失败，继续执行搜索
+        }
+
         // 处理搜索结果过滤：如果启用了黄色内容过滤，则过滤掉分类含有敏感内容的项目
         const yellowFilterEnabled = localStorage.getItem('yellowFilterEnabled') === 'true';
         if (yellowFilterEnabled) {
@@ -752,57 +807,76 @@ async function search() {
                 return !banned.some(keyword => typeName.includes(keyword));
             });
         }
+
+        // 添加XSS保护，使用textContent和属性转义
+        const safeResults = allResults.map(item => {
+            const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
+            const safeName = (item.vod_name || '').toString()
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+            const sourceInfo = item.source_name ? 
+                `<span class="bg-[#222] text-xs px-1.5 py-0.5 rounded-full">${item.source_name}</span>` : '';
+            const sourceCode = item.source_code || '';
+            
+            // 添加API URL属性，用于详情获取
+            const apiUrlAttr = item.api_url ? 
+                `data-api-url="${item.api_url.replace(/"/g, '&quot;')}"` : '';
+            
+            // 修改为水平卡片布局，图片在左侧，文本在右侧，并优化样式
+            const hasCover = item.vod_pic && item.vod_pic.startsWith('http');
+            
+            return `
+                <div class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md" 
+                     onclick="showDetails('${safeId}','${safeName}','${sourceCode}')" ${apiUrlAttr}>
+                    <div class="flex h-full">
+                        ${hasCover ? `
+                        <div class="relative flex-shrink-0 search-card-img-container">
+                            <img src="${item.vod_pic}" alt="${safeName}" 
+                                 class="h-full w-full object-cover transition-transform hover:scale-110" 
+                                 onerror="this.onerror=null; this.src='image/default-cover.jpg'; this.classList.add('object-contain');" 
+                                 loading="lazy">
+                            <div class="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent"></div>
+                        </div>` : ''}
+                        
+                        <div class="p-2 flex flex-col flex-grow">
+                            <div class="flex-grow">
+                                <h3 class="font-semibold mb-2 break-words line-clamp-2 ${hasCover ? '' : 'text-center'}" title="${safeName}">${safeName}</h3>
+                                
+                                <div class="flex flex-wrap ${hasCover ? '' : 'justify-center'} gap-1 mb-2">
+                                    ${(item.type_name || '').toString().replace(/</g, '&lt;') ? 
+                                      `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300">
+                                          ${(item.type_name || '').toString().replace(/</g, '&lt;')}
+                                      </span>` : ''}
+                                    ${(item.vod_year || '') ? 
+                                      `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300">
+                                          ${item.vod_year}
+                                      </span>` : ''}
+                                </div>
+                                <p class="text-gray-400 line-clamp-2 overflow-hidden ${hasCover ? '' : 'text-center'} mb-2">
+                                    ${(item.vod_remarks || '暂无介绍').toString().replace(/</g, '&lt;')}
+                                </p>
+                            </div>
+                            
+                            <div class="flex justify-between items-center mt-1 pt-1 border-t border-gray-800">
+                                ${sourceInfo ? `<div>${sourceInfo}</div>` : '<div></div>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
         
-        // 去重（根据vod_id和source_code组合）
-        const uniqueResults = [];
-        const seen = new Set();
-        
-        allResults.forEach(item => {
-            const key = `${item.source_code}_${item.vod_id}`;
-            if (!seen.has(key)) {
-                seen.add(key);
-                uniqueResults.push(item);
-            }
-        });
-        
-        // 更新搜索结果计数
-        const searchResultsCount = document.getElementById('searchResultsCount');
-        if (searchResultsCount) {
-            searchResultsCount.textContent = uniqueResults.length;
-        }
-        
-        // 显示结果
-        if (uniqueResults.length > 0) {
-            showResultsModal('搜索结果');
-            renderSearchResults(uniqueResults);
-        } else {
-            showToast('未找到相关视频', 'info');
-        }
-        
-        // 有搜索结果时，更新URL
-        try {
-            // 使用URI编码确保特殊字符能够正确显示
-            const encodedQuery = encodeURIComponent(query);
-            // 使用HTML5 History API更新URL，不刷新页面
-            window.history.pushState(
-                { search: query }, 
-                `搜索: ${query} - YTPPTV`, 
-                `/?s=${encodedQuery}`
-            );
-            // 更新页面标题
-            document.title = `搜索: ${query} - YTPPTV`;
-        } catch (e) {
-            console.error('更新浏览器历史失败:', e);
-            // 如果更新URL失败，继续执行搜索
-        }
+        resultsDiv.innerHTML = safeResults;
     } catch (error) {
-        console.error('Search error:', error);
-        hideLoading();
+        console.error('搜索错误:', error);
         if (error.name === 'AbortError') {
-            showToast('搜索请求超时，请稍后重试', 'error');
+            showToast('搜索请求超时，请检查网络连接', 'error');
         } else {
-            showToast(`搜索失败: ${error.message}`, 'error');
+            showToast('搜索请求失败，请稍后重试', 'error');
         }
+    } finally {
+        hideLoading();
     }
 }
 
@@ -836,40 +910,66 @@ function renderSearchResults(results) {
         return;
     }
 
-    results.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'bg-[#151515] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300';
+    // 添加XSS保护，使用textContent和属性转义
+    const safeResults = results.map(item => {
+        const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
+        const safeName = (item.vod_name || '').toString()
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        const sourceInfo = item.source_name ? 
+            `<span class="bg-[#222] text-xs px-1.5 py-0.5 rounded-full">${item.source_name}</span>` : '';
+        const sourceCode = item.source_code || '';
         
-        const cover = item.vod_pic || 'image/default-cover.jpg';
-        const title = item.vod_name || '未知标题';
-        const type = item.type_name || '未知类型';
-        const year = item.vod_year || '未知年份';
-        const area = item.vod_area || '未知地区';
-        const remarks = item.vod_remarks || '';
-        const source = item.source_name || '未知来源';
-
-        card.innerHTML = `
-            <div class="relative">
-                <img src="${cover}" alt="${title}" class="w-full h-48 object-cover" onerror="this.src='image/default-cover.jpg'">
-                ${remarks ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded">${remarks}</span>` : ''}
-        </div>
-            <div class="p-4">
-                <h3 class="text-lg font-semibold mb-2 line-clamp-2">${title}</h3>
-                <div class="text-sm text-gray-400 space-y-1">
-                    <p>类型：${type}</p>
-                    <p>年份：${year}</p>
-                    <p>地区：${area}</p>
-                    <p>来源：${source}</p>
+        // 添加API URL属性，用于详情获取
+        const apiUrlAttr = item.api_url ? 
+            `data-api-url="${item.api_url.replace(/"/g, '&quot;')}"` : '';
+        
+        // 修改为水平卡片布局，图片在左侧，文本在右侧，并优化样式
+        const hasCover = item.vod_pic && item.vod_pic.startsWith('http');
+        
+        return `
+            <div class="card-hover bg-[#111] rounded-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.02] h-full shadow-sm hover:shadow-md" 
+                 onclick="showDetails('${safeId}','${safeName}','${sourceCode}')" ${apiUrlAttr}>
+                <div class="flex h-full">
+                    ${hasCover ? `
+                    <div class="relative flex-shrink-0 search-card-img-container">
+                        <img src="${item.vod_pic}" alt="${safeName}" 
+                             class="h-full w-full object-cover transition-transform hover:scale-110" 
+                             onerror="this.onerror=null; this.src='image/default-cover.jpg'; this.classList.add('object-contain');" 
+                             loading="lazy">
+                        <div class="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent"></div>
+                    </div>` : ''}
+                    
+                    <div class="p-2 flex flex-col flex-grow">
+                        <div class="flex-grow">
+                            <h3 class="font-semibold mb-2 break-words line-clamp-2 ${hasCover ? '' : 'text-center'}" title="${safeName}">${safeName}</h3>
+                            
+                            <div class="flex flex-wrap ${hasCover ? '' : 'justify-center'} gap-1 mb-2">
+                                ${(item.type_name || '').toString().replace(/</g, '&lt;') ? 
+                                  `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-blue-500 text-blue-300">
+                                      ${(item.type_name || '').toString().replace(/</g, '&lt;')}
+                                  </span>` : ''}
+                                ${(item.vod_year || '') ? 
+                                  `<span class="text-xs py-0.5 px-1.5 rounded bg-opacity-20 bg-purple-500 text-purple-300">
+                                      ${item.vod_year}
+                                  </span>` : ''}
+                            </div>
+                            <p class="text-gray-400 line-clamp-2 overflow-hidden ${hasCover ? '' : 'text-center'} mb-2">
+                                ${(item.vod_remarks || '暂无介绍').toString().replace(/</g, '&lt;')}
+                            </p>
+                        </div>
+                        
+                        <div class="flex justify-between items-center mt-1 pt-1 border-t border-gray-800">
+                            ${sourceInfo ? `<div>${sourceInfo}</div>` : '<div></div>'}
+                        </div>
+                    </div>
                 </div>
-                <button onclick="showEpisodes('${item.vod_id}', '${item.source_code}', '${encodeURIComponent(title)}')" 
-                        class="mt-3 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white rounded-lg py-2 transition-all duration-300">
-                    查看详情
-                </button>
             </div>
         `;
-
-        resultsList.appendChild(card);
-    });
+    }).join('');
+    
+    resultsList.innerHTML = safeResults;
 }
 
 // 新增：处理搜索结果项选择
@@ -962,6 +1062,13 @@ document.addEventListener('DOMContentLoaded', hookInput);
 
 // 显示详情 - 修改为支持自定义API
 async function showDetails(id, vod_name, sourceCode) {
+    // 密码保护校验
+    if (window.isPasswordProtected && window.isPasswordVerified) {
+        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
+            showPasswordModal && showPasswordModal();
+            return;
+        }
+    }
     if (!id) {
         showToast('视频ID无效', 'error');
         return;
