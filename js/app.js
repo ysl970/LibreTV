@@ -610,10 +610,18 @@ async function search() {
     }
 
     try {
-        // 修改为使用代理路径
-        const response = await fetch(`/proxy/${encodeURIComponent(API_SITES[selectedApiKeys[0]].api + API_CONFIG.search.path + encodeURIComponent(query))}`);
-        const data = await response.json();
+        // 构建完整的API URL
+        const apiUrl = API_SITES[selectedApiKeys[0]].api + API_CONFIG.search.path + encodeURIComponent(query);
+        console.log('Search URL:', apiUrl); // 添加日志
 
+        // 使用代理发送请求
+        const response = await fetch(`/proxy/${encodeURIComponent(apiUrl)}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
         hideLoading();
 
         if (data.code === 200 && data.list && data.list.length > 0) {
@@ -624,8 +632,8 @@ async function search() {
         }
     } catch (error) {
         hideLoading();
-        showToast('搜索失败，请稍后重试', 'error');
         console.error('搜索失败:', error);
+        showToast(`搜索失败: ${error.message}`, 'error');
     }
 }
 
