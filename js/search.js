@@ -5,18 +5,41 @@ async function performSearch(keyword, apis) {
     const searchResults = [];
     const searchPromises = apis.map(async (apiCode) => {
         try {
-            const results = await searchResourceByApiAndTitle(apiCode, keyword);
-            if (results && results.length > 0) {
-                return results.map(item => ({
-                    ...item,
-                    source_code: apiCode,
-                    source_name: API_SITES[apiCode]?.name || '未知来源'
-                }));
+            // 构建API URL
+            const apiUrl = API_SITES[apiCode].api + API_CONFIG.search.path + encodeURIComponent(keyword);
+            
+            // 添加超时处理
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
+            
+            // 发送请求
+            const response = await fetch('/proxy/' + encodeURIComponent(apiUrl), {
+                headers: API_CONFIG.search.headers,
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`API请求失败: ${response.status}`);
             }
+            
+            const data = await response.json();
+            
+            if (!data || !data.list || !Array.isArray(data.list)) {
+                return [];
+            }
+            
+            // 处理搜索结果
+            return data.list.map(item => ({
+                ...item,
+                source_code: apiCode,
+                source_name: API_SITES[apiCode]?.name || '未知来源'
+            }));
         } catch (error) {
             console.error(`搜索API ${apiCode} 失败:`, error);
+            return [];
         }
-        return [];
     });
     
     // 等待所有搜索完成
@@ -24,11 +47,35 @@ async function performSearch(keyword, apis) {
     
     // 合并所有结果
     results.forEach(apiResults => {
-        searchResults.push(...apiResults);
+        if (Array.isArray(apiResults) && apiResults.length > 0) {
+            searchResults.push(...apiResults);
+        }
+    });
+    
+    // 去重（根据vod_id和source_code组合）
+    const uniqueResults = [];
+    const seen = new Set();
+    
+    searchResults.forEach(item => {
+        const key = `${item.source_code}_${item.vod_id}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueResults.push(item);
+        }
+    });
+    
+    // 按照视频名称和来源排序
+    uniqueResults.sort((a, b) => {
+        // 首先按照视频名称排序
+        const nameCompare = (a.vod_name || '').localeCompare(b.vod_name || '');
+        if (nameCompare !== 0) return nameCompare;
+        
+        // 如果名称相同，则按照来源排序
+        return (a.source_name || '').localeCompare(b.source_name || '');
     });
     
     // 渲染搜索结果
-    renderSearchResults(searchResults);
+    renderSearchResults(uniqueResults);
 }
 
 // 渲染搜索结果
@@ -41,21 +88,33 @@ function renderSearchResults(results) {
         return;
     }
     
-    container.innerHTML = results.map(item => `
-        <div class="search-result-item" onclick="playFirstEpisode('${item.source_code}', '${item.vod_id}', '${item.vod_name}')">
-            <div class="search-card-img-container">
-                <img src="${item.vod_pic}" alt="${item.vod_name}" loading="lazy">
-            </div>
-            <div class="flex-grow p-4">
-                <h3 class="line-clamp-2">${item.vod_name}</h3>
-                <div class="text-gray-400 text-sm mt-2">
-                    <span class="bg-[#222]">${item.source_name}</span>
-                    ${item.vod_remarks ? `<span class="bg-[#222]">${item.vod_remarks}</span>` : ''}
+    container.innerHTML = results.map(item => {
+        const safeId = item.vod_id ? item.vod_id.toString().replace(/[^\w-]/g, '') : '';
+        const safeName = (item.vod_name || item.name || '未知资源').toString()
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        
+        return `
+            <div class="search-result-item" onclick="playFirstEpisode('${item.source_code}', '${safeId}', '${safeName}')">
+                <div class="search-card-img-container">
+                    <img src="${item.vod_pic || 'https://via.placeholder.com/300x450?text=无封面'}" 
+                         alt="${safeName}" 
+                         loading="lazy"
+                         onerror="this.onerror=null; this.src='https://via.placeholder.com/300x450?text=无封面'; this.classList.add('object-contain');">
                 </div>
-                <div class="text-gray-400 text-sm mt-2 line-clamp-2">${item.vod_content || ''}</div>
+                <div class="flex-grow p-4">
+                    <h3 class="line-clamp-2">${safeName}</h3>
+                    <div class="text-gray-400 text-sm mt-2">
+                        <span class="bg-[#222]">${item.source_name}</span>
+                        ${item.vod_remarks ? `<span class="bg-[#222]">${item.vod_remarks}</span>` : ''}
+                        ${item.type_name ? `<span class="bg-[#222]">${item.type_name}</span>` : ''}
+                    </div>
+                    <div class="text-gray-400 text-sm mt-2 line-clamp-2">${item.vod_content || ''}</div>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // 播放第一集
