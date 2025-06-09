@@ -191,7 +191,7 @@ input:checked + .slider:before {
     border-radius: 16px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     padding: 12px 20px;
-    margin-bottom: 12px;
+    margin-bottom: 32px; /* 增大下方间距，防止重叠 */
     gap: 16px;
 }
 .resource-info {
