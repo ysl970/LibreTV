@@ -123,7 +123,7 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
         console.log('Proxy request:', targetUrl);
         
         // 验证URL
-        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        if (!isValidUrl(targetUrl)) {
             throw new Error('Invalid URL');
         }
 
@@ -136,22 +136,41 @@ app.get('/proxy/:encodedUrl', async (req, res) => {
             'Pragma': 'no-cache'
         };
 
-        // 发送请求
-        const response = await fetch(targetUrl, { headers });
+        // 添加重试机制
+        let retries = 0;
+        const maxRetries = config.maxRetries;
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        while (retries <= maxRetries) {
+            try {
+                // 发送请求
+                const response = await fetch(targetUrl, { 
+                    headers,
+                    timeout: config.timeout
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // 设置响应头
+                res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
+                res.setHeader('Access-Control-Allow-Origin', '*');
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                res.setHeader('Pragma', 'no-cache');
+                res.setHeader('Expires', '0');
+
+                // 流式传输响应
+                response.body.pipe(res);
+                return;
+            } catch (error) {
+                if (retries === maxRetries) {
+                    throw error;
+                }
+                retries++;
+                console.log(`Retry ${retries}/${maxRetries} for ${targetUrl}`);
+                await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+            }
         }
-
-        // 设置响应头
-        res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
-        res.setHeader('Expires', '0');
-
-        // 流式传输响应
-        response.body.pipe(res);
     } catch (error) {
         console.error('Proxy error:', error);
         res.status(500).json({
