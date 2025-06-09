@@ -1,3 +1,13 @@
+// API配置
+const API_CONFIG = {
+    search: {
+        path: '/?wd=',
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+    }
+};
+
 // 执行搜索
 async function performSearch(keyword, apis) {
     if (!keyword || !apis || apis.length === 0) return;
