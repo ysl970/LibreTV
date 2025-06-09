@@ -1435,7 +1435,7 @@ function closeEmbeddedPlayer() {
     return false;
 }
 
-// 渲染资源选择框
+// 渲染资源选择卡片区域（仿图片UI）
 function renderResourceSelector() {
     if (typeof API_SITES === 'undefined') return;
     const container = document.getElementById('resourceSelectorContainer');
@@ -1450,23 +1450,55 @@ function renderResourceSelector() {
         .filter(([key, val]) => !val.adult)
         .map(([key, val]) => ({ key, name: val.name }));
 
-    let html = '<label for="resourceSelector" style="margin-right:8px;">切换资源：</label>';
-    html += '<select id="resourceSelector" class="px-2 py-1 border rounded">';
+    // 当前资源信息（可根据实际数据补充视频数等）
+    const currentResource = API_SITES[currentSource] || resourceOptions[0];
+    const resourceName = currentResource ? currentResource.name : '未知资源';
+    // 视频数可根据实际集数或API返回数据动态获取
+    let videoCount = (typeof currentEpisodes !== 'undefined' && currentEpisodes.length) ? currentEpisodes.length : '';
+    let videoCountText = videoCount ? `${videoCount}个视频` : '';
+
+    // 顶部资源信息与切换按钮
+    let html = `<div class="resource-selector-bar">
+        <span class="resource-info">${resourceName} ${videoCountText}</span>
+        <button class="switch-resource-btn" id="switchResourceBtn">
+            <span class="switch-resource-icon" style="display:inline-block;">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 4v12m0 0l-4-4m4 4l4-4" stroke="#a67c2d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            切换资源
+        </button>
+    </div>`;
+
+    // 下方资源卡片按钮
+    html += '<div class="resource-card-list">';
     resourceOptions.forEach(opt => {
-        html += `<option value="${opt.key}" ${opt.key === currentSource ? 'selected' : ''}>${opt.name}</option>`;
+        html += `<button class="resource-card${opt.key === currentSource ? ' active' : ''}" data-key="${opt.key}">${opt.name}</button>`;
     });
-    html += '</select>';
+    html += '</div>';
     container.innerHTML = html;
 
-    // 监听切换
-    const selector = document.getElementById('resourceSelector');
-    selector.addEventListener('change', function(e) {
-        const newSource = e.target.value;
-        // 保持当前集数索引
-        const url = new URL(window.location.href);
-        url.searchParams.set('source_code', newSource);
-        // 可选：如不同源集数数目不同，可重置index为0
-        // url.searchParams.set('index', 0);
-        window.location.href = url.toString();
+    // 资源卡片点击切换
+    container.querySelectorAll('.resource-card').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const newSource = btn.getAttribute('data-key');
+            if (newSource === currentSource) return;
+            const url = new URL(window.location.href);
+            url.searchParams.set('source_code', newSource);
+            // 可选：如不同源集数数目不同，可重置index为0
+            // url.searchParams.set('index', 0);
+            window.location.href = url.toString();
+        });
     });
+    // 切换资源按钮（可做刷新或弹窗扩展）
+    const switchBtn = document.getElementById('switchResourceBtn');
+    if (switchBtn) {
+        switchBtn.addEventListener('click', function() {
+            // 这里可扩展为弹窗/下拉选择等，当前实现为刷新当前资源
+            window.location.reload();
+        });
+    }
 }
+
+// 页面加载后渲染资源选择卡片
+window.addEventListener('DOMContentLoaded', function () {
+    renderResourceSelector();
+});
