@@ -815,7 +815,7 @@ async function fillAndSearchWithDouban(title) {
                 localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
                 
                 // 更新选中API计数（如果有这个元素）
-                const countEl = document.getElementById('selectedAPICount');
+                const countEl = document.getElementById('selectedApiCount');
                 if (countEl) {
                     countEl.textContent = selectedAPIs.length;
                 }
@@ -829,7 +829,15 @@ async function fillAndSearchWithDouban(title) {
     const input = document.getElementById('searchInput');
     if (input) {
         input.value = safeTitle;
-        await search(); // 使用已有的search函数执行搜索
+        
+        // 检查search函数是否存在
+        if (typeof search === 'function') {
+            await search(); // 使用已有的search函数执行搜索
+        } else {
+            // 如果search函数不存在，尝试自己实现基本的搜索功能
+            showToast('搜索功能不可用', 'error');
+            return;
+        }
         
         // 更新浏览器URL，使其反映当前的搜索状态
         try {
