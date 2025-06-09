@@ -20,9 +20,12 @@ async function handleApiRequest(url) {
                 throw new Error('无效的API来源');
             }
             
+            // 修复API URL构建
             const apiUrl = customApi
                 ? `${customApi}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`
                 : `${API_SITES[source].api}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`;
+            
+            console.log('Search API URL:', apiUrl); // 添加日志
             
             // 添加超时处理
             const controller = new AbortController();
@@ -30,7 +33,12 @@ async function handleApiRequest(url) {
             
             try {
                 const response = await fetch(PROXY_URL + encodeURIComponent(apiUrl), {
-                    headers: API_CONFIG.search.headers,
+                    headers: {
+                        ...API_CONFIG.search.headers,
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    },
                     signal: controller.signal
                 });
                 
@@ -41,6 +49,7 @@ async function handleApiRequest(url) {
                 }
                 
                 const data = await response.json();
+                console.log('Search API Response:', data); // 添加日志
                 
                 // 检查JSON格式的有效性
                 if (!data || !Array.isArray(data.list)) {
@@ -63,6 +72,7 @@ async function handleApiRequest(url) {
                 });
             } catch (fetchError) {
                 clearTimeout(timeoutId);
+                console.error('Search API Error:', fetchError); // 添加错误日志
                 throw fetchError;
             }
         }
