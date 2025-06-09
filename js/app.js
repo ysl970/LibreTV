@@ -602,8 +602,7 @@ async function search() {
     resetSearchArea();
     document.getElementById('doubanArea').classList.add('hidden');
 
-    const selectedApiKeys = getSelectedAPIs();
-    if (selectedApiKeys.length === 0) {
+    if (selectedAPIs.length === 0) {
         hideLoading();
         showToast('请至少选择一个数据源', 'warning');
         return;
@@ -611,7 +610,7 @@ async function search() {
 
     try {
         // 使用内置API接口进行搜索
-        const apiUrl = `/api/search?wd=${encodeURIComponent(query)}&source=${selectedApiKeys[0]}`;
+        const apiUrl = `/api/search?wd=${encodeURIComponent(query)}&source=${selectedAPIs[0]}`;
         console.log('Search URL:', apiUrl);
 
         // 添加超时处理
