@@ -65,6 +65,8 @@ body, html {
 .episode-active {
     background-color: #3b82f6 !important;
     border-color: #60a5fa !important;
+    color: white !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
 }
 .episode-grid {
     max-height: 30vh;
