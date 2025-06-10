@@ -71,7 +71,7 @@
 }
 
 /* 模态框内容区域滚动样式 */
-#modalContent {
+#modalItemsContainer {
   max-height: 70vh;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -79,27 +79,43 @@
   padding-right: 5px;
 }
 
-#modalContent::-webkit-scrollbar {
+#modalItemsContainer::-webkit-scrollbar {
   width: 6px;
 }
 
-#modalContent::-webkit-scrollbar-track {
+#modalItemsContainer::-webkit-scrollbar-track {
   background: transparent;
 }
 
-#modalContent::-webkit-scrollbar-thumb {
+#modalItemsContainer::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 20px;
 }
 
-#modalContent::-webkit-scrollbar-thumb:hover {
+#modalItemsContainer::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.4);
 }
 
 /* 加载更多内容和无更多内容提示样式 */
-#loadingMore, #noMoreContent {
+#loadingMore, #noMoreItems {
   width: 100%;
   justify-content: center;
   align-items: center;
   margin-top: 1rem;
+}
+
+/* 全局加载状态样式 */
+#globalLoading {
+  z-index: 9999;
+}
+
+/* Toast提示样式 */
+#toast {
+  z-index: 9999;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* 分类模态框样式 */
+#categoryModal {
+  z-index: 1000;
 } 
