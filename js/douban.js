@@ -137,8 +137,8 @@ function initDouban() {
         doubanToggle.checked = localStorage.getItem('doubanEnabled') !== 'false';
     }
 
-    // 清除过期缓存，确保获取最新内容
-    clearExpiredCache();
+    // 清除所有缓存，确保获取最新内容
+    clearAllDoubanCache();
 
     // 立即更新豆瓣区域显示状态
     updateDoubanVisibility();
@@ -426,8 +426,6 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
         // 特殊处理某些分类
         if (category === 'animation' && type === 'movie') {
             params.genres = '动画';
-        } else if (category === 'hot') {
-            params.sort = 'recommend';
         } else if (type === 'tv') {
             if (category === 'us') params.countries = '美国';
             else if (category === 'hk') params.countries = '香港';
