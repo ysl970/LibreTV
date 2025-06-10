@@ -77,4 +77,33 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 300);
     }
+
+    // 处理免责声明的显示
+    const hasAcceptedDisclaimer = localStorage.getItem('acceptedDisclaimer');
+    if (!hasAcceptedDisclaimer) {
+        const disclaimerModal = document.getElementById('disclaimerModal');
+        if (disclaimerModal) {
+            disclaimerModal.style.display = 'flex';
+        }
+    }
+    
+    // 绑定免责声明接受按钮
+    const acceptDisclaimerBtn = document.getElementById('acceptDisclaimerBtn');
+    if (acceptDisclaimerBtn) {
+        acceptDisclaimerBtn.addEventListener('click', function() {
+            localStorage.setItem('acceptedDisclaimer', 'true');
+            const disclaimerModal = document.getElementById('disclaimerModal');
+            if (disclaimerModal) {
+                disclaimerModal.style.display = 'none';
+            }
+        });
+    }
+    
+    // 初始化豆瓣推荐功能
+    if (typeof initDouban === 'function') {
+        // 确保在页面完全加载后初始化豆瓣功能
+        setTimeout(() => {
+            initDouban();
+        }, 300);
+    }
 });
