@@ -1468,13 +1468,18 @@ function renderEpisodeCards() {
             console.log('当前播放集:', realIndex + 1);
         }
         
-        // 使用style属性直接添加蓝色背景，确保高亮效果生效
-        const activeStyle = isActive ? 
-            'style="background-color: #3b82f6 !important; color: white !important; border: 2px solid #60a5fa !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;"' : '';
+        // 为确保高亮效果生效，使用内联样式和类共同作用
+        const activeClass = isActive ? ' active' : '';
         
-        html += `<div class="episode-card${isActive ? ' active' : ''}" ${activeStyle} onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
+        // 使用style属性直接添加蓝色背景，确保高亮效果生效
+        // 注意：为了最大兼容性，同时使用class和内联样式
+        const activeStyle = isActive ? 
+            'style="background-color: #3b82f6 !important; color: white !important; border: 2px solid #60a5fa !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important; font-weight: bold;"' : '';
+        
+        // 生成卡片HTML
+        html += `<div class="episode-card${activeClass}" ${activeStyle} onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
           ${isActive ? '<span class="episode-icon" style="margin-right:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="white" stroke-width="1.5"/><path d="M15.4 12.5l-5.8 3.86V8.64l5.8 3.86z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
-          <span class="episode-label">${isActive ? '当前播放: ' : ''}第${realIndex+1}集</span>
+          <span class="episode-label"${isActive ? ' style="color: white !important; -webkit-text-fill-color: white !important; text-fill-color: white !important; background: none !important;"' : ''}>${isActive ? '当前播放: ' : ''}第${realIndex+1}集</span>
         </div>`;
     });
     container.innerHTML = html;
@@ -1682,9 +1687,11 @@ function renderResourceInfoBar() {
     const currentSource = urlParams.get('source_code') || '';
     const currentIndex = parseInt(urlParams.get('index') || '0', 10);
     const title = urlParams.get('title') || document.getElementById('videoTitle').textContent || '';
+    const videoUrl = urlParams.get('url') || '';
     
     // 获取当前资源名称
     let resourceName = '未知资源';
+    let resourceFound = false;
     
     // 检查API_SITES是否已加载
     if (typeof API_SITES === 'undefined') {
@@ -1713,6 +1720,7 @@ function renderResourceInfoBar() {
     // 从API_SITES获取资源名称
     if (currentSource && API_SITES[currentSource]) {
         resourceName = API_SITES[currentSource].name;
+        resourceFound = true;
         console.log('找到资源名称:', resourceName);
     } 
     // 如果是自定义API源
@@ -1723,24 +1731,43 @@ function renderResourceInfoBar() {
             const customIndex = parseInt(currentSource.replace('custom_', ''), 10);
             if (customAPIs[customIndex]) {
                 resourceName = customAPIs[customIndex].name || '自定义资源';
+                resourceFound = true;
             }
         } catch (e) {
             console.error('获取自定义API信息失败:', e);
         }
-    } else {
-        console.log('未找到匹配的资源:', currentSource);
-        
+    } 
+    
+    // 如果仍未找到资源名称，尝试通过视频URL匹配
+    if (!resourceFound && videoUrl) {
         // 尝试从所有API源中匹配当前URL
-        const currentUrl = urlParams.get('url') || '';
-        if (currentUrl && typeof API_SITES !== 'undefined') {
-            // 遍历所有API源，尝试匹配URL
-            for (const [key, api] of Object.entries(API_SITES)) {
-                if (currentUrl.includes(api.api) || 
-                    (api.detail && currentUrl.includes(api.detail))) {
+        for (const [key, api] of Object.entries(API_SITES)) {
+            // 检查URL是否包含API域名
+            if (videoUrl.includes(api.api) || 
+                (api.detail && videoUrl.includes(api.detail)) ||
+                (api.url && videoUrl.includes(api.url)) ||
+                (api.host && videoUrl.includes(api.host))) {
+                resourceName = api.name;
+                resourceFound = true;
+                console.log('通过URL匹配到资源名称:', resourceName);
+                break;
+            }
+            
+            // 尝试匹配视频播放服务的主机名（如果资源使用通用视频CDN）
+            try {
+                const videoUrlObj = new URL(videoUrl);
+                const videoHost = videoUrlObj.hostname;
+                const apiUrlObj = new URL(api.api);
+                const apiHost = apiUrlObj.hostname;
+                
+                if (videoHost === apiHost || (api.domains && api.domains.includes(videoHost))) {
                     resourceName = api.name;
-                    console.log('通过URL匹配到资源名称:', resourceName);
+                    resourceFound = true;
+                    console.log('通过主机名匹配到资源名称:', resourceName);
                     break;
                 }
+            } catch (e) {
+                // URL解析错误，继续尝试其他匹配方式
             }
         }
     }
