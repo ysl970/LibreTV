@@ -142,7 +142,7 @@ function loadAllCategoryContent() {
         fetchCategoryContent('variety', 'hot', '热门');
         
         // 4. 热门动画
-        fetchCategoryContent('movie', 'animation', '动画电影');
+        fetchCategoryContent('movie', 'animation', '动画');
         
         // 5. 新片榜单
         fetchCategoryContent('movie', 'new', '最新');
@@ -218,7 +218,7 @@ function getCategoryTitle(type, category) {
         if (category === 'hot') return '热门电影';
         if (category === 'new') return '新片榜单';
         if (category === 'top250') return 'Top250电影';
-        if (category === 'animation') return '热门动画电影';
+        if (category === 'animation') return '热门动画';
         return '电影';
     } else if (type === 'tv') {
         if (category === 'hot') return '热门电视剧';
@@ -248,8 +248,9 @@ async function fetchMoreCategoryContent(type, category) {
             } else if (category === 'new') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=50&page_start=0`;
             } else if (category === 'animation') {
-                // 动画使用动画电影标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画电影&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+                // 热门动画需要同时获取电影动画和电视动画
+                // 这里先获取电影动画，后面会合并电视动画
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画&sort=recommend&page_limit=50&page_start=0`;
             } else if (category === 'hot') {
                 // 热门电影
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=recommend&page_limit=50&page_start=0`;
@@ -278,6 +279,38 @@ async function fetchMoreCategoryContent(type, category) {
         
         // 获取数据
         const data = await fetchDoubanData(apiUrl);
+        
+        // 如果是动画分类，还需要获取电视动画并合并数据
+        if (type === 'movie' && category === 'animation') {
+            try {
+                // 获取电视动画数据
+                const tvAnimationUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+                const tvAnimationData = await fetchDoubanData(tvAnimationUrl);
+                
+                // 合并电影动画和电视动画数据
+                if (tvAnimationData && tvAnimationData.subjects && tvAnimationData.subjects.length > 0) {
+                    // 确保data.subjects存在
+                    if (!data.subjects) {
+                        data.subjects = [];
+                    }
+                    
+                    // 合并两组数据
+                    const allSubjects = [...data.subjects, ...tvAnimationData.subjects];
+                    
+                    // 根据评分排序（高分在前）
+                    allSubjects.sort((a, b) => {
+                        const rateA = parseFloat(a.rate) || 0;
+                        const rateB = parseFloat(b.rate) || 0;
+                        return rateB - rateA;
+                    });
+                    
+                    // 限制数量为原来的大小
+                    data.subjects = allSubjects.slice(0, doubanPageSize);
+                }
+            } catch (error) {
+                console.error('获取电视动画数据失败:', error);
+            }
+        }
         
         // 显示模态框
         if (data && data.subjects && data.subjects.length > 0) {
@@ -538,8 +571,9 @@ async function loadMoreItems(type, category, page) {
             } else if (category === 'new') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=20&page_start=${page * 20}`;
             } else if (category === 'animation') {
-                // 动画使用动画电影标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画电影&sort=recommend&page_limit=20&page_start=${page * 20}`;
+                // 热门动画需要同时获取电影动画和电视动画
+                // 这里先获取电影动画，后面会合并电视动画
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画&sort=recommend&page_limit=20&page_start=${page * 20}`;
             } else if (category === 'hot') {
                 // 热门电影
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=recommend&page_limit=20&page_start=${page * 20}`;
@@ -568,6 +602,38 @@ async function loadMoreItems(type, category, page) {
         
         // 获取数据
         const data = await fetchDoubanData(apiUrl);
+        
+        // 如果是动画分类，还需要获取电视动画并合并数据
+        if (type === 'movie' && category === 'animation') {
+            try {
+                // 获取电视动画数据
+                const tvAnimationUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&sort=recommend&page_limit=20&page_start=${page * 20}`;
+                const tvAnimationData = await fetchDoubanData(tvAnimationUrl);
+                
+                // 合并电影动画和电视动画数据
+                if (tvAnimationData && tvAnimationData.subjects && tvAnimationData.subjects.length > 0) {
+                    // 确保data.subjects存在
+                    if (!data.subjects) {
+                        data.subjects = [];
+                    }
+                    
+                    // 合并两组数据
+                    const allSubjects = [...data.subjects, ...tvAnimationData.subjects];
+                    
+                    // 根据评分排序（高分在前）
+                    allSubjects.sort((a, b) => {
+                        const rateA = parseFloat(a.rate) || 0;
+                        const rateB = parseFloat(b.rate) || 0;
+                        return rateB - rateA;
+                    });
+                    
+                    // 限制数量为原来的大小
+                    data.subjects = allSubjects.slice(0, 20);
+                }
+            } catch (error) {
+                console.error('获取电视动画数据失败:', error);
+            }
+        }
         
         return data;
     } catch (error) {
@@ -598,8 +664,9 @@ async function fetchCategoryContent(type, category, categoryName) {
                 // 新片榜单使用时间排序确保是最新的
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'animation') {
-                // 动画使用动画电影标签
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画电影&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+                // 热门动画需要同时获取电影动画和电视动画
+                // 这里先获取电影动画，后面会合并电视动画
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'hot') {
                 // 热门电影
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
@@ -630,6 +697,38 @@ async function fetchCategoryContent(type, category, categoryName) {
         
         // 获取数据
         const data = await fetchDoubanData(apiUrl);
+        
+        // 如果是动画分类，还需要获取电视动画并合并数据
+        if (type === 'movie' && category === 'animation') {
+            try {
+                // 获取电视动画数据
+                const tvAnimationUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+                const tvAnimationData = await fetchDoubanData(tvAnimationUrl);
+                
+                // 合并电影动画和电视动画数据
+                if (tvAnimationData && tvAnimationData.subjects && tvAnimationData.subjects.length > 0) {
+                    // 确保data.subjects存在
+                    if (!data.subjects) {
+                        data.subjects = [];
+                    }
+                    
+                    // 合并两组数据
+                    const allSubjects = [...data.subjects, ...tvAnimationData.subjects];
+                    
+                    // 根据评分排序（高分在前）
+                    allSubjects.sort((a, b) => {
+                        const rateA = parseFloat(a.rate) || 0;
+                        const rateB = parseFloat(b.rate) || 0;
+                        return rateB - rateA;
+                    });
+                    
+                    // 限制数量为原来的大小
+                    data.subjects = allSubjects.slice(0, doubanPageSize);
+                }
+            } catch (error) {
+                console.error('获取电视动画数据失败:', error);
+            }
+        }
         
         // 渲染内容
         renderCategoryContent(data, container);
