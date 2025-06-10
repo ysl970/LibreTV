@@ -16,16 +16,6 @@ const doubanCategories = {
                 countries: ''
             }
         },
-        new: {
-            title: '新片榜单',
-            params: {
-                type: 'movie',
-                tag: '最新',
-                sort: 'time',
-                genres: '',
-                countries: ''
-            }
-        },
         animation: {
             title: '热播动画',
             params: {
@@ -292,9 +282,6 @@ function loadAllCategoryContent() {
         // 4. 热门动画
         fetchCategoryContent('movie', 'animation', doubanCategories.movie.animation.title);
         
-        // 5. 新片榜单
-        fetchCategoryContent('movie', 'new', doubanCategories.movie.new.title);
-        
         doubanLoadStatus.secondaryLoaded = true;
     };
     
@@ -401,7 +388,6 @@ function getCategoryTitle(type, category) {
     // 兼容旧代码的返回值
     if (type === 'movie') {
         if (category === 'hot') return '热播电影';
-        if (category === 'new') return '新片榜单';
         if (category === 'top250') return 'Top250电影';
         if (category === 'animation') return '热播动画';
         return '电影';
@@ -442,9 +428,6 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
             params.genres = '动画';
         } else if (category === 'hot') {
             params.sort = 'recommend';
-        } else if (category === 'new' && type === 'movie') {
-            params.sort = 'time';
-            params.tag = '最新';
         } else if (type === 'tv') {
             if (category === 'us') params.countries = '美国';
             else if (category === 'hk') params.countries = '香港';
@@ -620,7 +603,6 @@ function showCategoryModal(items, title, type, category) {
 
 // 从标题获取分类
 function getCategoryFromTitle(title) {
-    if (title.includes('新片榜单')) return 'new';
     if (title.includes('Top250')) return 'top250';
     if (title.includes('动画')) return 'animation';
     if (title.includes('美剧')) return 'us';
