@@ -869,35 +869,6 @@ function renderEpisodes() {
     const episodes = episodesReversed ? [...currentEpisodes].reverse() : currentEpisodes;
     let html = '';
 
-    // 添加全局样式，确保高亮一致性
-    const highlightStyle = `
-    <style id="episodes-highlight-style">
-        .episode-btn.active {
-            background-color: #3b82f6 !important;
-            color: white !important;
-            border: 2px solid #60a5fa !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
-            font-weight: bold !important;
-            position: relative !important;
-            z-index: 1 !important;
-            transform: translateZ(0) !important;
-        }
-        .episode-btn.active:hover, .episode-btn.active:focus {
-            background-color: #2563eb !important;
-            border-color: #3b82f6 !important;
-        }
-        .episode-btn:focus-visible {
-            outline: 2px solid #60a5fa !important;
-            outline-offset: 2px !important;
-        }
-    </style>
-    `;
-    
-    // 如果页面中没有这个样式，则添加
-    if (!document.getElementById('episodes-highlight-style')) {
-        episodesList.insertAdjacentHTML('beforebegin', highlightStyle);
-    }
-
     episodes.forEach((episode, index) => {
         // 根据倒序状态计算真实的剧集索引
         const realIndex = episodesReversed ? currentEpisodes.length - 1 - index : index;
@@ -906,51 +877,13 @@ function renderEpisodes() {
         html += `
             <button id="episode-${realIndex}" 
                     onclick="playEpisode(${realIndex})" 
-                    class="px-4 py-2 episode-btn ${isActive ? 'active' : '!bg-[#222] hover:!bg-[#333] hover:!shadow-none'} !border ${isActive ? '!border-blue-500' : '!border-[#333]'} rounded-lg transition-colors text-center"
-                    role="button"
-                    aria-label="第${realIndex + 1}集${isActive ? ' (当前播放)' : ''}"
-                    aria-selected="${isActive}"
-                    tabindex="0">
+                    class="px-4 py-2 ${isActive ? 'episode-active bg-blue-600 text-white' : '!bg-[#222] hover:!bg-[#333] hover:!shadow-none'} !border ${isActive ? '!border-blue-500' : '!border-[#333]'} rounded-lg transition-colors text-center episode-btn">
                 ${realIndex + 1}
             </button>
         `;
     });
 
     episodesList.innerHTML = html;
-
-    // 添加键盘导航支持
-    const episodeButtons = episodesList.querySelectorAll('.episode-btn');
-    episodeButtons.forEach(button => {
-        button.addEventListener('keydown', function(e) {
-            // 回车或空格键触发点击
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                this.click();
-            }
-            
-            // 左右方向键导航
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                e.preventDefault();
-                const currentIndex = Array.from(episodeButtons).indexOf(this);
-                const nextIndex = e.key === 'ArrowLeft' ? 
-                    Math.max(0, currentIndex - 1) : 
-                    Math.min(episodeButtons.length - 1, currentIndex + 1);
-                episodeButtons[nextIndex].focus();
-            }
-        });
-    });
-    
-    // 滚动当前集数到视图中心
-    const activeButton = episodesList.querySelector('.episode-btn.active');
-    if (activeButton) {
-        setTimeout(() => {
-            activeButton.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'center'
-            });
-        }, 100);
-    }
 }
 
 // 播放指定集数
@@ -1525,43 +1458,6 @@ function renderEpisodeCards() {
     }
     const episodes = window.episodesReversed ? [...window.currentEpisodes].reverse() : window.currentEpisodes;
     let html = '';
-    
-    // 添加CSS样式，确保当前集数高亮效果在全局场景中生效
-    const highlightStyle = `
-    <style id="episode-highlight-style">
-        .episode-card.active {
-            background-color: #3b82f6 !important;
-            color: white !important;
-            border: 2px solid #60a5fa !important;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
-            font-weight: bold !important;
-            position: relative !important;
-            z-index: 1 !important;
-            transform: translateZ(0) !important;
-        }
-        .episode-card.active .episode-label {
-            color: white !important;
-            -webkit-text-fill-color: white !important;
-            text-fill-color: white !important;
-            background: none !important;
-        }
-        .episode-card.active:hover, .episode-card.active:focus {
-            background-color: #2563eb !important;
-            border-color: #3b82f6 !important;
-        }
-        /* 添加聚焦和键盘导航样式 */
-        .episode-card:focus-visible {
-            outline: 2px solid #60a5fa !important;
-            outline-offset: 2px !important;
-        }
-    </style>
-    `;
-    
-    // 如果页面中没有这个样式，则添加
-    if (!document.getElementById('episode-highlight-style')) {
-        container.insertAdjacentHTML('beforebegin', highlightStyle);
-    }
-    
     episodes.forEach((ep, idx) => {
         // 真实索引
         const realIndex = window.episodesReversed ? window.currentEpisodes.length - 1 - idx : idx;
@@ -1572,58 +1468,21 @@ function renderEpisodeCards() {
             console.log('当前播放集:', realIndex + 1);
         }
         
-        // 使用classList来设置高亮状态，确保样式一致性
-        const activeClass = isActive ? 'active' : '';
+        // 为确保高亮效果生效，使用内联样式和类共同作用
+        const activeClass = isActive ? ' active' : '';
         
-        // 生成卡片HTML - 使用class而不是内联样式，以提高一致性和可维护性
-        html += `<div class="episode-card ${activeClass}" 
-            onclick="playEpisode(${realIndex})" 
-            tabindex="0" 
-            data-index="${realIndex}"
-            role="button" 
-            aria-label="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}" 
-            title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
-          ${isActive ? '<span class="episode-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="white" stroke-width="1.5"/><path d="M15.4 12.5l-5.8 3.86V8.64l5.8 3.86z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
-          <span class="episode-label">第${realIndex+1}集</span>
+        // 使用style属性直接添加蓝色背景，确保高亮效果生效
+        // 注意：为了最大兼容性，同时使用class和内联样式
+        const activeStyle = isActive ? 
+            'style="background-color: #3b82f6 !important; color: white !important; border: 2px solid #60a5fa !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important; font-weight: bold;"' : '';
+        
+        // 生成卡片HTML
+        html += `<div class="episode-card${activeClass}" ${activeStyle} onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
+          ${isActive ? '<span class="episode-icon" style="margin-right:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="white" stroke-width="1.5"/><path d="M15.4 12.5l-5.8 3.86V8.64l5.8 3.86z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
+          <span class="episode-label"${isActive ? ' style="color: white !important; -webkit-text-fill-color: white !important; text-fill-color: white !important; background: none !important;"' : ''}>${isActive ? '当前播放: ' : ''}第${realIndex+1}集</span>
         </div>`;
     });
-    
     container.innerHTML = html;
-    
-    // 为当前播放集合添加聚焦，确保在切换时能够看到它
-    const activeCard = container.querySelector('.episode-card.active');
-    if (activeCard) {
-        // 滚动到视图中
-        setTimeout(() => {
-            activeCard.scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest',
-                inline: 'center'
-            });
-        }, 100);
-    }
-    
-    // 添加键盘导航支持
-    const episodeCards = container.querySelectorAll('.episode-card');
-    episodeCards.forEach(card => {
-        card.addEventListener('keydown', function(e) {
-            // 回车或空格键触发点击
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                this.click();
-            }
-            
-            // 左右方向键导航
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                e.preventDefault();
-                const currentIndex = Array.from(episodeCards).indexOf(this);
-                const nextIndex = e.key === 'ArrowLeft' ? 
-                    Math.max(0, currentIndex - 1) : 
-                    Math.min(episodeCards.length - 1, currentIndex + 1);
-                episodeCards[nextIndex].focus();
-            }
-        });
-    });
 }
 
 // 优化后的资源切换弹窗渲染
@@ -1881,83 +1740,34 @@ function renderResourceInfoBar() {
     
     // 如果仍未找到资源名称，尝试通过视频URL匹配
     if (!resourceFound && videoUrl) {
-        let bestMatchDomain = '';
-        let bestMatchKey = '';
-        
         // 尝试从所有API源中匹配当前URL
         for (const [key, api] of Object.entries(API_SITES)) {
+            // 检查URL是否包含API域名
+            if (videoUrl.includes(api.api) || 
+                (api.detail && videoUrl.includes(api.detail)) ||
+                (api.url && videoUrl.includes(api.url)) ||
+                (api.host && videoUrl.includes(api.host))) {
+                resourceName = api.name;
+                resourceFound = true;
+                console.log('通过URL匹配到资源名称:', resourceName);
+                break;
+            }
+            
+            // 尝试匹配视频播放服务的主机名（如果资源使用通用视频CDN）
             try {
-                // 检查URL是否包含API域名
-                const videoHostname = new URL(videoUrl).hostname;
-                const urlDomains = [];
+                const videoUrlObj = new URL(videoUrl);
+                const videoHost = videoUrlObj.hostname;
+                const apiUrlObj = new URL(api.api);
+                const apiHost = apiUrlObj.hostname;
                 
-                // 收集API的所有可能域名
-                if (api.api) {
-                    try {
-                        urlDomains.push(new URL(api.api).hostname);
-                    } catch (e) {}
-                }
-                
-                if (api.detail) {
-                    try {
-                        urlDomains.push(new URL(api.detail).hostname);
-                    } catch (e) {}
-                }
-                
-                if (api.host) urlDomains.push(api.host);
-                if (api.domains && Array.isArray(api.domains)) {
-                    urlDomains.push(...api.domains);
-                }
-                
-                // 检查视频URL是否包含API的任一域名
-                const domainMatch = urlDomains.some(domain => 
-                    videoHostname === domain || videoHostname.endsWith('.' + domain));
-                
-                if (domainMatch) {
-                    // 如果匹配到域名，直接使用这个匹配结果
+                if (videoHost === apiHost || (api.domains && api.domains.includes(videoHost))) {
                     resourceName = api.name;
                     resourceFound = true;
-                    console.log('通过域名匹配到资源名称:', resourceName, '域名:', videoHostname);
-                    
-                    // 更新URL参数中的source_code
-                    if (key !== currentSource) {
-                        console.log('更新URL参数中的source_code:', key);
-                        const newUrl = new URL(window.location.href);
-                        newUrl.searchParams.set('source_code', key);
-                        window.history.replaceState({}, '', newUrl.toString());
-                    }
-                    
+                    console.log('通过主机名匹配到资源名称:', resourceName);
                     break;
-                }
-                
-                // 如果仍未找到精确匹配，尝试部分匹配（检查URL是否包含API的域名部分）
-                if (!resourceFound) {
-                    for (const domain of urlDomains) {
-                        if (domain && videoUrl.includes(domain) && domain.length > bestMatchDomain.length) {
-                            bestMatchDomain = domain;
-                            bestMatchKey = key;
-                            break;
-                        }
-                    }
                 }
             } catch (e) {
                 // URL解析错误，继续尝试其他匹配方式
-                console.error('URL解析错误:', e);
-            }
-        }
-        
-        // 如果找到了最佳部分匹配，使用它
-        if (!resourceFound && bestMatchDomain) {
-            resourceName = API_SITES[bestMatchKey].name;
-            resourceFound = true;
-            console.log('通过部分域名匹配到资源名称:', resourceName, '域名部分:', bestMatchDomain);
-            
-            // 更新URL参数中的source_code
-            if (bestMatchKey !== currentSource) {
-                console.log('更新URL参数中的source_code:', bestMatchKey);
-                const newUrl = new URL(window.location.href);
-                newUrl.searchParams.set('source_code', bestMatchKey);
-                window.history.replaceState({}, '', newUrl.toString());
             }
         }
     }
