@@ -21,9 +21,10 @@ const doubanCategories = {
             params: {
                 type: 'movie',
                 tag: '动画',
-                sort: 'time',
+                sort: 'time', // 按时间排序，确保最新的在前面
                 genres: '动画',
                 countries: ''
+                // 不限制年份，显示所有最新的内容
             }
         },
         top250: {
@@ -93,9 +94,10 @@ const doubanCategories = {
             params: {
                 type: 'tv',
                 tag: '动画',
-                sort: 'time',
+                sort: 'time', // 按时间排序，确保最新的在前面
                 genres: '动画',
                 countries: ''
+                // 不限制年份，显示所有最新的内容
             }
         }
     },
@@ -105,9 +107,10 @@ const doubanCategories = {
             params: {
                 type: 'tv',
                 tag: '综艺',
-                sort: 'time',
+                sort: 'time', // 按时间排序，确保最新的在前面
                 genres: '综艺',
                 countries: ''
+                // 不限制年份，显示所有最新的内容
             }
         }
     }
@@ -405,6 +408,18 @@ function getCategoryTitle(type, category) {
 }
 
 // 构建豆瓣API请求URL
+// 获取当前年份和月份，用于构建最新内容的year_range
+function getCurrentYearRange() {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // 月份从0开始，所以+1
+    
+    // 如果是年初（1-3月），也包括上一年的内容
+    const startYear = currentMonth <= 3 ? currentYear - 1 : currentYear;
+    
+    return `${startYear},${currentYear}`;
+}
+
 function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart = 0, refresh = false) {
     // 添加随机参数，确保在刷新时不使用缓存
     const randomParam = refresh ? `&_t=${Date.now()}` : '';
@@ -413,6 +428,12 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
     let params = {};
     if (doubanCategories[type] && doubanCategories[type][category]) {
         params = { ...doubanCategories[type][category].params };
+        
+        // 对于热播综艺和热播动画，自动添加当前年份范围
+        if ((type === 'variety' && category === 'hot') || 
+            (category === 'animation' && (type === 'movie' || type === 'tv'))) {
+            params.year_range = getCurrentYearRange();
+        }
     } else {
         // 兼容旧代码的参数构建
         params = {
@@ -446,7 +467,11 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
     if (params.countries) {
         url += `&countries=${encodeURIComponent(params.countries)}`;
     }
+    if (params.year_range) {
+        url += `&year_range=${encodeURIComponent(params.year_range)}`;
+    }
     
+    console.log(`构建API URL: ${url}`);
     return url;
 }
 
@@ -502,6 +527,7 @@ async function fetchMoreCategoryContent(type, category) {
             try {
                 // 获取电视动画数据，使用随机起始位置
                 const tvRandomStart = Math.floor(Math.random() * 40);
+                // 确保使用最新的年份范围
                 const tvAnimationUrl = buildDoubanApiUrl('tv', 'animation', 50, tvRandomStart, true);
                 const tvAnimationData = await fetchDoubanData(tvAnimationUrl, true);
                 
@@ -830,7 +856,7 @@ async function fetchCategoryContent(type, category, categoryName, refresh = fals
             container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">加载中...</div>';
         }
         
-        // 使用新的函数构建API URL
+        // 使用新的函数构建API URL（包含最新的年份范围）
         const apiUrl = buildDoubanApiUrl(type, category, doubanPageSize, 0, refresh);
         
         console.log(`加载分类 ${type}-${category}: ${apiUrl}`);
@@ -844,7 +870,7 @@ async function fetchCategoryContent(type, category, categoryName, refresh = fals
         // 如果是动画分类，还需要获取电视动画并合并数据
         if (type === 'movie' && category === 'animation') {
             try {
-                // 获取电视动画数据
+                // 获取电视动画数据（确保使用最新的年份范围）
                 const tvAnimationUrl = buildDoubanApiUrl('tv', 'animation', 50, 0, refresh);
                 const tvAnimationData = await fetchDoubanData(tvAnimationUrl, refresh);
                 
@@ -881,6 +907,8 @@ async function fetchCategoryContent(type, category, categoryName, refresh = fals
 
 // 过滤并处理动画内容
 function filterAndProcessAnimationContent(items) {
+    console.log(`动画内容过滤前: ${items.length}个项目`);
+    
     // 强化过滤逻辑，确保所有内容都是动画
     const filteredItems = items.filter(item => {
         // 通过标题和URL判断是否是动画
@@ -907,12 +935,21 @@ function filterAndProcessAnimationContent(items) {
         
         // 额外检查是否有动画类型标记
         const hasAnimeTag = 
-            (item.genres && item.genres.some(genre => 
-                genre.includes('动画') || genre.includes('anime'))) ||
-            (item.tags && item.tags.some(tag => 
-                tag.includes('动画') || tag.includes('anime')));
+            (item.genres && Array.isArray(item.genres) && item.genres.some(genre => 
+                (typeof genre === 'string' && (genre.includes('动画') || genre.includes('anime'))))) ||
+            (item.tags && Array.isArray(item.tags) && item.tags.some(tag => 
+                (typeof tag === 'string' && (tag.includes('动画') || tag.includes('anime')))));
         
-        return isAnime || hasAnimeTag;
+        // 如果有类型信息但不是动画，则排除
+        if (item.genres && Array.isArray(item.genres) && item.genres.length > 0) {
+            // 如果明确有类型信息，但不包含动画，则排除
+            if (!item.genres.some(genre => 
+                (typeof genre === 'string' && (genre.includes('动画') || genre.includes('anime'))))) {
+                return false;
+            }
+        }
+        
+        return isAnime || hasAnimeTag || title.includes('仙逆') || title.includes('千与千寻');
     });
     
     // 根据评分排序（高分在前）
@@ -921,6 +958,8 @@ function filterAndProcessAnimationContent(items) {
         const rateB = parseFloat(b.rate) || 0;
         return rateB - rateA;
     });
+    
+    console.log(`动画内容过滤后: ${filteredItems.length}个项目`);
     
     // 限制数量为原来的大小
     return filteredItems.slice(0, 50);
