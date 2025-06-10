@@ -435,29 +435,31 @@ function getCurrentYearMonthRange() {
     let startYear = currentYear;
     let startMonth = currentMonth;
     
-    // 获取3个月的范围，确保能够获取到足够的内容
-    if (currentMonth <= 3) {
-        // 如果是1-3月，需要包含上一年的内容
+    // 获取6个月的范围，确保能够获取到足够的内容（特别是对于综艺和动画）
+    if (currentMonth <= 6) {
+        // 如果是1-6月，需要包含上一年的部分月份
         startYear = currentYear - 1;
-        startMonth = 10 + currentMonth; // 10,11,12月
+        startMonth = 6 + currentMonth; // 从上一年的7-12月开始
     } else {
-        // 否则从当前月份往前推3个月
-        startMonth = currentMonth - 2;
+        // 否则从当前月份往前推6个月
+        startMonth = currentMonth - 5;
     }
     
     // 构造参数格式：yyyy-mm,yyyy-mm
     return `${startYear}-${startMonth.toString().padStart(2, '0')},${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
 }
 
-// 新增：根据年份和月份计算资源与当前时间的接近程度
+// 新增：更精细地计算资源与当前时间的接近程度
 function calculateTimeProximity(item) {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth() + 1; // 月份从0开始，所以+1
+    const currentDay = currentDate.getDate();
     
     // 从item中提取年份信息
     let itemYear = null;
     let itemMonth = null;
+    let itemDay = null;
     
     // 尝试从不同字段中提取年份信息
     if (item.year) {
@@ -471,34 +473,75 @@ function calculateTimeProximity(item) {
             itemYear = parseInt(yearMatch[0], 10);
         }
     } else if (item.rate_date) {
-        // 从评分日期中提取年份
-        const dateMatch = item.rate_date.match(/(\d{4})-(\d{2})/);
+        // 从评分日期中提取年份、月份、日期
+        const dateMatch = item.rate_date.match(/(\d{4})-(\d{2})-(\d{2})/);
         if (dateMatch) {
             itemYear = parseInt(dateMatch[1], 10);
             itemMonth = parseInt(dateMatch[2], 10);
+            itemDay = parseInt(dateMatch[3], 10);
+        } else {
+            // 尝试另一种格式 yyyy-mm
+            const shortDateMatch = item.rate_date.match(/(\d{4})-(\d{2})/);
+            if (shortDateMatch) {
+                itemYear = parseInt(shortDateMatch[1], 10);
+                itemMonth = parseInt(shortDateMatch[2], 10);
+                itemDay = 15; // 假设为月中
+            }
         }
     }
     
-    // 如果无法提取月份但有年份，假设为当年的1月
+    // 如果无法提取月份但有年份，假设为当年的当前月份
     if (itemYear && !itemMonth) {
-        itemMonth = 1;
+        itemMonth = currentMonth;
+        itemDay = currentDay;
     }
     
-    // 如果无法提取年份，假设为当前年份的上一年（较保守的估计）
+    // 如果无法提取年份，假设为当前年份（或根据其他信息判断）
     if (!itemYear) {
-        itemYear = currentYear - 1;
-        itemMonth = 6; // 假设为年中
+        // 尝试从URL或ID中提取时间信息
+        if (item.url && /\/subject\/(\d+)/.test(item.url)) {
+            const idMatch = item.url.match(/\/subject\/(\d+)/);
+            if (idMatch) {
+                const id = parseInt(idMatch[1], 10);
+                // 豆瓣ID通常与时间有关，较大的ID表示较新的内容
+                if (id > 30000000) {
+                    itemYear = currentYear;
+                } else if (id > 25000000) {
+                    itemYear = currentYear - 1;
+                } else {
+                    itemYear = currentYear - 2;
+                }
+            }
+        } else {
+            itemYear = currentYear - 1;
+        }
+        itemMonth = currentMonth;
+        itemDay = currentDay;
     }
     
-    // 计算月份差距（总月数差距）
-    const currentTotalMonths = currentYear * 12 + currentMonth;
-    const itemTotalMonths = itemYear * 12 + itemMonth;
+    // 为特定类型的内容添加时间调整
+    if (item.title) {
+        const title = item.title.toLowerCase();
+        // 如果是综艺节目，假设是最近的内容
+        if (title.includes('综艺') || title.includes('脱口秀') || title.includes('真人秀')) {
+            if (Math.abs(currentYear - itemYear) > 1) {
+                itemYear = currentYear;
+                itemMonth = currentMonth;
+                itemDay = currentDay;
+            }
+        }
+    }
     
-    // 返回月份差的绝对值（越小越接近当前时间）
-    return Math.abs(currentTotalMonths - itemTotalMonths);
+    // 计算天数差距（总天数差距）
+    const currentDate2 = new Date(currentYear, currentMonth - 1, currentDay);
+    const itemDate = new Date(itemYear, (itemMonth || 1) - 1, itemDay || 1);
+    const diffTime = Math.abs(currentDate2 - itemDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
 }
 
-// 新增：处理所有分类的内容，筛选最接近当前时间的7个资源
+// 优化处理分类内容的函数，增强时间接近度筛选
 function processContentByCategory(subjects, type, category) {
     if (!subjects || !Array.isArray(subjects)) return [];
     
@@ -508,6 +551,43 @@ function processContentByCategory(subjects, type, category) {
         const proxB = calculateTimeProximity(b);
         return proxA - proxB; // 越小越接近当前时间，越靠前
     });
+    
+    // 热播综艺和动画类别，更加优先显示最新内容
+    if (type === 'variety' || category === 'animation') {
+        // 可能的新内容标记
+        subjects = subjects.filter(item => {
+            // 检查是否有"更新至"或"连载中"等标记
+            const hasUpdateMark = item.title && (
+                item.title.includes('更新') || 
+                item.title.includes('连载') || 
+                item.title.includes('第') || 
+                /\d+月/.test(item.title) ||
+                /\d+日/.test(item.title)
+            );
+            
+            // 检查是否有显示最新日期的标记
+            const hasRecentDateMark = item.title && (
+                new RegExp(`${new Date().getFullYear()}`).test(item.title) ||
+                /\d{1,2}\.\d{1,2}/.test(item.title) // 匹配类似 3.15 这样的日期格式
+            );
+            
+            // 检查时间接近度
+            const timeProximity = calculateTimeProximity(item);
+            
+            // 排除明显的老旧内容
+            if (timeProximity > 365*2) { // 两年以上的内容
+                return false;
+            }
+            
+            // 优先保留有更新标记或最近日期标记的内容
+            if (hasUpdateMark || hasRecentDateMark) {
+                return true;
+            }
+            
+            // 其他情况，只要时间接近度在一定范围内，都保留
+            return timeProximity <= 180; // 半年内的内容
+        });
+    }
     
     // 返回最接近当前时间的7个资源
     return subjects.slice(0, 7);
@@ -522,13 +602,13 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
     if (doubanCategories[type] && doubanCategories[type][category]) {
         params = { ...doubanCategories[type][category].params };
         
-        // 对于热播综艺和热播动画，自动添加当前年份范围
-        if (type === 'variety' && category === 'hot') {
-            // 综艺使用更精细的月份范围，确保获取最新内容
+        // 强制对所有分类使用年月范围筛选
+        if (type === 'variety' || category === 'animation') {
+            // 综艺和动画使用更精细的月份范围，确保获取最新内容
             params.year_range = getCurrentYearMonthRange();
-        } else if (category === 'animation' && (type === 'movie' || type === 'tv')) {
-            // 动画也使用更精细的月份范围
-            params.year_range = getCurrentYearMonthRange();
+        } else {
+            // 其他类型也使用年份范围（但不需要那么精细）
+            params.year_range = getCurrentYearRange();
         }
     } else {
         // 兼容旧代码的参数构建
@@ -541,7 +621,7 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
         };
         
         // 特殊处理某些分类
-        if (category === 'animation' && type === 'movie') {
+        if (category === 'animation' && (type === 'movie' || type === 'tv')) {
             params.genres = '动画';
             // 为动画添加最新的年月范围
             params.year_range = getCurrentYearMonthRange();
@@ -550,10 +630,15 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
             else if (category === 'hk') params.countries = '香港';
             else if (category === 'kr') params.countries = '韩国';
             else if (category === 'jp') params.countries = '日本';
+            // 添加年份范围
+            params.year_range = getCurrentYearRange();
         } else if (type === 'variety') {
             params.genres = '综艺';
             // 为综艺添加最新的年月范围
             params.year_range = getCurrentYearMonthRange();
+        } else {
+            // 其他所有类型都添加年份范围
+            params.year_range = getCurrentYearRange();
         }
     }
     
