@@ -888,74 +888,52 @@ function renderEpisodes() {
 
 // 播放指定集数
 function playEpisode(index) {
-    // 确保index在有效范围内
-    if (index < 0 || index >= currentEpisodes.length) {
-        return;
-    }
-
-    // 保存当前播放进度（如果正在播放）
-    if (art && art.video && !art.video.paused && !videoHasEnded) {
-        saveCurrentProgress();
-    }
-
-    // 清除进度保存计时器
-    if (progressSaveInterval) {
-        clearInterval(progressSaveInterval);
-        progressSaveInterval = null;
-    }
-
-    // 首先隐藏之前可能显示的错误
-    document.getElementById('error').style.display = 'none';
-    // 显示加载指示器
-    document.getElementById('loading').style.display = 'flex';
-    document.getElementById('loading').innerHTML = `
-        <div class="loading-spinner"></div>
-        <div>正在加载视频...</div>
-    `;
-
-    // 获取 sourceCode
-    const urlParams2 = new URLSearchParams(window.location.search);
-    const sourceCode = urlParams2.get('source_code');
-
-    // 准备切换剧集的URL
-    const url = currentEpisodes[index];
-
-    // 更新当前剧集索引
-    currentEpisodeIndex = index;
-    currentVideoUrl = url;
-    videoHasEnded = false; // 重置视频结束标志
-
-    clearVideoProgress();
-
-    // 更新URL参数（不刷新页面）
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('index', index);
-    currentUrl.searchParams.set('url', url);
-    currentUrl.searchParams.delete('position');
-    window.history.replaceState({}, '', currentUrl.toString());
-
-    if (isWebkit) {
-        initPlayer(url);
-    } else {
-        art.switch = url;
-    }
-
-    // 更新UI
-    updateEpisodeInfo();
-    updateButtonStates();
-    renderEpisodes();
-
-    // 重置用户点击位置记录
-    userClickedPosition = null;
-
-    // 三秒后保存到历史记录
-    setTimeout(() => saveToHistory(), 3000);
-
-    // 自动跳转到对应集数的URL
+    // 保存当前播放索引
+    window.currentEpisodeIndex = index;
+    
+    // 更新高亮状态
+    renderEpisodeCards();
+    
+    // 使用存储的API源码
     const urlParams = new URLSearchParams(window.location.search);
+    const sourceCode = urlParams.get('source_code') || '';
     const title = urlParams.get('title') || '';
-    if (url) {
-        window.location.href = `player.html?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}&source_code=${sourceCode}&index=${index}`;
+    const episodeUrl = window.currentEpisodes[index];
+    
+    if (episodeUrl) {
+        // 记录播放历史（包含source_code信息）
+        try {
+            const playHistory = JSON.parse(localStorage.getItem('playHistory') || '[]');
+            // 查找是否有相同标题的历史记录
+            const existingIndex = playHistory.findIndex(h => h.title === title);
+            
+            const historyItem = {
+                title: title,
+                url: episodeUrl,
+                source_code: sourceCode,
+                index: index,
+                timestamp: Date.now()
+            };
+            
+            if (existingIndex >= 0) {
+                // 更新现有记录
+                playHistory[existingIndex] = historyItem;
+            } else {
+                // 添加新记录
+                playHistory.unshift(historyItem);
+                // 限制历史记录数量
+                if (playHistory.length > 20) {
+                    playHistory.pop();
+                }
+            }
+            
+            localStorage.setItem('playHistory', JSON.stringify(playHistory));
+        } catch (e) {
+            console.error('保存播放历史失败:', e);
+        }
+        
+        // 跳转到新的URL
+        window.location.href = `player.html?url=${encodeURIComponent(episodeUrl)}&title=${encodeURIComponent(title)}&source_code=${sourceCode}&index=${index}`;
     }
 }
 
@@ -1474,7 +1452,7 @@ function renderEpisodeCards() {
         // 使用style属性直接添加蓝色背景，确保高亮效果生效
         // 注意：为了最大兼容性，同时使用class和内联样式
         const activeStyle = isActive ? 
-            'style="background-color: #3b82f6 !important; color: white !important; border: 2px solid #60a5fa !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important; font-weight: bold;"' : '';
+            'style="background-color: #3b82f6 !important; color: white !important; border: 2px solid #60a5fa !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important; font-weight: bold; outline: 3px solid #3b82f6 !important; transform: translateY(-2px) scale(1.05) !important; z-index: 10 !important; position: relative !important;"' : '';
         
         // 生成卡片HTML
         html += `<div class="episode-card${activeClass}" ${activeStyle} onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
@@ -1736,7 +1714,7 @@ function renderResourceInfoBar() {
         } catch (e) {
             console.error('获取自定义API信息失败:', e);
         }
-    } 
+    }
     
     // 如果仍未找到资源名称，尝试通过视频URL匹配
     if (!resourceFound && videoUrl) {
@@ -1769,6 +1747,23 @@ function renderResourceInfoBar() {
             } catch (e) {
                 // URL解析错误，继续尝试其他匹配方式
             }
+        }
+    }
+    
+    // 新增：如果仍未找到资源名称，尝试从localStorage中读取最近使用的资源
+    if (!resourceFound) {
+        try {
+            // 查看是否有保存的播放历史
+            const playHistory = JSON.parse(localStorage.getItem('playHistory') || '[]');
+            // 查找与当前标题匹配的历史记录
+            const matchedHistory = playHistory.find(h => h.title === title);
+            if (matchedHistory && matchedHistory.source_code && API_SITES[matchedHistory.source_code]) {
+                resourceName = API_SITES[matchedHistory.source_code].name;
+                resourceFound = true;
+                console.log('通过播放历史匹配到资源名称:', resourceName);
+            }
+        } catch (e) {
+            console.error('读取播放历史失败:', e);
         }
     }
     
@@ -1833,5 +1828,28 @@ window.addEventListener('DOMContentLoaded', function () {
             }
         }, 500); // 每500毫秒检查一次
     }
+    
+    // 设置当前播放索引
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentIndex = parseInt(urlParams.get('index') || '0', 10);
+    window.currentEpisodeIndex = currentIndex;
+    
+    // 渲染集数卡片
     renderEpisodeCards();
+    
+    // 监听键盘事件，支持上下集快捷键
+    document.addEventListener('keydown', function(e) {
+        // 左箭头键：上一集
+        if (e.key === 'ArrowLeft' && e.altKey) {
+            if (window.currentEpisodeIndex > 0) {
+                playEpisode(window.currentEpisodeIndex - 1);
+            }
+        }
+        // 右箭头键：下一集
+        else if (e.key === 'ArrowRight' && e.altKey) {
+            if (window.currentEpisodes && window.currentEpisodeIndex < window.currentEpisodes.length - 1) {
+                playEpisode(window.currentEpisodeIndex + 1);
+            }
+        }
+    });
 });
