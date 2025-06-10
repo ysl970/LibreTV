@@ -1462,7 +1462,17 @@ function renderEpisodeCards() {
         // 真实索引
         const realIndex = window.episodesReversed ? window.currentEpisodes.length - 1 - idx : idx;
         const isActive = realIndex === window.currentEpisodeIndex;
-        html += `<div class="episode-card${isActive ? ' active bg-blue-600' : ''}" onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
+        
+        // 添加调试日志
+        if (isActive) {
+            console.log('当前播放集:', realIndex + 1);
+        }
+        
+        // 使用style属性直接添加蓝色背景，确保高亮效果生效
+        const activeStyle = isActive ? 
+            'style="background-color: #3b82f6 !important; color: white !important; border: 2px solid #60a5fa !important; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;"' : '';
+        
+        html += `<div class="episode-card${isActive ? ' active' : ''}" ${activeStyle} onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
           ${isActive ? '<span class="episode-icon" style="margin-right:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="white" stroke-width="1.5"/><path d="M15.4 12.5l-5.8 3.86V8.64l5.8 3.86z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
           <span class="episode-label">${isActive ? '当前播放: ' : ''}第${realIndex+1}集</span>
         </div>`;
@@ -1591,20 +1601,54 @@ window.addEventListener('DOMContentLoaded', function () {
 
 // 页面初始化时，拉取分集并渲染集数按钮（修正版）
 window.addEventListener('DOMContentLoaded', async function () {
+    console.log('页面加载完成，开始初始化...');
+    
+    // 确保API_SITES已加载
+    const ensureApiSitesLoaded = () => {
+        return new Promise((resolve) => {
+            if (typeof API_SITES !== 'undefined') {
+                console.log('API_SITES已加载');
+                resolve();
+            } else {
+                console.log('API_SITES未加载，尝试手动加载...');
+                // 尝试手动加载api-sites.js
+                const apiSitesScript = document.createElement('script');
+                apiSitesScript.src = 'js/api-sites.js';
+                apiSitesScript.onload = () => {
+                    console.log('手动加载api-sites.js成功');
+                    resolve();
+                };
+                apiSitesScript.onerror = () => {
+                    console.error('手动加载api-sites.js失败');
+                    resolve(); // 即使失败也继续执行
+                };
+                document.head.appendChild(apiSitesScript);
+            }
+        });
+    };
+    
+    // 等待API_SITES加载完成
+    await ensureApiSitesLoaded();
+    
     const urlParams = new URLSearchParams(window.location.search);
     const sourceCode = urlParams.get('source_code') || '';
     const title = urlParams.get('title') || '';
+    
     if (typeof API_SITES !== 'undefined' && sourceCode && title) {
         try {
+            console.log(`开始搜索资源: ${sourceCode}, ${title}`);
             const searchResult = await searchResourceByApiAndTitle(sourceCode, title);
             if (searchResult && searchResult.length > 0) {
                 window.currentEpisodes = searchResult[0].vod_play_url_list.map(item => item.url);
                 localStorage.setItem('currentEpisodes', JSON.stringify(window.currentEpisodes));
+                console.log(`找到 ${window.currentEpisodes.length} 个视频`);
             } else {
                 window.currentEpisodes = [];
                 localStorage.setItem('currentEpisodes', '[]');
+                console.log('未找到匹配的视频');
             }
         } catch (e) {
+            console.error('搜索资源失败:', e);
             window.currentEpisodes = [];
             localStorage.setItem('currentEpisodes', '[]');
         }
@@ -1612,10 +1656,14 @@ window.addEventListener('DOMContentLoaded', async function () {
         // 兜底：尝试从localStorage恢复
         try {
             window.currentEpisodes = JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
+            console.log(`从缓存恢复了 ${window.currentEpisodes.length} 个视频`);
         } catch (e) {
+            console.error('从缓存恢复失败:', e);
             window.currentEpisodes = [];
         }
     }
+    
+    // 渲染UI
     renderEpisodeCards();
     renderResourceInfoBar();
     updateEpisodeInfo && updateEpisodeInfo();
@@ -1641,6 +1689,19 @@ function renderResourceInfoBar() {
     // 检查API_SITES是否已加载
     if (typeof API_SITES === 'undefined') {
         console.log('API_SITES未加载，延迟渲染资源信息');
+        
+        // 尝试加载api-sites.js
+        const apiSitesScript = document.createElement('script');
+        apiSitesScript.src = 'js/api-sites.js';
+        apiSitesScript.onload = () => {
+            console.log('手动加载api-sites.js成功');
+            renderResourceInfoBar();
+        };
+        apiSitesScript.onerror = () => {
+            console.error('手动加载api-sites.js失败');
+        };
+        document.head.appendChild(apiSitesScript);
+        
         // 如果API_SITES未定义，500毫秒后重试
         setTimeout(() => renderResourceInfoBar(), 500);
         return;
@@ -1668,6 +1729,20 @@ function renderResourceInfoBar() {
         }
     } else {
         console.log('未找到匹配的资源:', currentSource);
+        
+        // 尝试从所有API源中匹配当前URL
+        const currentUrl = urlParams.get('url') || '';
+        if (currentUrl && typeof API_SITES !== 'undefined') {
+            // 遍历所有API源，尝试匹配URL
+            for (const [key, api] of Object.entries(API_SITES)) {
+                if (currentUrl.includes(api.api) || 
+                    (api.detail && currentUrl.includes(api.detail))) {
+                    resourceName = api.name;
+                    console.log('通过URL匹配到资源名称:', resourceName);
+                    break;
+                }
+            }
+        }
     }
     
     // 视频数
