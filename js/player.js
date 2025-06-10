@@ -1641,14 +1641,18 @@ function renderResourceInfoBar() {
     // 检查API_SITES是否已加载
     if (typeof API_SITES === 'undefined') {
         console.log('API_SITES未加载，延迟渲染资源信息');
-        // 如果API_SITES未定义，1秒后重试
-        setTimeout(() => renderResourceInfoBar(), 1000);
+        // 如果API_SITES未定义，500毫秒后重试
+        setTimeout(() => renderResourceInfoBar(), 500);
         return;
     }
+    
+    console.log('API_SITES已加载，当前source_code:', currentSource);
+    console.log('可用的API源:', Object.keys(API_SITES));
     
     // 从API_SITES获取资源名称
     if (currentSource && API_SITES[currentSource]) {
         resourceName = API_SITES[currentSource].name;
+        console.log('找到资源名称:', resourceName);
     } 
     // 如果是自定义API源
     else if (currentSource && currentSource.startsWith('custom_')) {
@@ -1662,6 +1666,8 @@ function renderResourceInfoBar() {
         } catch (e) {
             console.error('获取自定义API信息失败:', e);
         }
+    } else {
+        console.log('未找到匹配的资源:', currentSource);
     }
     
     // 视频数
@@ -1710,8 +1716,20 @@ window.addEventListener('DOMContentLoaded', function () {
     if (typeof API_SITES !== 'undefined') {
         renderResourceInfoBar();
     } else {
-        // 如果API_SITES未加载，等待1秒后尝试渲染
-        setTimeout(() => renderResourceInfoBar(), 1000);
+        // 如果API_SITES未加载，使用轮询方式检查，直到加载完成
+        let checkCount = 0;
+        const maxChecks = 10; // 最多检查10次
+        const checkInterval = setInterval(() => {
+            checkCount++;
+            if (typeof API_SITES !== 'undefined') {
+                renderResourceInfoBar();
+                clearInterval(checkInterval);
+                console.log('API_SITES已加载，渲染资源信息');
+            } else if (checkCount >= maxChecks) {
+                clearInterval(checkInterval);
+                console.error('API_SITES加载超时');
+            }
+        }, 500); // 每500毫秒检查一次
     }
     renderEpisodeCards();
 });
