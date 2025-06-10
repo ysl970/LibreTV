@@ -1666,6 +1666,7 @@ function renderResourceInfoBar() {
     const currentIndex = parseInt(urlParams.get('index') || '0', 10);
     const title = urlParams.get('title') || document.getElementById('videoTitle').textContent || '';
     const videoUrl = urlParams.get('url') || '';
+    const videoId = urlParams.get('id') || '';
     
     // 获取当前资源名称
     let resourceName = '未知资源';
@@ -1693,15 +1694,14 @@ function renderResourceInfoBar() {
     }
     
     console.log('API_SITES已加载，当前source_code:', currentSource);
-    console.log('可用的API源:', Object.keys(API_SITES));
     
-    // 从API_SITES获取资源名称
+    // 1. 优先从URL参数获取source_code
     if (currentSource && API_SITES[currentSource]) {
         resourceName = API_SITES[currentSource].name;
         resourceFound = true;
-        console.log('找到资源名称:', resourceName);
+        console.log('从URL参数找到资源名称:', resourceName);
     } 
-    // 如果是自定义API源
+    // 2. 如果是自定义API源
     else if (currentSource && currentSource.startsWith('custom_')) {
         try {
             // 尝试从localStorage读取自定义API配置
@@ -1710,24 +1710,45 @@ function renderResourceInfoBar() {
             if (customAPIs[customIndex]) {
                 resourceName = customAPIs[customIndex].name || '自定义资源';
                 resourceFound = true;
+                console.log('从自定义API配置找到资源名称:', resourceName);
             }
         } catch (e) {
             console.error('获取自定义API信息失败:', e);
         }
     }
     
-    // 如果仍未找到资源名称，尝试通过视频URL匹配
+    // 3. 如果仍未找到资源名称，尝试从videoId参数匹配API
+    if (!resourceFound && videoId) {
+        for (const [key, api] of Object.entries(API_SITES)) {
+            // 检查API是否支持这个videoId的格式
+            if (api.idTypes && Array.isArray(api.idTypes)) {
+                // 例如，如果videoId是imdb格式，检查API是否支持imdb ID
+                if (videoId.startsWith('tt') && api.idTypes.includes('imdb')) {
+                    resourceName = api.name;
+                    resourceFound = true;
+                    console.log('通过videoId格式匹配到资源名称:', resourceName);
+                    break;
+                }
+                // 其他ID格式的匹配...
+            }
+        }
+    }
+    
+    // 4. 如果仍未找到资源名称，尝试通过视频URL匹配
     if (!resourceFound && videoUrl) {
         // 尝试从所有API源中匹配当前URL
         for (const [key, api] of Object.entries(API_SITES)) {
-            // 检查URL是否包含API域名
+            // 检查URL是否包含API域名或关键字
             if (videoUrl.includes(api.api) || 
                 (api.detail && videoUrl.includes(api.detail)) ||
                 (api.url && videoUrl.includes(api.url)) ||
-                (api.host && videoUrl.includes(api.host))) {
+                (api.host && videoUrl.includes(api.host)) ||
+                (api.keywords && api.keywords.some(kw => videoUrl.includes(kw)))) {
                 resourceName = api.name;
                 resourceFound = true;
-                console.log('通过URL匹配到资源名称:', resourceName);
+                console.log('通过URL匹配到资源名称:', resourceName, 'API源:', key);
+                // 既然找到了匹配的API源，更新URL参数中的source_code
+                updateUrlParam('source_code', key);
                 break;
             }
             
@@ -1741,7 +1762,9 @@ function renderResourceInfoBar() {
                 if (videoHost === apiHost || (api.domains && api.domains.includes(videoHost))) {
                     resourceName = api.name;
                     resourceFound = true;
-                    console.log('通过主机名匹配到资源名称:', resourceName);
+                    console.log('通过主机名匹配到资源名称:', resourceName, 'API源:', key);
+                    // 更新URL参数中的source_code
+                    updateUrlParam('source_code', key);
                     break;
                 }
             } catch (e) {
@@ -1750,7 +1773,7 @@ function renderResourceInfoBar() {
         }
     }
     
-    // 新增：如果仍未找到资源名称，尝试从localStorage中读取最近使用的资源
+    // 5. 如果仍未找到资源名称，尝试从localStorage中读取最近使用的资源
     if (!resourceFound) {
         try {
             // 查看是否有保存的播放历史
@@ -1761,14 +1784,48 @@ function renderResourceInfoBar() {
                 resourceName = API_SITES[matchedHistory.source_code].name;
                 resourceFound = true;
                 console.log('通过播放历史匹配到资源名称:', resourceName);
+                // 更新URL参数中的source_code
+                updateUrlParam('source_code', matchedHistory.source_code);
             }
         } catch (e) {
             console.error('读取播放历史失败:', e);
         }
     }
     
+    // 6. 如果还是未找到，尝试基于当前播放内容的特征进行猜测
+    if (!resourceFound && title) {
+        // 基于标题中的关键词猜测可能的API源
+        const lowerTitle = title.toLowerCase();
+        
+        // 判断不同类型的内容
+        if (lowerTitle.includes('动漫') || lowerTitle.includes('动画') || lowerTitle.includes('anime')) {
+            // 可能是动漫，尝试使用专门的动漫API
+            for (const [key, api] of Object.entries(API_SITES)) {
+                if (api.name.includes('动漫') || api.name.includes('动画') || api.tags?.includes('anime')) {
+                    resourceName = api.name;
+                    resourceFound = true;
+                    console.log('猜测内容是动漫，使用动漫API:', resourceName);
+                    updateUrlParam('source_code', key);
+                    break;
+                }
+            }
+        } else if (lowerTitle.includes('电视') || lowerTitle.includes('剧集') || lowerTitle.includes('连续剧')) {
+            // 可能是电视剧，尝试使用综合API
+            for (const [key, api] of Object.entries(API_SITES)) {
+                if (!api.tags?.includes('movie') && !api.tags?.includes('anime')) {
+                    resourceName = api.name;
+                    resourceFound = true;
+                    console.log('猜测内容是电视剧，使用综合API:', resourceName);
+                    updateUrlParam('source_code', key);
+                    break;
+                }
+            }
+        }
+    }
+    
     // 视频数
     let videoCount = window.currentEpisodes && window.currentEpisodes.length ? window.currentEpisodes.length : 0;
+    
     // HTML结构
     container.innerHTML = `
       <div class="resource-info-bar-left">
@@ -1789,6 +1846,20 @@ function renderResourceInfoBar() {
         e.preventDefault();
         showResourceModal && showResourceModal();
       };
+    }
+}
+
+// 辅助函数：更新URL参数但不刷新页面
+function updateUrlParam(param, value) {
+    if (!param || value === undefined) return;
+    
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.set(param, value);
+        window.history.replaceState({}, document.title, url.toString());
+        console.log(`已更新URL参数: ${param}=${value}`);
+    } catch (e) {
+        console.error('更新URL参数失败:', e);
     }
 }
 
