@@ -213,10 +213,35 @@ function setupMoreButtons() {
             // 获取该分类的标题
             const categoryName = getCategoryTitle(type, category);
             
+            // 为了确保刷新内容，我们需要清除该分类的缓存
+            clearCategoryCache(type, category);
+            
             // 刷新该分类内容
             fetchCategoryContent(type, category, categoryName, true);
         });
     });
+}
+
+// 添加清除特定分类缓存的函数
+function clearCategoryCache(type, category) {
+    // 构建可能的API URL模式
+    const patterns = [
+        `type=${type}&tag=`,
+        `type=${type}&tag=${encodeURIComponent(getCategoryTitle(type, category))}`,
+        `type=${type}&tag=${category}`
+    ];
+    
+    // 遍历doubanCache对象，删除匹配的缓存
+    for (let url in doubanCache) {
+        if (patterns.some(pattern => url.includes(pattern))) {
+            console.log(`清除缓存: ${url}`);
+            delete doubanCache[url];
+            
+            // 同时清除localStorage中的缓存
+            const cacheKey = `douban_${url.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            localStorage.removeItem(cacheKey);
+        }
+    }
 }
 
 // 获取分类标题
@@ -321,15 +346,35 @@ async function fetchMoreCategoryContent(type, category) {
                     // 合并两组数据
                     const allSubjects = [...data.subjects, ...tvAnimationData.subjects];
                     
-                    // 过滤确保所有内容都是动画
+                    // 强化过滤逻辑，确保所有内容都是动画
                     const filteredSubjects = allSubjects.filter(item => {
-                        // 通过标题判断是否是动画 (包含"动画"、"anime"等关键词或标题特征)
+                        // 通过标题和URL判断是否是动画
                         const title = item.title.toLowerCase();
-                        return title.includes('动画') || 
-                               title.includes('anime') || 
-                               title.includes('漫') ||
-                               item.url.includes('animation') ||
-                               item.url.includes('cartoon');
+                        const url = item.url.toLowerCase();
+                        
+                        // 排除明显的非动画内容
+                        if (title.includes('真人') || title.includes('live action')) {
+                            return false;
+                        }
+                        
+                        // 检查是否包含动画相关关键词
+                        const isAnime = 
+                            title.includes('动画') || 
+                            title.includes('anime') || 
+                            title.includes('漫') ||
+                            title.includes('卡通') ||
+                            url.includes('animation') ||
+                            url.includes('cartoon') ||
+                            url.includes('anime');
+                        
+                        // 额外检查是否有动画类型标记
+                        const hasAnimeTag = 
+                            (item.genres && item.genres.some(genre => 
+                                genre.includes('动画') || genre.includes('anime'))) ||
+                            (item.tags && item.tags.some(tag => 
+                                tag.includes('动画') || tag.includes('anime')));
+                        
+                        return isAnime || hasAnimeTag;
                     });
                     
                     // 根据评分排序（高分在前）
@@ -660,15 +705,35 @@ async function loadMoreItems(type, category, page) {
                     // 合并两组数据
                     const allSubjects = [...data.subjects, ...tvAnimationData.subjects];
                     
-                    // 过滤确保所有内容都是动画
+                    // 强化过滤逻辑，确保所有内容都是动画
                     const filteredSubjects = allSubjects.filter(item => {
-                        // 通过标题判断是否是动画 (包含"动画"、"anime"等关键词或标题特征)
+                        // 通过标题和URL判断是否是动画
                         const title = item.title.toLowerCase();
-                        return title.includes('动画') || 
-                               title.includes('anime') || 
-                               title.includes('漫') ||
-                               item.url.includes('animation') ||
-                               item.url.includes('cartoon');
+                        const url = item.url.toLowerCase();
+                        
+                        // 排除明显的非动画内容
+                        if (title.includes('真人') || title.includes('live action')) {
+                            return false;
+                        }
+                        
+                        // 检查是否包含动画相关关键词
+                        const isAnime = 
+                            title.includes('动画') || 
+                            title.includes('anime') || 
+                            title.includes('漫') ||
+                            title.includes('卡通') ||
+                            url.includes('animation') ||
+                            url.includes('cartoon') ||
+                            url.includes('anime');
+                        
+                        // 额外检查是否有动画类型标记
+                        const hasAnimeTag = 
+                            (item.genres && item.genres.some(genre => 
+                                genre.includes('动画') || genre.includes('anime'))) ||
+                            (item.tags && item.tags.some(tag => 
+                                tag.includes('动画') || tag.includes('anime')));
+                        
+                        return isAnime || hasAnimeTag;
                     });
                     
                     // 根据评分排序（高分在前）
@@ -707,58 +772,61 @@ async function fetchCategoryContent(type, category, categoryName, refresh = fals
         // 构建API请求URL
         let apiUrl = '';
         
+        // 添加随机参数，确保在刷新时不使用缓存
+        const randomParam = refresh ? `&_t=${Date.now()}` : '';
+        
         // 根据不同的分类使用不同的API或参数
         if (type === 'movie') {
             if (category === 'top250') {
                 // Top250使用特殊API - 豆瓣高分电影
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=recommend&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             } else if (category === 'new') {
                 // 新片榜单使用时间排序确保是最新的
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             } else if (category === 'animation') {
                 // 热播动画 - 使用动画标签并添加genres=动画限定，按时间排序获取最新内容
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画&genres=动画&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=动画&genres=动画&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             } else if (category === 'hot') {
                 // 热播电影 - 使用热门标签并按时间排序获取最新内容
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=热门&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             } else {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(categoryName)}&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             }
         } else if (type === 'tv') {
             if (category === 'us') {
                 // 热播美剧 - 使用美剧标签并明确指定国家/地区，按时间排序获取最新内容
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&countries=美国&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=美剧&countries=美国&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             } else if (category === 'hk') {
                 // 热播港剧 - 使用港剧标签并明确指定国家/地区，按时间排序获取最新内容
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&countries=香港&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=港剧&countries=香港&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             } else if (category === 'kr') {
                 // 热播韩剧 - 使用韩剧标签并明确指定国家/地区，按时间排序获取最新内容
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&countries=韩国&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=韩剧&countries=韩国&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             } else if (category === 'jp') {
                 // 热播日剧 - 使用日剧标签并明确指定国家/地区，按时间排序获取最新内容
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&countries=日本&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&countries=日本&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             } else if (category === 'hot') {
                 // 热播电视剧 - 使用热门标签并按时间排序确保是最新热播内容
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             } else {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
             }
         } else if (type === 'variety') {
             // 热播综艺 - 使用综艺标签并按时间排序确保是最新热播内容
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&genres=综艺&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&genres=综艺&sort=time&page_limit=${doubanPageSize}&page_start=0${randomParam}`;
         }
         
         console.log(`加载分类 ${type}-${category}: ${apiUrl}`);
         
         // 获取数据
-        const data = await fetchDoubanData(apiUrl);
+        const data = await fetchDoubanData(apiUrl, refresh);
         
         // 如果是动画分类，还需要获取电视动画并合并数据
         if (type === 'movie' && category === 'animation') {
             try {
                 // 获取电视动画数据 - 添加genres=动画确保只获取动画内容
-                const tvAnimationUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&genres=动画&sort=time&page_limit=50&page_start=0`;
-                const tvAnimationData = await fetchDoubanData(tvAnimationUrl);
+                const tvAnimationUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=动画&genres=动画&sort=time&page_limit=50&page_start=0${randomParam}`;
+                const tvAnimationData = await fetchDoubanData(tvAnimationUrl, refresh);
                 
                 // 合并电影动画和电视动画数据
                 if (tvAnimationData && tvAnimationData.subjects && tvAnimationData.subjects.length > 0) {
@@ -770,15 +838,35 @@ async function fetchCategoryContent(type, category, categoryName, refresh = fals
                     // 合并两组数据
                     const allSubjects = [...data.subjects, ...tvAnimationData.subjects];
                     
-                    // 过滤确保所有内容都是动画
+                    // 强化过滤逻辑，确保所有内容都是动画
                     const filteredSubjects = allSubjects.filter(item => {
-                        // 通过标题判断是否是动画 (包含"动画"、"anime"等关键词或标题特征)
+                        // 通过标题和URL判断是否是动画
                         const title = item.title.toLowerCase();
-                        return title.includes('动画') || 
-                               title.includes('anime') || 
-                               title.includes('漫') ||
-                               item.url.includes('animation') ||
-                               item.url.includes('cartoon');
+                        const url = item.url.toLowerCase();
+                        
+                        // 排除明显的非动画内容
+                        if (title.includes('真人') || title.includes('live action')) {
+                            return false;
+                        }
+                        
+                        // 检查是否包含动画相关关键词
+                        const isAnime = 
+                            title.includes('动画') || 
+                            title.includes('anime') || 
+                            title.includes('漫') ||
+                            title.includes('卡通') ||
+                            url.includes('animation') ||
+                            url.includes('cartoon') ||
+                            url.includes('anime');
+                        
+                        // 额外检查是否有动画类型标记
+                        const hasAnimeTag = 
+                            (item.genres && item.genres.some(genre => 
+                                genre.includes('动画') || genre.includes('anime'))) ||
+                            (item.tags && item.tags.some(tag => 
+                                tag.includes('动画') || tag.includes('anime')));
+                        
+                        return isAnime || hasAnimeTag;
                     });
                     
                     // 根据评分排序（高分在前）
@@ -938,28 +1026,33 @@ function initLazyLoading(container) {
 }
 
 // 从豆瓣API获取数据
-async function fetchDoubanData(url) {
-    // 检查内存缓存
-    const now = Date.now();
-    if (doubanCache[url] && doubanCache[url].expiry > now) {
-        return doubanCache[url].data;
-    }
-    
-    // 检查localStorage缓存
-    const cacheKey = `douban_${url.replace(/[^a-zA-Z0-9]/g, '_')}`;
-    const cachedData = localStorage.getItem(cacheKey);
-    if (cachedData) {
-        try {
-            const parsedData = JSON.parse(cachedData);
-            // 更新内存缓存
-            doubanCache[url] = {
-                data: parsedData,
-                expiry: now + CACHE_EXPIRY
-            };
-            return parsedData;
-        } catch (e) {
-            console.error("解析缓存数据失败:", e);
+async function fetchDoubanData(url, refresh = false) {
+    // 如果是刷新请求，则跳过内存缓存检查
+    if (!refresh) {
+        // 检查内存缓存
+        const now = Date.now();
+        if (doubanCache[url] && doubanCache[url].expiry > now) {
+            return doubanCache[url].data;
         }
+        
+        // 检查localStorage缓存
+        const cacheKey = `douban_${url.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const cachedData = localStorage.getItem(cacheKey);
+        if (cachedData) {
+            try {
+                const parsedData = JSON.parse(cachedData);
+                // 更新内存缓存
+                doubanCache[url] = {
+                    data: parsedData,
+                    expiry: now + CACHE_EXPIRY
+                };
+                return parsedData;
+            } catch (e) {
+                console.error("解析缓存数据失败:", e);
+            }
+        }
+    } else {
+        console.log("刷新请求，跳过缓存检查:", url);
     }
     
     // 添加超时控制
