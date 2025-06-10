@@ -389,6 +389,9 @@ function renderModalItems(items) {
 }
 
 // 设置无限滚动
+// 定义全局变量用于存储滚动处理函数
+let modalScrollHandler;
+
 function setupInfiniteScroll() {
     const modalContent = document.getElementById('modalContent');
     const loadingMore = document.getElementById('loadingMore');
@@ -397,7 +400,9 @@ function setupInfiniteScroll() {
     const modal = document.getElementById('modal');
     
     // 清除旧的事件监听器，防止重复绑定
-    modalContent.removeEventListener('scroll', modalScrollHandler);
+    if (modalScrollHandler) {
+        modalContent.removeEventListener('scroll', modalScrollHandler);
+    }
     
     // 创建新的事件处理器
     const scrollHandler = function() {
@@ -457,7 +462,7 @@ function setupInfiniteScroll() {
     };
     
     // 绑定防抖后的滚动事件处理器
-    const modalScrollHandler = debounce(scrollHandler, 200);
+    modalScrollHandler = debounce(scrollHandler, 200);
     modalContent.addEventListener('scroll', modalScrollHandler);
     
     // 初始触发一次滚动事件，确保在内容不足以滚动时也能加载更多
