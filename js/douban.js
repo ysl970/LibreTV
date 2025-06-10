@@ -97,6 +97,16 @@ const doubanCategories = {
                 genres: '',
                 countries: '日本'
             }
+        },
+        animation: {
+            title: '电视动画',
+            params: {
+                type: 'tv',
+                tag: '动画',
+                sort: 'recommend',
+                genres: '动画',
+                countries: ''
+            }
         }
     },
     variety: {
@@ -217,10 +227,10 @@ function loadAllCategoryContent() {
     // 优先加载的内容（首屏可见内容）
     const priorityLoad = () => {
         // 1. 热门电影（最受关注）
-        fetchCategoryContent('movie', 'hot', '热门');
+        fetchCategoryContent('movie', 'hot', doubanCategories.movie.hot.title);
         
         // 2. 热门电视剧
-        fetchCategoryContent('tv', 'hot', '热门');
+        fetchCategoryContent('tv', 'hot', doubanCategories.tv.hot.title);
         
         doubanLoadStatus.priorityLoaded = true;
     };
@@ -228,13 +238,13 @@ function loadAllCategoryContent() {
     // 第二批加载（稍后加载）
     const secondaryLoad = () => {
         // 3. 热门综艺
-        fetchCategoryContent('variety', 'hot', '热门');
+        fetchCategoryContent('variety', 'hot', doubanCategories.variety.hot.title);
         
         // 4. 热门动画
-        fetchCategoryContent('movie', 'animation', '动画');
+        fetchCategoryContent('movie', 'animation', doubanCategories.movie.animation.title);
         
         // 5. 新片榜单
-        fetchCategoryContent('movie', 'new', '最新');
+        fetchCategoryContent('movie', 'new', doubanCategories.movie.new.title);
         
         doubanLoadStatus.secondaryLoaded = true;
     };
@@ -242,19 +252,19 @@ function loadAllCategoryContent() {
     // 最后加载（用户可能需要滚动才能看到的内容）
     const finalLoad = () => {
         // 6. 热门美剧
-        fetchCategoryContent('tv', 'us', '美剧');
+        fetchCategoryContent('tv', 'us', doubanCategories.tv.us.title);
         
         // 7. 热门港剧
-        fetchCategoryContent('tv', 'hk', '港剧');
+        fetchCategoryContent('tv', 'hk', doubanCategories.tv.hk.title);
         
         // 8. 热门韩剧
-        fetchCategoryContent('tv', 'kr', '韩剧');
+        fetchCategoryContent('tv', 'kr', doubanCategories.tv.kr.title);
         
         // 9. 热门日剧
-        fetchCategoryContent('tv', 'jp', '日剧');
+        fetchCategoryContent('tv', 'jp', doubanCategories.tv.jp.title);
         
         // 10. Top250电影
-        fetchCategoryContent('movie', 'top250', '豆瓣高分');
+        fetchCategoryContent('movie', 'top250', doubanCategories.movie.top250.title);
         
         doubanLoadStatus.finalLoaded = true;
     };
@@ -1168,11 +1178,15 @@ function initLazyLoading(container) {
 
 // 从豆瓣API获取数据
 async function fetchDoubanData(url, refresh = false) {
+    // 调试模式 - 可以通过URL参数启用
+    const isDebug = new URLSearchParams(window.location.search).get('debug') === 'true';
+    
     // 如果是刷新请求，则跳过内存缓存检查
     if (!refresh) {
         // 检查内存缓存
         const now = Date.now();
         if (doubanCache[url] && doubanCache[url].expiry > now) {
+            if (isDebug) console.log('从内存缓存获取数据:', url);
             return doubanCache[url].data;
         }
         
@@ -1187,6 +1201,7 @@ async function fetchDoubanData(url, refresh = false) {
                     data: parsedData,
                     expiry: now + CACHE_EXPIRY
                 };
+                if (isDebug) console.log('从localStorage缓存获取数据:', url);
                 return parsedData;
             } catch (e) {
                 console.error("解析缓存数据失败:", e);
@@ -1211,6 +1226,7 @@ async function fetchDoubanData(url, refresh = false) {
     };
 
     try {
+        if (isDebug) console.log('请求豆瓣数据:', url);
         // 尝试通过代理访问
         const response = await fetch(PROXY_URL + encodeURIComponent(url), fetchOptions);
         clearTimeout(timeoutId);
@@ -1221,14 +1237,21 @@ async function fetchDoubanData(url, refresh = false) {
         
         const data = await response.json();
         
+        // 调试模式 - 输出API响应
+        if (isDebug) {
+            console.log('豆瓣API响应:', url, data);
+        }
+        
         // 保存到localStorage作为备用缓存
         try {
+            const cacheKey = `douban_${url.replace(/[^a-zA-Z0-9]/g, '_')}`;
             localStorage.setItem(cacheKey, JSON.stringify(data));
         } catch (e) {
             console.error("保存到localStorage失败:", e);
         }
         
         // 同时保存到内存缓存
+        const now = Date.now();
         doubanCache[url] = {
             data: data,
             expiry: now + CACHE_EXPIRY
@@ -1256,6 +1279,7 @@ async function fetchDoubanData(url, refresh = false) {
         const fallbackUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         
         try {
+            if (isDebug) console.log('尝试备用方法获取数据:', fallbackUrl);
             const fallbackResponse = await fetch(fallbackUrl);
             
             if (!fallbackResponse.ok) {
@@ -1276,6 +1300,7 @@ async function fetchDoubanData(url, refresh = false) {
                 }
                 
                 // 同时保存到内存缓存
+                const now = Date.now();
                 doubanCache[url] = {
                     data: parsedData,
                     expiry: now + CACHE_EXPIRY
@@ -1510,3 +1535,36 @@ function initializeLazyLoading() {
         });
     }, 200));
 }
+
+// 清除所有豆瓣相关的缓存
+function clearAllDoubanCache() {
+    // 清除内存缓存
+    for (let key in doubanCache) {
+        delete doubanCache[key];
+    }
+    
+    // 清除localStorage缓存
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('douban_')) {
+            keysToRemove.push(key);
+        }
+    }
+    
+    // 删除收集到的键
+    keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+    });
+    
+    console.log(`已清除 ${keysToRemove.length} 个豆瓣缓存项`);
+    
+    // 重置加载状态
+    doubanLoadStatus.initialized = false;
+    doubanLoadStatus.priorityLoaded = false;
+    doubanLoadStatus.secondaryLoaded = false;
+    doubanLoadStatus.finalLoaded = false;
+}
+
+// 添加到全局作用域，方便调试
+window.clearAllDoubanCache = clearAllDoubanCache;
