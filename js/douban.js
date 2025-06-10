@@ -129,8 +129,15 @@ const doubanLoadStatus = {
 
 // 内存缓存对象
 const doubanCache = {};
-// 缓存过期时间（24小时）
-const CACHE_EXPIRY = 24 * 60 * 60 * 1000;
+// 缓存过期时间（修改为2小时，确保获取更频繁的更新）
+const CACHE_EXPIRY = 2 * 60 * 60 * 1000;
+// 添加最大缓存存活时间（6小时）
+const MAX_CACHE_LIFETIME = 6 * 60 * 60 * 1000;
+// 缓存刷新阈值时间（1小时检查一次）
+const CACHE_REFRESH_THRESHOLD = 60 * 60 * 1000;
+
+// 最后缓存刷新时间戳
+let lastCacheRefreshTime = 0;
 
 // 初始化豆瓣功能
 function initDouban() {
@@ -140,8 +147,8 @@ function initDouban() {
         doubanToggle.checked = localStorage.getItem('doubanEnabled') !== 'false';
     }
 
-    // 清除所有缓存，确保获取最新内容
-    clearAllDoubanCache();
+    // 检查缓存状态，每次页面加载时刷新部分缓存以确保内容更新
+    checkAndRefreshCache();
     
     // 立即更新豆瓣区域显示状态
     updateDoubanVisibility();
@@ -154,7 +161,7 @@ function initDouban() {
             
             // 切换时清除缓存并强制刷新
             if (this.checked) {
-                clearAllDoubanCache();
+                checkAndRefreshCache(true);
                 loadAllCategoryContent(true);  // 传入true参数表示强制刷新
             }
         });
@@ -172,6 +179,40 @@ function initDouban() {
     }
 }
 
+// 新增：检查和刷新缓存的函数
+function checkAndRefreshCache(forceRefresh = false) {
+    const now = Date.now();
+    
+    // 检查是否需要进行缓存刷新（距离上次刷新已经超过阈值时间或强制刷新）
+    if (forceRefresh || now - lastCacheRefreshTime > CACHE_REFRESH_THRESHOLD) {
+        console.log('执行缓存刷新检查...');
+        lastCacheRefreshTime = now;
+        
+        // 清除过期缓存
+        clearExpiredCache();
+        
+        // 优先刷新热门内容类别的缓存，这些内容更新频率更高
+        const priorityCategories = [
+            { type: 'movie', category: 'hot' },
+            { type: 'tv', category: 'hot' },
+            { type: 'variety', category: 'hot' },
+            { type: 'movie', category: 'animation' }
+        ];
+        
+        // 随机选择1-2个优先类别进行刷新
+        const refreshCount = forceRefresh ? priorityCategories.length : Math.floor(Math.random() * 2) + 1;
+        const shuffled = [...priorityCategories].sort(() => 0.5 - Math.random());
+        const selectedCategories = shuffled.slice(0, refreshCount);
+        
+        console.log(`选择了 ${refreshCount} 个类别进行刷新:`, selectedCategories);
+        
+        // 刷新选定的类别缓存
+        selectedCategories.forEach(item => {
+            clearCategoryCache(item.type, item.category);
+        });
+    }
+}
+
 // 清除过期缓存
 function clearExpiredCache() {
     const now = Date.now();
@@ -181,6 +222,15 @@ function clearExpiredCache() {
         if (doubanCache[url].expiry < now) {
             delete doubanCache[url];
         }
+    }
+    
+    // 检查是否存在缓存刷新时间记录
+    const lastFullCacheCheck = parseInt(localStorage.getItem('douban_last_cache_check') || '0');
+    const needsFullCheck = now - lastFullCacheCheck > CACHE_REFRESH_THRESHOLD;
+    
+    // 如果需要进行完整检查，则更新时间戳
+    if (needsFullCheck) {
+        localStorage.setItem('douban_last_cache_check', now.toString());
     }
     
     // 清除localStorage中的过期缓存
@@ -193,9 +243,11 @@ function clearExpiredCache() {
                     // 检查缓存是否包含时间戳
                     if (cachedData.includes('"timestamp":')) {
                         const data = JSON.parse(cachedData);
-                        // 如果缓存超过24小时，则清除
-                        if (data.timestamp && (now - data.timestamp > CACHE_EXPIRY)) {
+                        // 如果缓存超过有效期，或者存在超过最大生命周期，则清除
+                        if (data.timestamp && ((now - data.timestamp > CACHE_EXPIRY) || 
+                           (needsFullCheck && now - data.timestamp > MAX_CACHE_LIFETIME))) {
                             localStorage.removeItem(key);
+                            console.log(`缓存已过期，删除: ${key}`);
                         }
                     } else {
                         // 如果没有时间戳，添加一个
@@ -235,7 +287,7 @@ function updateDoubanVisibility() {
         if (!doubanLoadStatus.initialized) {
             // 使用 requestAnimationFrame 确保在下一帧渲染时加载内容
             requestAnimationFrame(() => {
-                loadAllCategoryContent();
+                loadAllCategoryContent(true);  // 强制刷新，确保最新内容
                 doubanLoadStatus.initialized = true;
             });
         } else {
@@ -249,12 +301,11 @@ function updateDoubanVisibility() {
                 }
             });
             
+            // 如果容器为空，则重新加载内容
             if (isEmpty) {
-                // 如果所有容器都是空的，重新加载内容
-                loadAllCategoryContent();
-            } else {
-                // 重新初始化懒加载，确保图片正确加载
-                reinitializeLazyLoading();
+                requestAnimationFrame(() => {
+                    loadAllCategoryContent(true);  // 强制刷新，确保最新内容
+                });
             }
         }
     } else {
