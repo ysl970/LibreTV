@@ -1,5 +1,8 @@
 // 豆瓣热门电影电视剧推荐功能
 
+// 使用config.js中定义的PROXY_URL常量
+// const PROXY_URL = '/proxy/';
+
 // 定义不同类型的内容分类
 const contentCategories = {
     movie: {
@@ -61,6 +64,11 @@ function initDouban() {
 
     // 初始化懒加载
     initializeLazyLoading();
+    
+    // 如果豆瓣功能已启用，加载所有分类内容
+    if (localStorage.getItem('doubanEnabled') !== 'false') {
+        loadAllCategoryContent();
+    }
 }
 
 // 根据设置更新豆瓣区域的显示状态
@@ -84,10 +92,19 @@ function updateDoubanVisibility() {
                 doubanLoadStatus.initialized = true;
             });
         } else {
-            // 检查豆瓣结果区域是否为空，如果为空则重新加载
-            const doubanResults = document.getElementById('douban-results');
-            if (doubanResults && doubanResults.children.length === 0) {
-                renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
+            // 检查豆瓣内容是否需要刷新
+            const containers = document.querySelectorAll('[class^="douban-"]');
+            let isEmpty = true;
+            
+            containers.forEach(container => {
+                if (container.children.length > 0) {
+                    isEmpty = false;
+                }
+            });
+            
+            if (isEmpty) {
+                // 如果所有容器都是空的，重新加载内容
+                loadAllCategoryContent();
             } else {
                 // 重新初始化懒加载，确保图片正确加载
                 reinitializeLazyLoading();
@@ -578,6 +595,7 @@ async function fetchCategoryContent(type, category, categoryName) {
                 // Top250使用特殊API
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=豆瓣高分&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'new') {
+                // 新片榜单使用时间排序确保是最新的
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=最新&sort=time&page_limit=${doubanPageSize}&page_start=0`;
             } else if (category === 'animation') {
                 // 动画使用动画标签
@@ -604,9 +622,11 @@ async function fetchCategoryContent(type, category, categoryName) {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(categoryName)}&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
             }
         } else if (type === 'variety') {
-            // 修改综艺API请求，确保能获取到综艺内容
+            // 综艺节目使用正确的标签
             apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&sort=recommend&page_limit=${doubanPageSize}&page_start=0`;
         }
+        
+        console.log(`加载分类 ${type}-${category}: ${apiUrl}`);
         
         // 获取数据
         const data = await fetchDoubanData(apiUrl);
@@ -1017,108 +1037,28 @@ window.addEventListener('resize', function() {
     });
 });
 
-// 关闭模态框
-function closeModal() {
-    const modal = document.getElementById('categoryModal');
-    if (modal) {
-        document.body.removeChild(modal);
-    }
+// 初始化所有容器的懒加载
+function initializeLazyLoading() {
+    // 获取所有豆瓣内容容器
+    const containers = document.querySelectorAll('[class^="douban-"]');
     
-    // 清除滚动事件监听器
-    if (modalScrollHandler) {
-        const modalContent = document.getElementById('modalItemsContainer');
-        if (modalContent) {
-            modalContent.removeEventListener('scroll', modalScrollHandler);
-        }
-        modalScrollHandler = null;
-    }
-}
-
-// 显示加载状态
-function showLoading() {
-    let loading = document.getElementById('globalLoading');
-    if (!loading) {
-        loading = document.createElement('div');
-        loading.id = 'globalLoading';
-        loading.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        loading.innerHTML = `
-            <div class="bg-[#111] rounded-lg p-6 flex items-center">
-                <div class="w-6 h-6 border-2 border-t-transparent border-pink-500 rounded-full animate-spin mr-3"></div>
-                <span class="text-white">加载中...</span>
-            </div>
-        `;
-        document.body.appendChild(loading);
-    } else {
-        loading.classList.remove('hidden');
-    }
-}
-
-// 隐藏加载状态
-function hideLoading() {
-    const loading = document.getElementById('globalLoading');
-    if (loading) {
-        loading.classList.add('hidden');
-        // 延迟移除DOM元素
-        setTimeout(() => {
-            if (loading.parentNode) {
-                loading.parentNode.removeChild(loading);
+    // 为每个容器初始化懒加载
+    containers.forEach(container => {
+        initLazyLoading(container);
+    });
+    
+    // 设置滚动监听，在滚动时检查是否需要加载更多内容
+    window.addEventListener('scroll', debounce(() => {
+        containers.forEach(container => {
+            // 检查容器是否在视口内
+            const rect = container.getBoundingClientRect();
+            if (rect.top < window.innerHeight && rect.bottom > 0) {
+                // 容器在视口内，确保图片加载
+                const lazyImages = container.querySelectorAll('img.lazy-image');
+                if (lazyImages.length > 0) {
+                    initLazyLoading(container);
+                }
             }
-        }, 300);
-    }
-}
-
-// 显示提示信息
-function showToast(message, type = 'info') {
-    // 移除现有的toast
-    const existingToast = document.getElementById('toast');
-    if (existingToast) {
-        existingToast.remove();
-    }
-    
-    // 创建新的toast
-    const toast = document.createElement('div');
-    toast.id = 'toast';
-    
-    // 根据类型设置样式
-    let bgColor = 'bg-gray-800';
-    let icon = '';
-    
-    switch (type) {
-        case 'success':
-            bgColor = 'bg-green-800';
-            icon = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-            break;
-        case 'error':
-            bgColor = 'bg-red-800';
-            icon = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
-            break;
-        case 'warning':
-            bgColor = 'bg-yellow-700';
-            icon = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
-            break;
-        default:
-            icon = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
-    }
-    
-    // 设置toast样式
-    toast.className = `fixed bottom-4 left-1/2 transform -translate-x-1/2 ${bgColor} text-white px-4 py-2 rounded-lg shadow-lg flex items-center z-50 transition-opacity duration-300 opacity-0`;
-    toast.innerHTML = `${icon}<span>${message}</span>`;
-    
-    // 添加到页面
-    document.body.appendChild(toast);
-    
-    // 显示toast
-    setTimeout(() => {
-        toast.classList.replace('opacity-0', 'opacity-100');
-    }, 10);
-    
-    // 自动隐藏
-    setTimeout(() => {
-        toast.classList.replace('opacity-100', 'opacity-0');
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        }, 300);
-    }, 3000);
+        });
+    }, 200));
 }
