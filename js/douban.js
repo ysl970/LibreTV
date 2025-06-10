@@ -431,19 +431,10 @@ function getCurrentYearMonthRange() {
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth() + 1; // 月份从0开始，所以+1
     
-    // 如果是月初（1-10号），也包括上个月的内容
-    let startYear = currentYear;
+    // 更大范围地获取内容，确保有足够的数据可供筛选
+    // 对于综艺和动画，获取12个月的范围
+    let startYear = currentYear - 1;
     let startMonth = currentMonth;
-    
-    // 获取6个月的范围，确保能够获取到足够的内容（特别是对于综艺和动画）
-    if (currentMonth <= 6) {
-        // 如果是1-6月，需要包含上一年的部分月份
-        startYear = currentYear - 1;
-        startMonth = 6 + currentMonth; // 从上一年的7-12月开始
-    } else {
-        // 否则从当前月份往前推6个月
-        startMonth = currentMonth - 5;
-    }
     
     // 构造参数格式：yyyy-mm,yyyy-mm
     return `${startYear}-${startMonth.toString().padStart(2, '0')},${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
@@ -677,6 +668,12 @@ async function fetchMoreCategoryContent(type, category) {
         // 获取该分类的标题
         const categoryName = getCategoryTitle(type, category);
         
+        // 为综艺和动画获取更多数据
+        let pageSize = doubanPageSize;
+        if (type === 'variety' || category === 'animation') {
+            pageSize = 30; // 增加数据量
+        }
+        
         // 生成随机的起始页码，确保每次获取不同的内容
         // 对于不同类型的内容，设置不同的最大范围
         let maxStart = 20; // 默认最大起始值
@@ -685,19 +682,20 @@ async function fetchMoreCategoryContent(type, category) {
             if (category === 'top250') maxStart = 200;
             else if (category === 'hot') maxStart = 50;
             else if (category === 'new') maxStart = 30;
-            else if (category === 'animation') maxStart = 40;
+            else if (category === 'animation') maxStart = 100; // 增加动画范围
         } else if (type === 'tv') {
             if (category === 'hot') maxStart = 40;
+            else if (category === 'animation') maxStart = 100; // 增加动画范围
             else maxStart = 30; // 区域性剧集
         } else if (type === 'variety') {
-            maxStart = 30;
+            maxStart = 100; // 增加综艺范围
         }
         
         // 生成随机起始位置，确保每次"换一批"都能获取不同内容
         const randomStart = Math.floor(Math.random() * maxStart);
         
         // 构建API请求URL，添加随机起始位置和时间戳确保不使用缓存
-        const apiUrl = buildDoubanApiUrl(type, category, doubanPageSize, randomStart, true);
+        const apiUrl = buildDoubanApiUrl(type, category, pageSize, randomStart, true);
         
         console.log(`加载更多 ${type}-${category} 内容: ${apiUrl}`);
         
@@ -711,7 +709,7 @@ async function fetchMoreCategoryContent(type, category) {
         if (type === 'movie' && category === 'animation') {
             try {
                 // 获取电视动画数据，使用随机起始位置
-                const tvRandomStart = Math.floor(Math.random() * 40);
+                const tvRandomStart = Math.floor(Math.random() * 80);
                 // 确保使用最新的年份范围
                 const tvAnimationUrl = buildDoubanApiUrl('tv', 'animation', 50, tvRandomStart, true);
                 const tvAnimationData = await fetchDoubanData(tvAnimationUrl, true);
@@ -731,6 +729,11 @@ async function fetchMoreCategoryContent(type, category) {
                 }
             } catch (error) {
                 console.error('获取电视动画数据失败:', error);
+            }
+        } else if (type === 'variety' && category === 'hot') {
+            // 特殊处理综艺内容
+            if (processedData.subjects && processedData.subjects.length > 0) {
+                processedData.subjects = filterAndProcessVarietyContent(processedData.subjects);
             }
         } else {
             // 对所有分类的内容进行处理
@@ -1041,8 +1044,16 @@ async function fetchCategoryContent(type, category, categoryName, refresh = fals
             container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">加载中...</div>';
         }
         
+        // 对于综艺和动画分类，使用特殊的API请求参数，获取更多数据
+        let pageSize = doubanPageSize;
+        if (type === 'variety' || category === 'animation') {
+            // 增加初始请求的数据量，确保有足够数据筛选
+            pageSize = 30; // 请求30条数据，然后筛选出最近的7条
+            console.log(`为${type}-${category}请求更多数据: ${pageSize}条`);
+        }
+        
         // 使用新的函数构建API URL（包含最新的年份范围）
-        const apiUrl = buildDoubanApiUrl(type, category, doubanPageSize, 0, refresh);
+        const apiUrl = buildDoubanApiUrl(type, category, pageSize, 0, refresh);
         
         console.log(`加载分类 ${type}-${category}: ${apiUrl}`);
         
@@ -1075,6 +1086,11 @@ async function fetchCategoryContent(type, category, categoryName, refresh = fals
             } catch (error) {
                 console.error('获取电视动画数据失败:', error);
             }
+        } else if (type === 'variety' && category === 'hot') {
+            // 特殊处理综艺内容
+            if (processedData.subjects && processedData.subjects.length > 0) {
+                processedData.subjects = filterAndProcessVarietyContent(processedData.subjects);
+            }
         } else {
             // 对所有分类的内容进行处理
             if (processedData.subjects && processedData.subjects.length > 0) {
@@ -1090,19 +1106,60 @@ async function fetchCategoryContent(type, category, categoryName, refresh = fals
     }
 }
 
+// 过滤和处理综艺内容
+function filterAndProcessVarietyContent(subjects) {
+    if (!subjects || !Array.isArray(subjects)) return [];
+    
+    console.log(`综艺内容处理 - 原始数量: ${subjects.length}个`);
+    
+    // 对综艺内容进行特殊处理，优先展示最新一期的综艺节目
+    const processedSubjects = subjects.map(item => {
+        // 计算时间接近度
+        const timeProximity = calculateTimeProximity(item);
+        return { ...item, timeProximity };
+    });
+    
+    // 按时间接近度排序
+    processedSubjects.sort((a, b) => a.timeProximity - b.timeProximity);
+    
+    // 日志记录排序后的前7个节目
+    const top7 = processedSubjects.slice(0, 7).map(item => ({
+        title: item.title,
+        timeProximity: item.timeProximity,
+        year: item.year || 'unknown'
+    }));
+    console.log(`综艺内容处理 - 排序后前7个:`, top7);
+    
+    // 返回最接近当前时间的7个资源
+    return processedSubjects.slice(0, 7);
+}
+
 // 过滤和处理动画内容
 function filterAndProcessAnimationContent(subjects) {
     if (!subjects || !Array.isArray(subjects)) return [];
     
-    // 对所有内容进行排序，根据与当前时间的接近程度
-    subjects.sort((a, b) => {
-        const proxA = calculateTimeProximity(a);
-        const proxB = calculateTimeProximity(b);
-        return proxA - proxB; // 越小越接近当前时间，越靠前
+    console.log(`动画内容处理 - 原始数量: ${subjects.length}个`);
+    
+    // 对动画内容进行特殊处理，优先展示最新一季的动画
+    const processedSubjects = subjects.map(item => {
+        // 计算时间接近度
+        const timeProximity = calculateTimeProximity(item);
+        return { ...item, timeProximity };
     });
     
+    // 按时间接近度排序
+    processedSubjects.sort((a, b) => a.timeProximity - b.timeProximity);
+    
+    // 日志记录排序后的前7个节目
+    const top7 = processedSubjects.slice(0, 7).map(item => ({
+        title: item.title,
+        timeProximity: item.timeProximity,
+        year: item.year || 'unknown'
+    }));
+    console.log(`动画内容处理 - 排序后前7个:`, top7);
+    
     // 返回最接近当前时间的7个资源
-    return subjects.slice(0, 7);
+    return processedSubjects.slice(0, 7);
 }
 
 // 渲染分类内容
