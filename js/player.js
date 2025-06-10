@@ -877,7 +877,7 @@ function renderEpisodes() {
         html += `
             <button id="episode-${realIndex}" 
                     onclick="playEpisode(${realIndex})" 
-                    class="px-4 py-2 ${isActive ? 'episode-active' : '!bg-[#222] hover:!bg-[#333] hover:!shadow-none'} !border ${isActive ? '!border-blue-500' : '!border-[#333]'} rounded-lg transition-colors text-center episode-btn">
+                    class="px-4 py-2 ${isActive ? 'episode-active bg-blue-600 text-white' : '!bg-[#222] hover:!bg-[#333] hover:!shadow-none'} !border ${isActive ? '!border-blue-500' : '!border-[#333]'} rounded-lg transition-colors text-center episode-btn">
                 ${realIndex + 1}
             </button>
         `;
@@ -1625,9 +1625,10 @@ window.addEventListener('DOMContentLoaded', async function () {
 
 // 渲染资源信息卡片（顶部）
 function renderResourceInfoBar() {
-    if (typeof API_SITES === 'undefined') return;
+    // 确保API_SITES已加载
     const container = document.getElementById('resourceInfoBarContainer');
     if (!container) return;
+    
     // 获取当前source_code
     const urlParams = new URLSearchParams(window.location.search);
     const currentSource = urlParams.get('source_code') || '';
@@ -1637,22 +1638,32 @@ function renderResourceInfoBar() {
     // 获取当前资源名称
     let resourceName = '未知资源';
     
-    // 首先尝试从API_SITES获取资源名称
-    if (currentSource && API_SITES[currentSource]) {
-        resourceName = API_SITES[currentSource].name;
-    } 
-    // 如果是自定义API源
-    else if (currentSource && currentSource.startsWith('custom_')) {
-        try {
-            // 尝试从localStorage读取自定义API配置
-            const customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]');
-            const customIndex = parseInt(currentSource.replace('custom_', ''), 10);
-            if (customAPIs[customIndex]) {
-                resourceName = customAPIs[customIndex].name || '自定义资源';
+    // 确保API_SITES已经加载
+    if (typeof API_SITES !== 'undefined') {
+        // 首先尝试从API_SITES获取资源名称
+        if (currentSource && API_SITES[currentSource]) {
+            resourceName = API_SITES[currentSource].name;
+        } 
+        // 如果是自定义API源
+        else if (currentSource && currentSource.startsWith('custom_')) {
+            try {
+                // 尝试从localStorage读取自定义API配置
+                const customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]');
+                const customIndex = parseInt(currentSource.replace('custom_', ''), 10);
+                if (customAPIs[customIndex]) {
+                    resourceName = customAPIs[customIndex].name || '自定义资源';
+                }
+            } catch (e) {
+                console.error('获取自定义API信息失败:', e);
             }
-        } catch (e) {
-            console.error('获取自定义API信息失败:', e);
         }
+    } else {
+        // 如果API_SITES未定义，尝试延迟加载
+        setTimeout(() => {
+            if (typeof API_SITES !== 'undefined') {
+                renderResourceInfoBar();
+            }
+        }, 1000);
     }
     
     // 视频数
