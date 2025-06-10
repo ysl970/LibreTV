@@ -141,9 +141,31 @@ function updateSiteStatus(isAvailable) {
 }
 
 function closeModal() {
-    document.getElementById('modal').classList.add('hidden');
-    // 清除 iframe 内容
-    document.getElementById('modalContent').innerHTML = '';
+    // 关闭普通模态框
+    const modal = document.getElementById('modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        // 清除 iframe 内容
+        const modalContent = document.getElementById('modalContent');
+        if (modalContent) {
+            modalContent.innerHTML = '';
+        }
+    }
+    
+    // 关闭分类模态框
+    const categoryModal = document.getElementById('categoryModal');
+    if (categoryModal && categoryModal.parentNode) {
+        categoryModal.parentNode.removeChild(categoryModal);
+        
+        // 清除滚动事件监听器
+        if (typeof modalScrollHandler === 'function') {
+            const modalItemsContainer = document.getElementById('modalItemsContainer');
+            if (modalItemsContainer) {
+                modalItemsContainer.removeEventListener('scroll', modalScrollHandler);
+            }
+            modalScrollHandler = null;
+        }
+    }
 }
 
 // 获取搜索历史的增强版本 - 支持新旧格式
