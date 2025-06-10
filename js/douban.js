@@ -449,6 +449,70 @@ function getCurrentYearMonthRange() {
     return `${startYear}-${startMonth.toString().padStart(2, '0')},${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
 }
 
+// 新增：根据年份和月份计算资源与当前时间的接近程度
+function calculateTimeProximity(item) {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // 月份从0开始，所以+1
+    
+    // 从item中提取年份信息
+    let itemYear = null;
+    let itemMonth = null;
+    
+    // 尝试从不同字段中提取年份信息
+    if (item.year) {
+        itemYear = parseInt(item.year, 10);
+    } else if (item.vod_year) {
+        itemYear = parseInt(item.vod_year, 10);
+    } else if (item.title && /\d{4}/.test(item.title)) {
+        // 从标题中提取年份（如果存在）
+        const yearMatch = item.title.match(/\d{4}/);
+        if (yearMatch) {
+            itemYear = parseInt(yearMatch[0], 10);
+        }
+    } else if (item.rate_date) {
+        // 从评分日期中提取年份
+        const dateMatch = item.rate_date.match(/(\d{4})-(\d{2})/);
+        if (dateMatch) {
+            itemYear = parseInt(dateMatch[1], 10);
+            itemMonth = parseInt(dateMatch[2], 10);
+        }
+    }
+    
+    // 如果无法提取月份但有年份，假设为当年的1月
+    if (itemYear && !itemMonth) {
+        itemMonth = 1;
+    }
+    
+    // 如果无法提取年份，假设为当前年份的上一年（较保守的估计）
+    if (!itemYear) {
+        itemYear = currentYear - 1;
+        itemMonth = 6; // 假设为年中
+    }
+    
+    // 计算月份差距（总月数差距）
+    const currentTotalMonths = currentYear * 12 + currentMonth;
+    const itemTotalMonths = itemYear * 12 + itemMonth;
+    
+    // 返回月份差的绝对值（越小越接近当前时间）
+    return Math.abs(currentTotalMonths - itemTotalMonths);
+}
+
+// 新增：处理所有分类的内容，筛选最接近当前时间的7个资源
+function processContentByCategory(subjects, type, category) {
+    if (!subjects || !Array.isArray(subjects)) return [];
+    
+    // 对所有内容进行排序，根据与当前时间的接近程度
+    subjects.sort((a, b) => {
+        const proxA = calculateTimeProximity(a);
+        const proxB = calculateTimeProximity(b);
+        return proxA - proxB; // 越小越接近当前时间，越靠前
+    });
+    
+    // 返回最接近当前时间的7个资源
+    return subjects.slice(0, 7);
+}
+
 function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart = 0, refresh = false) {
     // 添加随机参数，确保在刷新时不使用缓存
     const randomParam = refresh ? `&_t=${Date.now()}` : '';
@@ -941,181 +1005,19 @@ async function fetchCategoryContent(type, category, categoryName, refresh = fals
     }
 }
 
-// 过滤并处理动画内容
-function filterAndProcessAnimationContent(items) {
-    console.log(`动画内容过滤前: ${items.length}个项目`);
+// 过滤和处理动画内容
+function filterAndProcessAnimationContent(subjects) {
+    if (!subjects || !Array.isArray(subjects)) return [];
     
-    // 强化过滤逻辑，确保所有内容都是动画
-    const filteredItems = items.filter(item => {
-        // 通过标题和URL判断是否是动画
-        const title = (item.title || '').toLowerCase();
-        const url = (item.url || '').toLowerCase();
-        
-        // 排除明显的非动画内容
-        if (title.includes('真人') || 
-            title.includes('live action') || 
-            title.includes('真人版') || 
-            title.includes('真人电影')) {
-            return false;
-        }
-        
-        // 优先包含明确的动画作品（无论是电影还是电视剧类型）
-        // 常见动画标志性作品，即使它们在豆瓣分类中是电影或电视剧
-        if (title.includes('仙逆') || 
-            title.includes('千与千寻') ||
-            title.includes('宫崎骏') ||
-            title.includes('龙珠') ||
-            title.includes('柯南') ||
-            title.includes('哆啦A梦') ||
-            title.includes('多啦A梦') ||
-            title.includes('鬼灭之刃') ||
-            title.includes('名侦探柯南') ||
-            title.includes('海贼王') ||
-            title.includes('進撃の巨人') ||
-            title.includes('进击的巨人') ||
-            title.includes('间谍过家家')) {
-            return true;
-        }
-        
-        // 检查是否包含动画相关关键词
-        const isAnime = 
-            title.includes('动画') || 
-            title.includes('anime') || 
-            title.includes('漫') ||
-            title.includes('卡通') ||
-            url.includes('animation') ||
-            url.includes('cartoon') ||
-            url.includes('anime');
-        
-        // 额外检查是否有动画类型标记
-        const hasAnimeTag = 
-            (item.genres && Array.isArray(item.genres) && item.genres.some(genre => 
-                (typeof genre === 'string' && (
-                    genre.includes('动画') || 
-                    genre.includes('anime') || 
-                    genre.includes('动漫'))))) ||
-            (item.tags && Array.isArray(item.tags) && item.tags.some(tag => 
-                (typeof tag === 'string' && (
-                    tag.includes('动画') || 
-                    tag.includes('anime') || 
-                    tag.includes('动漫')))));
-        
-        // 如果有类型信息但不是动画，则排除
-        if (item.genres && Array.isArray(item.genres) && item.genres.length > 0) {
-            // 如果类型中明确包含"真人秀"、"纪录片"、"脱口秀"等非动画类型，则排除
-            if (item.genres.some(genre => 
-                (typeof genre === 'string' && (
-                    genre.includes('真人秀') || 
-                    genre.includes('脱口秀') || 
-                    genre.includes('纪录片'))))) {
-                return false;
-            }
-            
-            // 如果没有明确的动画标记，但是有其他类型标记，则进一步检查描述和详情
-            if (!hasAnimeTag) {
-                // 检查item是否有更多可以识别的动画特征
-                const hasMoreAnimeEvidence = 
-                    (item.directors && typeof item.directors === 'string' && 
-                        (item.directors.includes('宫崎骏') || 
-                         item.directors.includes('今敏'))) ||
-                    (item.cover && typeof item.cover === 'string' && 
-                        (item.cover.includes('anime') || 
-                         item.cover.includes('animation'))) ||
-                    (item.rate && parseFloat(item.rate) >= 8.0);  // 高分动画更可能是真正的动画
-                
-                // 如果没有足够证据表明这是动画，就排除
-                if (!hasMoreAnimeEvidence && !isAnime) {
-                    return false;
-                }
-            }
-        }
-        
-        return isAnime || hasAnimeTag;
+    // 对所有内容进行排序，根据与当前时间的接近程度
+    subjects.sort((a, b) => {
+        const proxA = calculateTimeProximity(a);
+        const proxB = calculateTimeProximity(b);
+        return proxA - proxB; // 越小越接近当前时间，越靠前
     });
     
-    // 根据评分排序（高分在前）
-    filteredItems.sort((a, b) => {
-        const rateA = parseFloat(a.rate) || 0;
-        const rateB = parseFloat(b.rate) || 0;
-        return rateB - rateA;
-    });
-    
-    console.log(`动画内容过滤后: ${filteredItems.length}个项目`);
-    
-    // 限制数量为原来的大小
-    return filteredItems.slice(0, 50);
-}
-
-// 根据分类处理内容
-function processContentByCategory(items, type, category) {
-    // 确保items是数组
-    if (!Array.isArray(items) || items.length === 0) {
-        return items;
-    }
-    
-    let processedItems = [...items];
-    
-    // 根据不同分类进行处理
-    switch(type) {
-        case 'movie':
-            // 电影分类处理
-            switch(category) {
-                case 'top250':
-                    // Top250按评分排序
-                    processedItems.sort((a, b) => {
-                        const rateA = parseFloat(a.rate) || 0;
-                        const rateB = parseFloat(b.rate) || 0;
-                        return rateB - rateA;
-                    });
-                    break;
-                    
-                case 'new':
-                    // 新片按上映日期排序（如果有）
-                    processedItems = processedItems.filter(item => {
-                        // 过滤掉明显的非电影内容
-                        const title = (item.title || '').toLowerCase();
-                        return !title.includes('剧集') && !title.includes('综艺');
-                    });
-                    break;
-                    
-                case 'hot':
-                    // 热门电影过滤掉剧集和综艺
-                    processedItems = processedItems.filter(item => {
-                        const title = (item.title || '').toLowerCase();
-                        return !title.includes('剧集') && !title.includes('综艺');
-                    });
-                    break;
-            }
-            break;
-            
-        case 'tv':
-            // 电视剧分类处理
-            switch(category) {
-                case 'us':
-                case 'hk':
-                case 'kr':
-                case 'jp':
-                    // 放宽区域性电视剧的过滤条件，使用API返回的结果
-                    // 不再进行额外过滤，因为API已经按国家/地区进行了筛选
-                    break;
-                    
-                case 'hot':
-                    // 热门剧集过滤掉电影和综艺
-                    processedItems = processedItems.filter(item => {
-                        const title = (item.title || '').toLowerCase();
-                        return !title.includes('电影') && !title.includes('综艺');
-                    });
-                    break;
-            }
-            break;
-            
-        case 'variety':
-            // 综艺分类处理 - 放宽过滤条件
-            // 不再进行额外过滤，因为API已经使用了综艺标签和类型
-            break;
-    }
-    
-    return processedItems;
+    // 返回最接近当前时间的7个资源
+    return subjects.slice(0, 7);
 }
 
 // 渲染分类内容
