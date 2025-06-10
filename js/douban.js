@@ -142,7 +142,7 @@ function initDouban() {
 
     // 清除所有缓存，确保获取最新内容
     clearAllDoubanCache();
-
+    
     // 立即更新豆瓣区域显示状态
     updateDoubanVisibility();
 
@@ -151,6 +151,12 @@ function initDouban() {
         doubanToggle.addEventListener('change', function() {
             localStorage.setItem('doubanEnabled', this.checked);
             updateDoubanVisibility();
+            
+            // 切换时清除缓存并强制刷新
+            if (this.checked) {
+                clearAllDoubanCache();
+                loadAllCategoryContent(true);  // 传入true参数表示强制刷新
+            }
         });
     }
 
@@ -162,7 +168,7 @@ function initDouban() {
     
     // 如果豆瓣功能已启用，加载所有分类内容
     if (localStorage.getItem('doubanEnabled') !== 'false') {
-        loadAllCategoryContent();
+        loadAllCategoryContent(true);  // 强制刷新内容
     }
 }
 
@@ -265,14 +271,14 @@ function reinitializeLazyLoading() {
 }
 
 // 加载所有分类内容
-function loadAllCategoryContent() {
+function loadAllCategoryContent(refresh = false) {
     // 优先加载的内容（首屏可见内容）
     const priorityLoad = () => {
         // 1. 热门电影（最受关注）
-        fetchCategoryContent('movie', 'hot', doubanCategories.movie.hot.title);
+        fetchCategoryContent('movie', 'hot', doubanCategories.movie.hot.title, refresh);
         
         // 2. 热门电视剧
-        fetchCategoryContent('tv', 'hot', doubanCategories.tv.hot.title);
+        fetchCategoryContent('tv', 'hot', doubanCategories.tv.hot.title, refresh);
         
         doubanLoadStatus.priorityLoaded = true;
     };
@@ -280,10 +286,10 @@ function loadAllCategoryContent() {
     // 第二批加载（稍后加载）
     const secondaryLoad = () => {
         // 3. 热门综艺
-        fetchCategoryContent('variety', 'hot', doubanCategories.variety.hot.title);
+        fetchCategoryContent('variety', 'hot', doubanCategories.variety.hot.title, refresh);
         
         // 4. 热门动画
-        fetchCategoryContent('movie', 'animation', doubanCategories.movie.animation.title);
+        fetchCategoryContent('movie', 'animation', doubanCategories.movie.animation.title, refresh);
         
         doubanLoadStatus.secondaryLoaded = true;
     };
@@ -291,19 +297,19 @@ function loadAllCategoryContent() {
     // 最后加载（用户可能需要滚动才能看到的内容）
     const finalLoad = () => {
         // 6. 热门美剧
-        fetchCategoryContent('tv', 'us', doubanCategories.tv.us.title);
+        fetchCategoryContent('tv', 'us', doubanCategories.tv.us.title, refresh);
         
         // 7. 热门港剧
-        fetchCategoryContent('tv', 'hk', doubanCategories.tv.hk.title);
+        fetchCategoryContent('tv', 'hk', doubanCategories.tv.hk.title, refresh);
         
         // 8. 热门韩剧
-        fetchCategoryContent('tv', 'kr', doubanCategories.tv.kr.title);
+        fetchCategoryContent('tv', 'kr', doubanCategories.tv.kr.title, refresh);
         
         // 9. 热门日剧
-        fetchCategoryContent('tv', 'jp', doubanCategories.tv.jp.title);
+        fetchCategoryContent('tv', 'jp', doubanCategories.tv.jp.title, refresh);
         
         // 10. Top250电影
-        fetchCategoryContent('movie', 'top250', doubanCategories.movie.top250.title);
+        fetchCategoryContent('movie', 'top250', doubanCategories.movie.top250.title, refresh);
         
         doubanLoadStatus.finalLoaded = true;
     };
@@ -407,7 +413,6 @@ function getCategoryTitle(type, category) {
     return '影视内容';
 }
 
-// 构建豆瓣API请求URL
 // 获取当前年份和月份，用于构建最新内容的year_range
 function getCurrentYearRange() {
     const currentDate = new Date();
@@ -420,6 +425,30 @@ function getCurrentYearRange() {
     return `${startYear},${currentYear}`;
 }
 
+// 获取更精细化的年份月份范围，适用于需要实时更新的内容如综艺
+function getCurrentYearMonthRange() {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // 月份从0开始，所以+1
+    
+    // 如果是月初（1-10号），也包括上个月的内容
+    let startYear = currentYear;
+    let startMonth = currentMonth;
+    
+    // 获取3个月的范围，确保能够获取到足够的内容
+    if (currentMonth <= 3) {
+        // 如果是1-3月，需要包含上一年的内容
+        startYear = currentYear - 1;
+        startMonth = 10 + currentMonth; // 10,11,12月
+    } else {
+        // 否则从当前月份往前推3个月
+        startMonth = currentMonth - 2;
+    }
+    
+    // 构造参数格式：yyyy-mm,yyyy-mm
+    return `${startYear}-${startMonth.toString().padStart(2, '0')},${currentYear}-${currentMonth.toString().padStart(2, '0')}`;
+}
+
 function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart = 0, refresh = false) {
     // 添加随机参数，确保在刷新时不使用缓存
     const randomParam = refresh ? `&_t=${Date.now()}` : '';
@@ -430,9 +459,12 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
         params = { ...doubanCategories[type][category].params };
         
         // 对于热播综艺和热播动画，自动添加当前年份范围
-        if ((type === 'variety' && category === 'hot') || 
-            (category === 'animation' && (type === 'movie' || type === 'tv'))) {
-            params.year_range = getCurrentYearRange();
+        if (type === 'variety' && category === 'hot') {
+            // 综艺使用更精细的月份范围，确保获取最新内容
+            params.year_range = getCurrentYearMonthRange();
+        } else if (category === 'animation' && (type === 'movie' || type === 'tv')) {
+            // 动画也使用更精细的月份范围
+            params.year_range = getCurrentYearMonthRange();
         }
     } else {
         // 兼容旧代码的参数构建
@@ -447,6 +479,8 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
         // 特殊处理某些分类
         if (category === 'animation' && type === 'movie') {
             params.genres = '动画';
+            // 为动画添加最新的年月范围
+            params.year_range = getCurrentYearMonthRange();
         } else if (type === 'tv') {
             if (category === 'us') params.countries = '美国';
             else if (category === 'hk') params.countries = '香港';
@@ -454,6 +488,8 @@ function buildDoubanApiUrl(type, category, pageSize = doubanPageSize, pageStart 
             else if (category === 'jp') params.countries = '日本';
         } else if (type === 'variety') {
             params.genres = '综艺';
+            // 为综艺添加最新的年月范围
+            params.year_range = getCurrentYearMonthRange();
         }
     }
     
@@ -923,6 +959,24 @@ function filterAndProcessAnimationContent(items) {
             return false;
         }
         
+        // 优先包含明确的动画作品（无论是电影还是电视剧类型）
+        // 常见动画标志性作品，即使它们在豆瓣分类中是电影或电视剧
+        if (title.includes('仙逆') || 
+            title.includes('千与千寻') ||
+            title.includes('宫崎骏') ||
+            title.includes('龙珠') ||
+            title.includes('柯南') ||
+            title.includes('哆啦A梦') ||
+            title.includes('多啦A梦') ||
+            title.includes('鬼灭之刃') ||
+            title.includes('名侦探柯南') ||
+            title.includes('海贼王') ||
+            title.includes('進撃の巨人') ||
+            title.includes('进击的巨人') ||
+            title.includes('间谍过家家')) {
+            return true;
+        }
+        
         // 检查是否包含动画相关关键词
         const isAnime = 
             title.includes('动画') || 
@@ -936,20 +990,47 @@ function filterAndProcessAnimationContent(items) {
         // 额外检查是否有动画类型标记
         const hasAnimeTag = 
             (item.genres && Array.isArray(item.genres) && item.genres.some(genre => 
-                (typeof genre === 'string' && (genre.includes('动画') || genre.includes('anime'))))) ||
+                (typeof genre === 'string' && (
+                    genre.includes('动画') || 
+                    genre.includes('anime') || 
+                    genre.includes('动漫'))))) ||
             (item.tags && Array.isArray(item.tags) && item.tags.some(tag => 
-                (typeof tag === 'string' && (tag.includes('动画') || tag.includes('anime')))));
+                (typeof tag === 'string' && (
+                    tag.includes('动画') || 
+                    tag.includes('anime') || 
+                    tag.includes('动漫')))));
         
         // 如果有类型信息但不是动画，则排除
         if (item.genres && Array.isArray(item.genres) && item.genres.length > 0) {
-            // 如果明确有类型信息，但不包含动画，则排除
-            if (!item.genres.some(genre => 
-                (typeof genre === 'string' && (genre.includes('动画') || genre.includes('anime'))))) {
+            // 如果类型中明确包含"真人秀"、"纪录片"、"脱口秀"等非动画类型，则排除
+            if (item.genres.some(genre => 
+                (typeof genre === 'string' && (
+                    genre.includes('真人秀') || 
+                    genre.includes('脱口秀') || 
+                    genre.includes('纪录片'))))) {
                 return false;
+            }
+            
+            // 如果没有明确的动画标记，但是有其他类型标记，则进一步检查描述和详情
+            if (!hasAnimeTag) {
+                // 检查item是否有更多可以识别的动画特征
+                const hasMoreAnimeEvidence = 
+                    (item.directors && typeof item.directors === 'string' && 
+                        (item.directors.includes('宫崎骏') || 
+                         item.directors.includes('今敏'))) ||
+                    (item.cover && typeof item.cover === 'string' && 
+                        (item.cover.includes('anime') || 
+                         item.cover.includes('animation'))) ||
+                    (item.rate && parseFloat(item.rate) >= 8.0);  // 高分动画更可能是真正的动画
+                
+                // 如果没有足够证据表明这是动画，就排除
+                if (!hasMoreAnimeEvidence && !isAnime) {
+                    return false;
+                }
             }
         }
         
-        return isAnime || hasAnimeTag || title.includes('仙逆') || title.includes('千与千寻');
+        return isAnime || hasAnimeTag;
     });
     
     // 根据评分排序（高分在前）
@@ -1532,28 +1613,27 @@ function initializeLazyLoading() {
     }, 200));
 }
 
-// 清除所有豆瓣相关的缓存
+// 清除所有豆瓣缓存
 function clearAllDoubanCache() {
-    // 清除内存缓存
-    for (let key in doubanCache) {
-        delete doubanCache[key];
-    }
+    console.log('清除所有豆瓣缓存');
     
-    // 清除localStorage缓存
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('douban_')) {
-            keysToRemove.push(key);
+    // 清除内存中的缓存
+    for (let key in doubanCache) {
+        if (key.includes('douban') || key.includes('movie') || key.includes('tv')) {
+            delete doubanCache[key];
         }
     }
     
-    // 删除收集到的键
-    keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-    });
+    // 清除localStorage中的缓存
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('douban_') || key.includes('_movie_') || key.includes('_tv_'))) {
+            localStorage.removeItem(key);
+        }
+    }
     
-    console.log(`已清除 ${keysToRemove.length} 个豆瓣缓存项`);
+    // 设置一个标记表示缓存已被清除
+    localStorage.setItem('douban_cache_cleared', Date.now().toString());
     
     // 重置加载状态
     doubanLoadStatus.initialized = false;
