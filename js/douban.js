@@ -258,13 +258,13 @@ async function fetchMoreCategoryContent(type, category) {
             } else if (category === 'jp') {
                 tag = '日剧';
             } else {
-                tag = '热门';
+                tag = '电视剧';  // 修改为"电视剧"而不是"热门"
             }
             
             apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(tag)}&sort=time&page_limit=18&page_start=0`;
         } else if (type === 'variety') {
-            tag = '综艺';
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(tag)}&sort=time&page_limit=18&page_start=0`;
+            tag = '真人秀';  // 修改为"真人秀"而不是"综艺"
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(tag)}&sort=time&page_limit=18&page_start=0`;  // 修改type为movie
         }
         
         console.log('加载分类内容:', apiUrl);
@@ -510,13 +510,13 @@ async function loadMoreItems(type, category, page) {
             } else if (category === 'jp') {
                 tag = '日剧';
             } else {
-                tag = '热门';
+                tag = '电视剧';  // 修改为"电视剧"而不是"热门"
             }
             
             apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(tag)}&sort=time&page_limit=18&page_start=${pageStart}`;
         } else if (type === 'variety') {
-            tag = '综艺';
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=${encodeURIComponent(tag)}&sort=time&page_limit=18&page_start=${pageStart}`;
+            tag = '真人秀';  // 修改为"真人秀"而不是"综艺"
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=${encodeURIComponent(tag)}&sort=time&page_limit=18&page_start=${pageStart}`;  // 修改type为movie
         }
         
         console.log('加载更多内容:', apiUrl, '页码:', page, '类型:', type, '分类:', category);
@@ -566,11 +566,11 @@ async function fetchCategoryContent(type, category, categoryName) {
             } else if (category === 'jp') {
                 apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=日剧&sort=time&page_limit=${doubanPageSize}&page_start=0`;
             } else {
-                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=热门&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+                apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=电视剧&sort=time&page_limit=${doubanPageSize}&page_start=0`;  // 修改为"电视剧"而不是"热门"
             }
         } else if (type === 'variety') {
             // 修改综艺API请求，确保能获取到综艺内容
-            apiUrl = `https://movie.douban.com/j/search_subjects?type=tv&tag=综艺&sort=time&page_limit=${doubanPageSize}&page_start=0`;
+            apiUrl = `https://movie.douban.com/j/search_subjects?type=movie&tag=真人秀&sort=time&page_limit=${doubanPageSize}&page_start=0`;  // 修改为"真人秀"和type=movie
         }
         
         // 获取数据
