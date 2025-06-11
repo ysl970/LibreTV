@@ -35,8 +35,6 @@ async function handleApiRequest(url) {
                 ? `${customApi}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`
                 : `${API_SITES[source].api}${API_CONFIG.search.path}${encodeURIComponent(searchQuery)}`;
             
-            console.log('Search API URL:', apiUrl); // 添加日志
-            
             // 添加超时处理
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -59,7 +57,6 @@ async function handleApiRequest(url) {
                 }
                 
                 const data = await response.json();
-                console.log('Search API Response:', data); // 添加日志
                 
                 // 检查JSON格式的有效性
                 if (!data || !Array.isArray(data.list)) {
@@ -82,7 +79,7 @@ async function handleApiRequest(url) {
                 });
             } catch (fetchError) {
                 clearTimeout(timeoutId);
-                console.error('Search API Error:', fetchError); // 添加错误日志
+                console.error('Search API Error:', fetchError.message); // 简化错误日志
                 throw fetchError;
             }
         }
