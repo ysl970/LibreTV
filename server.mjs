@@ -53,16 +53,17 @@ function sha256Hash(input) {
   });
 }
 
-async function renderPage(filePath, password, adminPassword) {
+async function renderPage(filePath, password) {
   let content = fs.readFileSync(filePath, 'utf8');
   if (password !== '') {
     const sha256 = await sha256Hash(password);
     content = content.replace('{{PASSWORD}}', sha256);
   }
-  if (adminPassword !== '') {
-    const adminSha256 = await sha256Hash(adminPassword);
-    content = content.replace('{{ADMINPASSWORD}}', adminSha256);
-  }
+  // 添加ADMINPASSWORD注入
+  if (config.adminpassword !== '') {
+      const adminSha256 = await sha256Hash(config.adminpassword);
+      content = content.replace('{{ADMINPASSWORD}}', adminSha256);
+  } 
   return content;
 }
 
@@ -78,7 +79,7 @@ app.get(['/', '/index.html', '/player.html'], async (req, res) => {
         break;
     }
     
-    const content = await renderPage(filePath, config.password, config.adminpassword);
+    const content = await renderPage(filePath, config.password);
     res.send(content);
   } catch (error) {
     console.error('页面渲染错误:', error);
@@ -89,7 +90,7 @@ app.get(['/', '/index.html', '/player.html'], async (req, res) => {
 app.get('/s=:keyword', async (req, res) => {
   try {
     const filePath = path.join(__dirname, 'index.html');
-    const content = await renderPage(filePath, config.password, config.adminpassword);
+    const content = await renderPage(filePath, config.password);
     res.send(content);
   } catch (error) {
     console.error('搜索页面渲染错误:', error);
