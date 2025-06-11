@@ -165,7 +165,7 @@ function isValidUrl(urlString) {
   }
 }
 
-// 代理请求处理
+// 优化代理请求处理，添加缓存控制
 app.use('/proxy', async (req, res) => {
     try {
         const targetUrl = decodeURIComponent(req.url.substring(1));
@@ -177,6 +177,42 @@ app.use('/proxy', async (req, res) => {
             return res.status(400).json({ error: 'Invalid target URL' });
         }
 
+        // 判断是否为豆瓣API请求(用于差异化处理缓存策略)
+        const isDoubanRequest = targetUrl.includes('movie.douban.com');
+        // 判断是否为视频资源请求(m3u8/ts文件等)
+        const isVideoResource = /\.(m3u8|ts|mp4)(\?|$)/i.test(targetUrl);
+        // 判断是否为搜索API请求
+        const isSearchRequest = targetUrl.includes('?ac=videolist&wd=');
+        // 判断是否为详情API请求
+        const isDetailRequest = targetUrl.includes('?ac=detail&ids=');
+        // 判断是否为图片请求
+        const isImageRequest = /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(targetUrl);
+        
+        // 不同请求类型的缓存策略
+        let cacheControl;
+        let cacheMaxAge;
+        
+        if (isDoubanRequest) {
+            cacheControl = 'public, max-age=21600'; // 豆瓣API请求缓存6小时
+            cacheMaxAge = 21600;
+        } else if (isVideoResource) {
+            cacheControl = 'public, max-age=3600'; // 视频资源缓存1小时
+            cacheMaxAge = 3600;
+        } else if (isImageRequest) {
+            cacheControl = 'public, max-age=604800'; // 图片缓存1周
+            cacheMaxAge = 604800;
+        } else if (isSearchRequest) {
+            cacheControl = 'public, max-age=43200'; // 搜索请求缓存12小时
+            cacheMaxAge = 43200;
+        } else if (isDetailRequest) {
+            cacheControl = 'public, max-age=86400'; // 详情请求缓存24小时
+            cacheMaxAge = 86400;
+        } else {
+            // 默认策略
+            cacheControl = 'public, max-age=3600'; // 默认缓存1小时
+            cacheMaxAge = 3600;
+        }
+
         // 添加请求头
         const headers = {
             'User-Agent': config.userAgent,
@@ -184,18 +220,21 @@ app.use('/proxy', async (req, res) => {
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache',
-            'Referer': 'https://www.douban.com/',
-            'Origin': 'https://www.douban.com'
+            'Referer': isDoubanRequest ? 'https://www.douban.com/' : targetUrl,
+            'Origin': isDoubanRequest ? 'https://www.douban.com' : new URL(targetUrl).origin
         };
 
+        // 设置超时设置和重试策略
         let retries = 0;
+        const maxRetries = isDoubanRequest ? 3 : config.maxRetries; // 豆瓣请求增加重试次数
+        const timeout = isDoubanRequest ? 12000 : config.timeout; // 豆瓣请求延长超时时间
         let lastError = null;
 
-        while (retries <= config.maxRetries) {
+        while (retries <= maxRetries) {
             try {
                 // 设置超时
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
 
                 const response = await fetch(targetUrl, {
                     headers,
@@ -209,11 +248,31 @@ app.use('/proxy', async (req, res) => {
                 }
 
                 const contentType = response.headers.get('content-type');
+                
+                // 设置缓存控制响应头
+                res.setHeader('Cache-Control', cacheControl);
+                res.setHeader('Expires', new Date(Date.now() + cacheMaxAge * 1000).toUTCString());
+                
+                // 设置内容类型和其他重要的响应头
+                if (contentType) {
+                    res.setHeader('Content-Type', contentType);
+                }
+                
+                // 传递其他可能有用的头部，比如内容长度
+                const contentLength = response.headers.get('content-length');
+                if (contentLength) {
+                    res.setHeader('Content-Length', contentLength);
+                }
 
+                // 处理不同的响应类型
                 if (contentType && contentType.includes('application/json')) {
                     const data = await response.json();
                     return res.json(data);
+                } else if (isVideoResource || isImageRequest) {
+                    // 对于视频和图片等二进制资源，使用流式传输
+                    return response.body.pipe(res);
                 } else {
+                    // 其他内容类型使用文本响应
                     const text = await response.text();
                     return res.send(text);
                 }
@@ -222,9 +281,10 @@ app.use('/proxy', async (req, res) => {
                 console.error(`Proxy attempt ${retries + 1} failed:`, error.message);
                 retries++;
                 
-                if (retries <= config.maxRetries) {
-                    // 等待一段时间后重试
-                    await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+                if (retries <= maxRetries) {
+                    // 等待一段时间后重试，使用指数退避策略
+                    const delay = 1000 * Math.pow(1.5, retries);
+                    await new Promise(resolve => setTimeout(resolve, delay));
                     continue;
                 }
                 break;
