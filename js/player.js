@@ -1456,6 +1456,16 @@ function renderEpisodeCards() {
         container.innerHTML = '<div class="episode-card" style="opacity:0.5;cursor:default;">没有可用的集数</div>';
         return;
     }
+    
+    // 获取当前播放索引
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlIndex = parseInt(urlParams.get('index') || '0', 10);
+    
+    // 确保currentEpisodeIndex始终使用URL中的index参数
+    window.currentEpisodeIndex = urlIndex;
+    
+    console.log('渲染集数卡片，当前播放索引:', window.currentEpisodeIndex);
+    
     const episodes = window.episodesReversed ? [...window.currentEpisodes].reverse() : window.currentEpisodes;
     let html = '';
     episodes.forEach((ep, idx) => {
@@ -1715,9 +1725,8 @@ function renderResourceInfoBar() {
     }
     
     console.log('API_SITES已加载，当前source_code:', currentSource);
-    console.log('可用的API源:', Object.keys(API_SITES));
     
-    // 从API_SITES获取资源名称
+    // 从API_SITES获取资源名称 - 直接使用currentSource作为键
     if (currentSource && API_SITES[currentSource]) {
         resourceName = API_SITES[currentSource].name;
         resourceFound = true;
@@ -1801,13 +1810,21 @@ function renderResourceInfoBar() {
 const _oldPlayEpisode = window.playEpisode;
 window.playEpisode = function(index) {
     if (typeof _oldPlayEpisode === 'function') _oldPlayEpisode(index);
+    
+    // 更新当前播放索引
+    window.currentEpisodeIndex = index;
+    
+    // 渲染集数卡片，确保高亮效果
     renderEpisodeCards();
+    
     // 自动跳转到对应集数的URL
     const urlParams = new URLSearchParams(window.location.search);
     const sourceCode = urlParams.get('source_code') || '';
     const title = urlParams.get('title') || '';
     const episodeUrl = window.currentEpisodes[index];
+    
     if (episodeUrl) {
+        console.log(`跳转到第${index+1}集，资源源: ${sourceCode}`);
         window.location.href = `player.html?url=${encodeURIComponent(episodeUrl)}&title=${encodeURIComponent(title)}&source_code=${sourceCode}&index=${index}`;
     }
 };
@@ -1833,5 +1850,17 @@ window.addEventListener('DOMContentLoaded', function () {
             }
         }, 500); // 每500毫秒检查一次
     }
+    
+    // 确保URL中的index参数被正确应用
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlIndex = parseInt(urlParams.get('index') || '0', 10);
+    window.currentEpisodeIndex = urlIndex;
+    
+    // 渲染集数卡片并应用高亮
     renderEpisodeCards();
+    
+    // 由于页面可能有延迟加载的内容，延迟再次渲染以确保高亮效果
+    setTimeout(() => {
+        renderEpisodeCards();
+    }, 1000);
 });
