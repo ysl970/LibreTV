@@ -21,6 +21,7 @@
     
     <!-- 引入API站点配置 -->
     <script src="js/api-sites.js"></script>
+    <script src="js/douban.js"></script>
     
     <!-- 注册Service Worker -->
     <script>
@@ -278,131 +279,33 @@
             <!-- 豆瓣热门推荐区域: 默认隐藏，现在位于搜索区域下方，调整宽度 -->
             <div id="doubanArea" class="w-full my-8 hidden">
                 <div class="mx-auto max-w-screen-xl px-2">
-                    <!-- 1. 热门电视剧区域 -->
-                    <div class="mb-8">
+                    <!-- 改进标题和标签区域布局 -->
+                    <div class="mb-4">
+                        <!-- 标题和刷新按钮一行 -->
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热播电视剧</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hot" data-type="tv">
-                                换一批 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            <div class="flex items-center">
+                                <h2 class="text-xl font-bold text-white mr-4">豆瓣热门</h2>
+                                <!-- 添加电影/电视剧切换开关 -->
+                                <div class="flex items-center bg-[#222] rounded-full p-1">
+                                    <button id="douban-movie-toggle" class="px-3 py-1 text-sm rounded-full bg-pink-600 text-white">电影</button>
+                                    <button id="douban-tv-toggle" class="px-3 py-1 text-sm rounded-full text-gray-300 hover:text-white">电视剧</button>
+                                </div>
+                            </div>
+                            <button id="douban-refresh" class="text-sm px-3 py-1 bg-pink-600 hover:bg-pink-700 text-white rounded-lg flex items-center gap-1">
+                                <span>换一批</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                 </svg>
-                            </a>
+                            </button>
                         </div>
-                        <div class="douban-tv-hot"></div>
-                    </div>
-
-                    <!-- 2. 热门综艺区域 -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热播综艺</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hot" data-type="variety">
-                                换一批 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
+                        <!-- 分类标签独立成行，添加滚动支持以适应移动设备 -->
+                        <div class="overflow-x-auto pb-2">
+                            <div id="douban-tags" class="flex space-x-2 min-w-max"></div>
                         </div>
-                        <div class="douban-variety-hot"></div>
                     </div>
-
-                    <!-- 3. 热播电影区域 -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热播电影</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hot" data-type="movie">
-                                换一批 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-                        <div class="douban-movie-hot"></div>
-                    </div>
-
-                    <!-- 4. 热播动画区域 -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热播动画</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="animation" data-type="movie">
-                                换一批 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-                        <div class="douban-movie-animation"></div>
-                    </div>
-
-                    <!-- 6. 热播美剧区域 -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热播美剧</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="us" data-type="tv">
-                                换一批 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-                        <div class="douban-tv-us"></div>
-                    </div>
-
-                    <!-- 7. 热播港剧区域 -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热播港剧</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hk" data-type="tv">
-                                换一批 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-                        <div class="douban-tv-hk"></div>
-                    </div>
-
-                    <!-- 8. 热播韩剧区域 -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热播韩剧</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="kr" data-type="tv">
-                                换一批 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-                        <div class="douban-tv-kr"></div>
-                    </div>
-
-                    <!-- 9. 热播日剧区域 -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">热播日剧</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="jp" data-type="tv">
-                                换一批 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-                        <div class="douban-tv-jp"></div>
-                    </div>
-
-                    <!-- 10. Top250电影区域 -->
-                    <div class="mb-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-xl font-bold gradient-text">Top250电影</h2>
-                            <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="top250" data-type="movie">
-                                换一批 
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                                </svg>
-                            </a>
-                        </div>
-                        <div class="douban-movie-top250"></div>
-                    </div>
+                    
+                    <!-- 推荐内容 -->
+                    <div id="douban-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3"></div>
                 </div>
             </div>
             
