@@ -43,15 +43,15 @@ header p {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--primary-color);
-    color: var(--text-primary);
+    background: white;
+    color: black;
     font-weight: 500;
     transition: background-color 0.2s;
     font-size: var(--text-level3);
 }
 
 .search-button:hover {
-    background: var(--primary-light);
+    background: #f0f0f0;
 }
 
 .search-input {
@@ -197,40 +197,6 @@ header p {
     margin-bottom: 1rem;
 }
 
-/* 结果模态框中的搜索结果列表 */
-#searchResultsList {
-    display: grid;
-    gap: 1rem;
-}
-
-.search-result-item {
-    padding: 1rem;
-    border-radius: 0.5rem;
-    font-size: var(--text-level3);
-}
-
-.search-result-item h4 {
-    font-size: var(--text-level3);
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-    color: var(--text-primary);
-}
-
-.search-result-item p {
-    font-size: var(--text-level4);
-    color: var(--text-secondary);
-}
-
-#episodesSelectionList {
-    display: grid;
-    gap: 0.75rem;
-}
-
-.episode-select-btn {
-    font-size: var(--text-level4);
-    padding: 0.75rem 0.5rem;
-}
-
 /* 响应式网格布局 */
 .search-results-grid {
     display: grid;
@@ -246,15 +212,6 @@ header p {
         font-size: 2.5rem;
     }
     
-    #searchResultsList {
-        grid-template-columns: 1fr;
-    }
-    
-    #episodesSelectionList {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.5rem;
-    }
-    
     .search-button {
         width: 4rem;
         font-size: var(--text-level4);
@@ -265,27 +222,11 @@ header p {
     .search-results-grid {
         grid-template-columns: repeat(2, 1fr);
     }
-    
-    #searchResultsList {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    #episodesSelectionList {
-        grid-template-columns: repeat(4, 1fr);
-    }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
     .search-results-grid {
         grid-template-columns: repeat(3, 1fr);
-    }
-    
-    #searchResultsList {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    #episodesSelectionList {
-        grid-template-columns: repeat(5, 1fr);
     }
 }
 
@@ -293,11 +234,41 @@ header p {
     .search-results-grid {
         grid-template-columns: repeat(4, 1fr);
     }
-    
-    #searchResultsList {
-        grid-template-columns: repeat(2, 1fr);
+}
+
+/* 集数选择和搜索结果模态框样式 */
+#episodesSelectionList {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+}
+
+.episode-select-btn {
+    background-color: #222;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.episode-select-btn:hover {
+    background-color: #333;
+    transform: translateY(-2px);
+}
+
+@media (min-width: 640px) {
+    #episodesSelectionList {
+        grid-template-columns: repeat(4, 1fr);
     }
-    
+}
+
+@media (min-width: 768px) {
+    #episodesSelectionList {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
     #episodesSelectionList {
         grid-template-columns: repeat(6, 1fr);
     }
