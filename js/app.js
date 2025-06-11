@@ -482,31 +482,24 @@ function removeCustomApi(index) {
 
 function toggleSettings(e) {
     const settingsPanel = document.getElementById('settingsPanel');
-    if (!settingsPanel) {
-        return;
-    }
+    if (!settingsPanel) return;
 
-    // 检查管理员密码是否设置
+    // 检查是否有管理员密码
     const hasAdminPassword = window.__ENV__?.ADMINPASSWORD && 
                            window.__ENV__.ADMINPASSWORD.length === 64 && 
                            !/^0+$/.test(window.__ENV__.ADMINPASSWORD);
 
-    // 先检查密码验证状态
-    if (window.isPasswordProtected && window.isPasswordVerified) {
-        if (window.isPasswordProtected() && !window.isPasswordVerified()) {
-            return;
-        }
-    }
-
     if (settingsPanel.classList.contains('show')) {
         settingsPanel.classList.remove('show');
     } else {
-        // 只有设置了管理员密码时才需要验证
+        // 只有设置了管理员密码且未验证时才拦截
         if (hasAdminPassword && !isAdminVerified()) {
+            e.preventDefault();
+            e.stopPropagation();
             showAdminPasswordModal();
-        } else {
-            settingsPanel.classList.add('show');
+            return;
         }
+        settingsPanel.classList.add('show');
     }
 
     if (e) {

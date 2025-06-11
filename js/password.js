@@ -180,47 +180,29 @@ function initPasswordProtection() {
         return;
     }
     
-    // 检查管理员密码是否设置
-    const hasAdminPassword = window.__ENV__?.ADMINPASSWORD && 
-                           window.__ENV__.ADMINPASSWORD.length === 64 && 
-                           !/^0+$/.test(window.__ENV__.ADMINPASSWORD);
+    // 检查是否有普通密码
+    const hasNormalPassword = window.__ENV__?.PASSWORD && 
+                           window.__ENV__.PASSWORD.length === 64 && 
+                           !/^0+$/.test(window.__ENV__.PASSWORD);
     
-    // 添加设置按钮的密码验证
+    // 只有当设置了普通密码且未验证时才显示密码框
+    if (hasNormalPassword && !isPasswordVerified()) {
+        showPasswordModal();
+    }
+    
+    // 设置按钮事件监听
     const settingsBtn = document.querySelector('[onclick="toggleSettings(event)"]');
     if (settingsBtn) {
         settingsBtn.addEventListener('click', function(e) {
-            if (isPasswordProtected() && !isPasswordVerified()) {
+            // 只有当设置了普通密码且未验证时才拦截点击
+            if (hasNormalPassword && !isPasswordVerified()) {
                 e.preventDefault();
                 e.stopPropagation();
                 showPasswordModal();
+                return;
             }
-            // 只有当设置了管理员密码时才需要验证
-            else if (hasAdminPassword && !isAdminVerified()) {
-                e.preventDefault();
-                e.stopPropagation();
-                showAdminPasswordModal();
-            }
+            
         });
-    }
-    
-    if (!isPasswordVerified()) {
-        showPasswordModal();
-        
-        // 设置密码提交按钮事件监听
-        const submitButton = document.getElementById('passwordSubmitBtn');
-        if (submitButton) {
-            submitButton.addEventListener('click', handlePasswordSubmit);
-        }
-        
-        // 设置密码输入框回车键监听
-        const passwordInput = document.getElementById('passwordInput');
-        if (passwordInput) {
-            passwordInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    handlePasswordSubmit();
-                }
-            });
-        }
     }
 }
 
