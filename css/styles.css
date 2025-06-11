@@ -114,7 +114,7 @@ button, .card-hover {
 
 /* 针对不同长度的标题优化显示 */
 .card-hover h3 {
-    font-size: var(--text-level2);
+    font-size: 0.95rem;
     min-height: unset;
     max-height: unset;
     display: -webkit-box;
@@ -125,13 +125,13 @@ button, .card-hover {
     line-height: 1.2rem;
     word-break: break-word; /* 允许在任何字符间断行 */
     hyphens: auto; /* 允许断词 */
-    color: var(--text-primary);
+    color: white;
     margin-bottom: 0.5rem;
 }
 
 .card-hover p {
-    font-size: var(--text-level4);
-    color: var(--text-secondary);
+    font-size: 0.8rem;
+    color: #9ca3af;
     margin-bottom: 0.5rem;
 }
 
@@ -154,18 +154,15 @@ button, .card-hover {
 
 /* 搜索卡片图片容器统一样式 */
 .search-card-img-container {
-    position: relative;
-    width: 100%;
-    padding-top: 140%; /* 10:14 的宽高比 */
+    width: 100px;  /* 固定宽度 */
+    height: 150px; /* 固定高度 */
     overflow: hidden;
-    border-radius: 4px;
-    margin-bottom: 0.5rem;
+    background-color: #191919;
+    flex-shrink: 0;
+    position: relative;
 }
 
 .search-card-img-container img {
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -1136,27 +1133,26 @@ body {
 }
 
 /* 搜索结果项样式 */
-.search-result-item {
-    border: 1px solid var(--border-color);
-    background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end));
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    transition: all 0.3s ease;
+#searchResultsList {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
 }
 
-.search-result-item:hover {
-    border-color: var(--primary-color);
-    transform: translateY(-3px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+@media (min-width: 768px) {
+    #searchResultsList {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 /* 集数选择按钮样式 */
 .episode-select-btn {
-    border: 1px solid var(--border-color);
-    background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #222;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     text-align: center;
     font-weight: bold;
-    font-size: var(--text-level4);
+    font-size: 0.9rem;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
@@ -1166,6 +1162,6 @@ body {
 .episode-select-btn:hover {
     border-color: var(--primary-color);
     transform: translateY(-2px);
-    background: linear-gradient(135deg, var(--card-gradient-end), var(--card-gradient-start));
+    background: #333;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
