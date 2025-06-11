@@ -1651,21 +1651,25 @@ window.addEventListener('DOMContentLoaded', function () {
 
 // 页面初始化时，拉取分集并渲染集数按钮（修正版）
 window.addEventListener('DOMContentLoaded', async function () {
-    console.log('页面加载完成，开始初始化...');
+    // 删除不必要的日志
+    // console.log('页面加载完成，开始初始化...');
     
     // 确保API_SITES已加载
     const ensureApiSitesLoaded = () => {
         return new Promise((resolve) => {
             if (typeof API_SITES !== 'undefined') {
-                console.log('API_SITES已加载');
+                // 删除不必要的日志
+                // console.log('API_SITES已加载');
                 resolve();
             } else {
-                console.log('API_SITES未加载，尝试手动加载...');
+                // 删除不必要的日志
+                // console.log('API_SITES未加载，尝试手动加载...');
                 // 尝试手动加载api-sites.js
                 const apiSitesScript = document.createElement('script');
                 apiSitesScript.src = 'js/api-sites.js';
                 apiSitesScript.onload = () => {
-                    console.log('手动加载api-sites.js成功');
+                    // 删除不必要的日志
+                    // console.log('手动加载api-sites.js成功');
                     resolve();
                 };
                 apiSitesScript.onerror = () => {
@@ -1701,7 +1705,8 @@ window.addEventListener('DOMContentLoaded', async function () {
                             (api.detail && videoUrl.includes(api.detail))) {
                             
                             // 找到匹配的API，添加source_code到URL
-                            console.log('从视频URL推断出source_code:', key);
+                            // 删除不必要的日志
+                            // console.log('从视频URL推断出source_code:', key);
                             const newUrl = new URL(window.location.href);
                             newUrl.searchParams.set('source_code', key);
                             window.history.replaceState({}, '', newUrl.toString());
@@ -1717,16 +1722,19 @@ window.addEventListener('DOMContentLoaded', async function () {
     
     if (typeof API_SITES !== 'undefined' && sourceCode && title) {
         try {
-            console.log(`开始搜索资源: ${sourceCode}, ${title}`);
+            // 删除不必要的日志
+            // console.log(`开始搜索资源: ${sourceCode}, ${title}`);
             const searchResult = await searchResourceByApiAndTitle(sourceCode, title);
             if (searchResult && searchResult.length > 0) {
                 window.currentEpisodes = searchResult[0].vod_play_url_list.map(item => item.url);
                 localStorage.setItem('currentEpisodes', JSON.stringify(window.currentEpisodes));
-                console.log(`找到 ${window.currentEpisodes.length} 个视频`);
+                // 删除不必要的日志
+                // console.log(`找到 ${window.currentEpisodes.length} 个视频`);
             } else {
                 window.currentEpisodes = [];
                 localStorage.setItem('currentEpisodes', '[]');
-                console.log('未找到匹配的视频');
+                // 删除不必要的日志
+                // console.log('未找到匹配的视频');
             }
         } catch (e) {
             console.error('搜索资源失败:', e);
@@ -1737,7 +1745,8 @@ window.addEventListener('DOMContentLoaded', async function () {
         // 兜底：尝试从localStorage恢复
         try {
             window.currentEpisodes = JSON.parse(localStorage.getItem('currentEpisodes') || '[]');
-            console.log(`从缓存恢复了 ${window.currentEpisodes.length} 个视频`);
+            // 删除不必要的日志
+            // console.log(`从缓存恢复了 ${window.currentEpisodes.length} 个视频`);
         } catch (e) {
             console.error('从缓存恢复失败:', e);
             window.currentEpisodes = [];
@@ -1754,7 +1763,8 @@ window.addEventListener('DOMContentLoaded', async function () {
 
 // 渲染资源信息卡片（顶部）
 function renderResourceInfoBar() {
-    console.log('开始渲染资源信息卡片');
+    // 删除不必要的日志
+    // console.log('开始渲染资源信息卡片');
     
     // 获取容器元素
     const container = document.getElementById('resourceInfoBarContainer');
@@ -1769,7 +1779,8 @@ function renderResourceInfoBar() {
     const title = urlParams.get('title') || document.getElementById('videoTitle')?.textContent || '';
     const videoUrl = urlParams.get('url') || '';
     
-    console.log(`当前参数 - source_code: "${currentSource}", title: "${title}", video_url: "${videoUrl.substring(0, 50)}..."`);
+    // 删除不必要的日志
+    // console.log(`当前参数 - source_code: "${currentSource}", title: "${title}", video_url: "${videoUrl.substring(0, 50)}..."`);
     
     // 显示临时加载状态
     container.innerHTML = `
@@ -1798,9 +1809,10 @@ function renderResourceInfoBar() {
         if (videoUrl) {
             const urlObj = new URL(videoUrl);
             domainFromUrl = urlObj.hostname;
-            if (domainFromUrl) {
-                console.log('从URL中提取的域名:', domainFromUrl);
-            }
+            // 删除不必要的日志
+            // if (domainFromUrl) {
+            //     console.log('从URL中提取的域名:', domainFromUrl);
+            // }
         }
         
         // 函数：从API_SITES中查找最匹配的API
@@ -1809,13 +1821,14 @@ function renderResourceInfoBar() {
             if (typeof API_SITES === 'undefined' || !API_SITES) {
                 console.error('API_SITES未定义，尝试加载...');
                 try {
-        // 尝试加载api-sites.js
+                    // 尝试加载api-sites.js
                     const script = document.createElement('script');
                     script.src = 'js/api-sites.js';
                     script.onload = () => {
-                        console.log('成功加载API_SITES，重新渲染资源信息');
+                        // 删除不必要的日志
+                        // console.log('成功加载API_SITES，重新渲染资源信息');
                         setTimeout(renderResourceInfoBar, 100);
-        };
+                    };
                     document.head.appendChild(script);
                 } catch (e) {
                     console.error('加载API_SITES失败:', e);
@@ -1824,30 +1837,32 @@ function renderResourceInfoBar() {
             }
             
             // 方法1：直接通过source_code匹配
-    if (currentSource && API_SITES[currentSource]) {
-        resourceName = API_SITES[currentSource].name;
-                console.log('通过source_code直接匹配成功:', resourceName);
+            if (currentSource && API_SITES[currentSource]) {
+                resourceName = API_SITES[currentSource].name;
+                // 删除不必要的日志
+                // console.log('通过source_code直接匹配成功:', resourceName);
                 return true;
-    } 
+            } 
             
             // 方法2：如果是自定义API
             if (currentSource && currentSource.startsWith('custom_')) {
-        try {
-            const customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]');
-            const customIndex = parseInt(currentSource.replace('custom_', ''), 10);
-            if (customAPIs[customIndex]) {
-                resourceName = customAPIs[customIndex].name || '自定义资源';
-                        console.log('通过自定义API匹配成功:', resourceName);
+                try {
+                    const customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]');
+                    const customIndex = parseInt(currentSource.replace('custom_', ''), 10);
+                    if (customAPIs[customIndex]) {
+                        resourceName = customAPIs[customIndex].name || '自定义资源';
+                        // 删除不必要的日志
+                        // console.log('通过自定义API匹配成功:', resourceName);
                         return true;
-            }
-        } catch (e) {
-            console.error('获取自定义API信息失败:', e);
-        }
-    } 
+                    }
+                } catch (e) {
+                    console.error('获取自定义API信息失败:', e);
+                }
+            } 
     
-            // 方法3：通过视频URL域名匹配
+            // 方法3：通过视频URL域名匹配 - 继续其他匹配方法
             if (videoUrl && domainFromUrl) {
-        for (const [key, api] of Object.entries(API_SITES)) {
+                for (const [key, api] of Object.entries(API_SITES)) {
                     // 通过API URL匹配
                     try {
                         const apiUrlObj = new URL(api.api);
@@ -1856,14 +1871,16 @@ function renderResourceInfoBar() {
                         // 域名完全匹配
                         if (domainFromUrl === apiHost) {
                 resourceName = api.name;
-                            console.log('通过域名完全匹配成功:', resourceName);
+                            // 删除不必要的日志
+                            // console.log('通过域名完全匹配成功:', resourceName);
                             return true;
                         }
                         
                         // 域名部分匹配
                         if (domainFromUrl.includes(apiHost) || apiHost.includes(domainFromUrl)) {
                             resourceName = api.name;
-                            console.log('通过域名部分匹配成功:', resourceName);
+                            // 删除不必要的日志
+                            // console.log('通过域名部分匹配成功:', resourceName);
                             return true;
             }
             
@@ -1874,7 +1891,8 @@ function renderResourceInfoBar() {
                                 const detailHost = detailUrlObj.hostname;
                                 if (domainFromUrl === detailHost || domainFromUrl.includes(detailHost) || detailHost.includes(domainFromUrl)) {
                                     resourceName = api.name;
-                                    console.log('通过detail域名匹配成功:', resourceName);
+                                    // 删除不必要的日志
+                                    // console.log('通过detail域名匹配成功:', resourceName);
                                     return true;
                                 }
                             } catch (e) {}
@@ -1883,7 +1901,8 @@ function renderResourceInfoBar() {
                         // 通过URL字符串匹配
                         if (videoUrl.includes(api.api) || (api.detail && videoUrl.includes(api.detail))) {
                     resourceName = api.name;
-                            console.log('通过URL字符串匹配成功:', resourceName);
+                            // 删除不必要的日志
+                            // console.log('通过URL字符串匹配成功:', resourceName);
                             return true;
                 }
             } catch (e) {
@@ -1898,7 +1917,8 @@ function renderResourceInfoBar() {
                     if (key.toLowerCase().includes(currentSource.toLowerCase()) || 
                         currentSource.toLowerCase().includes(key.toLowerCase())) {
                         resourceName = api.name;
-                        console.log('通过source_code部分匹配成功:', resourceName);
+                        // 删除不必要的日志
+                        // console.log('通过source_code部分匹配成功:', resourceName);
                         return true;
                     }
                 }
@@ -1931,7 +1951,8 @@ function renderResourceInfoBar() {
                 for (const [keyword, apiKey] of Object.entries(keywordMap)) {
                     if (title.includes(keyword) && API_SITES[apiKey]) {
                         resourceName = API_SITES[apiKey].name;
-                        console.log('通过标题关键词匹配成功:', resourceName);
+                        // 删除不必要的日志
+                        // console.log('通过标题关键词匹配成功:', resourceName);
                         return true;
                     }
                 }
@@ -1941,7 +1962,8 @@ function renderResourceInfoBar() {
             const apiKeys = Object.keys(API_SITES);
             if (apiKeys.length > 0) {
                 resourceName = API_SITES[apiKeys[0]].name;
-                console.log('使用第一个可用API作为兜底:', resourceName);
+                // 删除不必要的日志
+                // console.log('使用第一个可用API作为兜底:', resourceName);
                 return true;
             }
             
@@ -1954,7 +1976,8 @@ function renderResourceInfoBar() {
         // 如果仍未找到，使用域名作为资源名称
         if (!foundResource && domainFromUrl) {
             resourceName = domainFromUrl.replace(/^www\./, '');
-            console.log('使用视频域名作为资源名称:', resourceName);
+            // 删除不必要的日志
+            // console.log('使用视频域名作为资源名称:', resourceName);
             foundResource = true;
         }
     } catch (e) {
@@ -1962,7 +1985,8 @@ function renderResourceInfoBar() {
     }
     
     // 更新UI显示
-    console.log('最终资源名称:', resourceName, '视频数:', videoCount);
+    // 删除不必要的日志
+    // console.log('最终资源名称:', resourceName, '视频数:', videoCount);
     container.innerHTML = `
       <div class="resource-info-bar-left">
         <span>${resourceName}</span>
