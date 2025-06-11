@@ -15,6 +15,7 @@ const __dirname = path.dirname(__filename);
 const config = {
   port: process.env.PORT || 8080,
   password: process.env.PASSWORD || '',
+  adminpassword: process.env.ADMINPASSWORD || '',
   corsOrigin: process.env.CORS_ORIGIN || '*',
   timeout: parseInt(process.env.REQUEST_TIMEOUT || '5000'),
   maxRetries: parseInt(process.env.MAX_RETRIES || '2'),
@@ -52,11 +53,15 @@ function sha256Hash(input) {
   });
 }
 
-async function renderPage(filePath, password) {
+async function renderPage(filePath, password, adminPassword) {
   let content = fs.readFileSync(filePath, 'utf8');
   if (password !== '') {
     const sha256 = await sha256Hash(password);
     content = content.replace('{{PASSWORD}}', sha256);
+  }
+  if (adminPassword !== '') {
+    const adminSha256 = await sha256Hash(adminPassword);
+    content = content.replace('{{ADMINPASSWORD}}', adminSha256);
   }
   return content;
 }
@@ -73,7 +78,7 @@ app.get(['/', '/index.html', '/player.html'], async (req, res) => {
         break;
     }
     
-    const content = await renderPage(filePath, config.password);
+    const content = await renderPage(filePath, config.password, config.adminpassword);
     res.send(content);
   } catch (error) {
     console.error('页面渲染错误:', error);
@@ -84,7 +89,7 @@ app.get(['/', '/index.html', '/player.html'], async (req, res) => {
 app.get('/s=:keyword', async (req, res) => {
   try {
     const filePath = path.join(__dirname, 'index.html');
-    const content = await renderPage(filePath, config.password);
+    const content = await renderPage(filePath, config.password, config.adminpassword);
     res.send(content);
   } catch (error) {
     console.error('搜索页面渲染错误:', error);
@@ -196,10 +201,13 @@ app.use((req, res) => {
 app.listen(config.port, () => {
   console.log(`服务器运行在 http://localhost:${config.port}`);
   if (config.password !== '') {
-    console.log('登录密码已设置');
+    console.log('用户登录密码已设置');
+  }
+  if (config.adminpassword !== '') {
+    console.log('管理员登录密码已设置');
   }
   if (config.debug) {
     console.log('调试模式已启用');
-    console.log('配置:', { ...config, password: config.password ? '******' : '' });
+    console.log('配置:', { ...config, password: config.password ? '******' : '', adminpassword: config.adminpassword? '******' : '' });
   }
 });
