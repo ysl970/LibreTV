@@ -1537,13 +1537,27 @@ function showResourceModal() {
         } catch (e) { count = 0; }
         return { ...opt, count };
     })).then(resourceWithCounts => {
-        list.innerHTML = resourceWithCounts.map(opt =>
+        // 筛选出视频数大于0的资源
+        const filteredResources = resourceWithCounts.filter(opt => {
+            // 当前正在播放的资源始终显示，无论视频数是否为0
+            if (opt.key === currentSource) return true;
+            // 其他资源只有视频数大于0时才显示
+            return opt.count > 0;
+        });
+        
+        if (filteredResources.length === 0) {
+            list.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;grid-column:1/-1;">未找到可用资源</div>';
+            return;
+        }
+        
+        list.innerHTML = filteredResources.map(opt =>
             `<div class="resource-modal-item${opt.key === currentSource ? ' active' : ''}" data-key="${opt.key}">
                 <span>${opt.name}</span>
                 <span>${opt.count !== '' ? opt.count + '个视频' : ''}</span>
                 ${opt.key === currentSource ? '<div class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"></path></svg></div>' : ''}
             </div>`
         ).join('');
+        
         list.querySelectorAll('.resource-modal-item').forEach(item => {
             item.addEventListener('click', async function() {
                 const newSource = item.getAttribute('data-key');
