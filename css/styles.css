@@ -51,6 +51,28 @@ YTPPTV 全局样式
     --card-gradient-end: #1c2939;   /* 卡片结束色 */
     --card-accent: rgba(0, 204, 255, 0.12); /* 霓虹蓝卡片强调色 */
     --card-hover-border: rgba(0, 204, 255, 0.5); /* 悬停边框颜色 */
+    
+    /* 统一文字颜色 */
+    --text-primary: #ffffff;        /* 主要文字颜色 */
+    --text-secondary: rgba(255, 255, 255, 0.8); /* 次要文字颜色 */
+    --text-tertiary: rgba(255, 255, 255, 0.6);  /* 辅助文字颜色 */
+    --text-accent: #00ccff;         /* 强调文字颜色 */
+    --text-highlight: #3b82f6;      /* 高亮文字颜色 */
+    --text-warning: #ffd700;        /* 警告文字颜色 */
+    
+    /* 统一字体大小 */
+    --text-level1: 1.25rem;  /* 主标题/页面标题 */
+    --text-level2: 1.1rem;   /* 子标题/区域标题 */
+    --text-level3: 1rem;     /* 正文/按钮文字 */
+    --text-level4: 0.9rem;   /* 次要信息 */
+    --text-level5: 0.8rem;   /* 辅助信息/提示 */
+    
+    /* 应用文字层级到常用元素 */
+    --title-font-size: var(--text-level1);
+    --subtitle-font-size: var(--text-level2);
+    --body-font-size: var(--text-level3);
+    --small-font-size: var(--text-level4);
+    --tiny-font-size: var(--text-level5);
 }
 
 .page-bg {
@@ -92,6 +114,7 @@ button, .card-hover {
 
 /* 针对不同长度的标题优化显示 */
 .card-hover h3 {
+    font-size: var(--text-level2);
     min-height: unset;
     max-height: unset;
     display: -webkit-box;
@@ -102,6 +125,55 @@ button, .card-hover {
     line-height: 1.2rem;
     word-break: break-word; /* 允许在任何字符间断行 */
     hyphens: auto; /* 允许断词 */
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.card-hover p {
+    font-size: var(--text-level4);
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.card-hover .api-name {
+    font-size: var(--text-level5);
+}
+
+/* 卡片次要信息（如集数、更新时间等） */
+.card-hover .card-meta {
+    font-size: var(--text-level5);
+    color: var(--text-tertiary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-hover .card-meta .highlight {
+    color: var(--text-accent);
+}
+
+/* 搜索卡片图片容器统一样式 */
+.search-card-img-container {
+    position: relative;
+    width: 100%;
+    padding-top: 140%; /* 10:14 的宽高比 */
+    overflow: hidden;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.search-card-img-container img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.card-hover:hover .search-card-img-container img {
+    transform: scale(1.05);
 }
 
 .card-hover::before {
@@ -223,6 +295,9 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    font-size: var(--body-font-size);
+    color: var(--text-primary);
+    line-height: 1.5;
 }
 
 .container {
@@ -933,43 +1008,39 @@ body {
 
 /* 详情模态框样式优化 */
 #modal .modal-detail-info {
-    background: linear-gradient(135deg, var(--card-gradient-start), var(--card-gradient-end));
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
 }
 
 #modal .detail-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-    font-size: 0.875rem;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    font-size: var(--text-level4);
 }
 
 @media (min-width: 768px) {
     #modal .detail-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: auto 1fr;
+        gap: 1rem;
     }
 }
 
 #modal .detail-item {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    display: contents;
+    line-height: 1.5;
 }
 
 #modal .detail-label {
-    color: #9ca3af;
-    font-weight: 500;
+    color: var(--text-tertiary);
     min-width: 3rem;
-    flex-shrink: 0;
+    text-align: left;
 }
 
 #modal .detail-value {
-    color: white;
-    flex: 1;
+    color: var(--text-secondary);
     word-break: break-word;
 }
 
@@ -980,8 +1051,8 @@ body {
 }
 
 #modal .detail-desc-content {
-    color: #d1d5db;
-    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-size: var(--text-level4);
     line-height: 1.6;
     max-height: 8rem;
     overflow-y: auto;
@@ -1005,8 +1076,8 @@ body {
 
 /* 集数统计信息样式 */
 #modal .episode-stats {
-    color: #9ca3af;
-    font-size: 0.875rem;
+    color: var(--text-tertiary);
+    font-size: var(--text-level5);
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1016,7 +1087,7 @@ body {
 @media (max-width: 640px) {
     #modal .detail-grid {
         gap: 0.5rem;
-        font-size: 0.8rem;
+        font-size: var(--text-level5);
     }
     
     #modal .detail-label {
@@ -1025,11 +1096,11 @@ body {
     
     #modal .detail-desc-content {
         max-height: 6rem;
-        font-size: 0.8rem;
+        font-size: var(--text-level5);
     }
 }
 
-/* 新增：搜索结果/详情模态框样式 */
+/* 搜索结果/详情模态框样式 */
 #resultsModal {
     animation: fadeInModal 0.3s ease-out forwards;
 }
@@ -1085,7 +1156,7 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     text-align: center;
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: var(--text-level4);
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
