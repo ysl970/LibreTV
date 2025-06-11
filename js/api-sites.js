@@ -6,9 +6,9 @@ const API_SITES = {
         detail: 'https://heimuer.tv', 
     },
     dyttzy:  {
-        api: 'http://caiji.dyttzyapi.com/api.php/provide/vod',
+        api: 'https://caiji.dyttzyapi.com/api.php/provide/vod',
         name: '电影天堂资源',
-        detail: 'http://caiji.dyttzyapi.com', 
+        detail: 'https://caiji.dyttzyapi.com', 
     },
     ruyi: {
         api: 'https://cj.rycjapi.com/api.php/provide/vod',
@@ -23,9 +23,9 @@ const API_SITES = {
         name: '天涯资源',
     },
     ffzy: {
-        api: 'http://ffzy5.tv/api.php/provide/vod',
+        api: 'https://ffzy5.tv/api.php/provide/vod',
         name: '非凡影视',
-        detail: 'http://ffzy5.tv', 
+        detail: 'https://ffzy5.tv', 
     },
     zy360: {
         api: 'https://360zy.com/api.php/provide/vod',
@@ -85,9 +85,10 @@ const API_SITES = {
         name: 'iKun资源'
     },
     testSource: {
-        api: 'https://www.example.com/api.php/provide/vod',
-        name: '空内容测试源',
-        adult: true
+        api: 'https://api.example.com/api.php/provide/vod',
+        name: '测试源(仅做测试用)',
+        adult: true,
+        disabled: true // 标记为不可用
     }
 };
 
