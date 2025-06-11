@@ -406,6 +406,73 @@ function fetchDoubanTags() {
         });
 }
 
+// 添加豆瓣缓存管理函数
+function getDoubanCache(key) {
+    if (!DOUBAN_CONFIG.cache.enabled) return null;
+    
+    try {
+        const cacheData = localStorage.getItem(DOUBAN_CONFIG.cache.storageKey);
+        if (!cacheData) return null;
+        
+        const cache = JSON.parse(cacheData);
+        const item = cache[key];
+        
+        if (!item) return null;
+        
+        // 检查缓存是否过期
+        if (Date.now() - item.timestamp > DOUBAN_CONFIG.cache.expiry) {
+            // 缓存已过期，删除并返回null
+            delete cache[key];
+            localStorage.setItem(DOUBAN_CONFIG.cache.storageKey, JSON.stringify(cache));
+            return null;
+        }
+        
+        return item.data;
+    } catch (e) {
+        console.error('读取豆瓣缓存失败:', e);
+        return null;
+    }
+}
+
+function setDoubanCache(key, data) {
+    if (!DOUBAN_CONFIG.cache.enabled) return;
+    
+    try {
+        // 获取现有缓存
+        const cacheData = localStorage.getItem(DOUBAN_CONFIG.cache.storageKey);
+        const cache = cacheData ? JSON.parse(cacheData) : {};
+        
+        // 添加新的缓存项
+        cache[key] = {
+            data: data,
+            timestamp: Date.now()
+        };
+        
+        // 如果缓存项过多，删除最旧的
+        const keys = Object.keys(cache);
+        if (keys.length > DOUBAN_CONFIG.cache.maxItems) {
+            // 按时间戳排序
+            const oldestKeys = keys
+                .map(k => ({ key: k, timestamp: cache[k].timestamp }))
+                .sort((a, b) => a.timestamp - b.timestamp)
+                .slice(0, keys.length - DOUBAN_CONFIG.cache.maxItems)
+                .map(item => item.key);
+            
+            // 删除最旧的项
+            oldestKeys.forEach(k => delete cache[k]);
+        }
+        
+        // 保存缓存
+        localStorage.setItem(DOUBAN_CONFIG.cache.storageKey, JSON.stringify(cache));
+    } catch (e) {
+        console.error('保存豆瓣缓存失败:', e);
+        // 如果存储失败（可能是存储空间已满），尝试清空缓存
+        try {
+            localStorage.removeItem(DOUBAN_CONFIG.cache.storageKey);
+        } catch (err) {}
+    }
+}
+
 // 渲染热门推荐内容
 function renderRecommend(tag, pageLimit, pageStart) {
     const container = document.getElementById("douban-results");
@@ -423,11 +490,28 @@ function renderRecommend(tag, pageLimit, pageStart) {
     container.classList.add("relative");
     container.insertAdjacentHTML('beforeend', loadingOverlayHTML);
     
+    // 生成缓存键
+    const cacheKey = `${doubanMovieTvCurrentSwitch}_${tag}_${pageLimit}_${pageStart}`;
+    
+    // 尝试从缓存获取
+    const cachedData = getDoubanCache(cacheKey);
+    
+    if (cachedData) {
+        // 使用缓存数据
+        setTimeout(() => {
+            renderDoubanCards(cachedData, container);
+        }, 10); // 短延迟让加载动画有时间显示，提高用户体验
+        return;
+    }
+    
+    // 构建API URL
     const target = `https://movie.douban.com/j/search_subjects?type=${doubanMovieTvCurrentSwitch}&tag=${tag}&sort=recommend&page_limit=${pageLimit}&page_start=${pageStart}`;
     
     // 使用通用请求函数
     fetchDoubanData(target)
         .then(data => {
+            // 缓存结果
+            setDoubanCache(cacheKey, data);
             renderDoubanCards(data, container);
         })
         .catch(error => {
@@ -444,7 +528,7 @@ function renderRecommend(tag, pageLimit, pageStart) {
 async function fetchDoubanData(url) {
     // 添加超时控制
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+    const timeoutId = setTimeout(() => controller.abort(), DOUBAN_CONFIG.api.timeout); // 使用配置的超时时间
     
     // 设置请求选项，包括信号和头部
     const fetchOptions = {
@@ -456,48 +540,76 @@ async function fetchDoubanData(url) {
         }
     };
 
-    try {
-        // 尝试直接访问（豆瓣API可能允许部分CORS请求）
-        const response = await fetch(PROXY_URL + encodeURIComponent(url), fetchOptions);
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        
-        return await response.json();
-    } catch (err) {
-        console.error("豆瓣 API 请求失败（直接代理）：", err);
-        
-        // 失败后尝试备用方法：作为备选
-        const fallbackUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-        
+    // 生成完整URL列表，按优先级排序
+    const targetUrls = DOUBAN_CONFIG.api.primaryMirrors.map(mirror => {
+        // 替换URL中的占位符
+        return mirror.replace('https://movie.douban.com/j/search_subjects', url);
+    });
+    
+    // 按序尝试多个镜像
+    for (let i = 0; i < targetUrls.length; i++) {
         try {
-            const fallbackResponse = await fetch(fallbackUrl);
+            const currentUrl = targetUrls[i];
+            const isProxy = currentUrl.startsWith('/proxy/');
             
-            if (!fallbackResponse.ok) {
-                throw new Error(`备用API请求失败! 状态: ${fallbackResponse.status}`);
-            }
-            
-            const data = await fallbackResponse.json();
-            
-            // 解析原始内容
-            if (data && data.contents) {
-                return JSON.parse(data.contents);
+            // 处理不同类型的API端点
+            let response;
+            if (isProxy) {
+                // 本地代理
+                response = await fetch(currentUrl, fetchOptions);
+            } else if (currentUrl.includes('allorigins.win')) {
+                // AllOrigins代理
+                response = await fetch(currentUrl);
             } else {
-                throw new Error("无法获取有效数据");
+                // 直接请求
+                response = await fetch(currentUrl, fetchOptions);
             }
-        } catch (fallbackErr) {
-            console.error("豆瓣 API 备用请求也失败：", fallbackErr);
-            throw fallbackErr; // 向上抛出错误，让调用者处理
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            
+            // 处理不同类型的响应格式
+            let data;
+            if (currentUrl.includes('allorigins.win')) {
+                const result = await response.json();
+                if (!result.contents) throw new Error("无效的代理响应");
+                data = JSON.parse(result.contents);
+            } else {
+                data = await response.json();
+            }
+            
+            // 清除超时计时器
+            clearTimeout(timeoutId);
+            return data;
+        } catch (err) {
+            console.error(`豆瓣API请求失败 (${i+1}/${targetUrls.length})：`, err);
+            
+            // 如果这是最后一个尝试，重新抛出错误
+            if (i === targetUrls.length - 1) {
+                clearTimeout(timeoutId);
+                throw err;
+            }
+            
+            // 否则继续尝试下一个镜像
+            // 添加短暂延迟，避免立即重试
+            await new Promise(resolve => setTimeout(resolve, DOUBAN_CONFIG.api.retryDelay));
         }
     }
+    
+    // 应该不会达到这里，因为所有失败都会在循环中处理
+    clearTimeout(timeoutId);
+    throw new Error("所有豆瓣API镜像均请求失败");
 }
 
 // 抽取渲染豆瓣卡片的逻辑到单独函数
 function renderDoubanCards(data, container) {
     // 创建文档片段以提高性能
     const fragment = document.createDocumentFragment();
+    
+    // 移除加载动画
+    const loadingOverlay = container.querySelector('.absolute');
+    if (loadingOverlay) loadingOverlay.remove();
     
     // 如果没有数据
     if (!data.subjects || data.subjects.length === 0) {
@@ -524,6 +636,10 @@ function renderDoubanCards(data, container) {
                 .replace(/>/g, '&gt;');
             
             // 处理图片URL
+            // 使用配置的占位符图像
+            const placeholderImage = DOUBAN_CONFIG.images.placeholderImage;
+            const errorImage = DOUBAN_CONFIG.images.errorImage;
+            
             // 1. 直接使用豆瓣图片URL (添加no-referrer属性)
             const originalCoverUrl = item.cover;
             
@@ -533,9 +649,9 @@ function renderDoubanCards(data, container) {
             // 为不同设备优化卡片布局
             card.innerHTML = `
                 <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                    <img src="${originalCoverUrl}" alt="${safeTitle}" 
-                        class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-                        onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; this.classList.add('object-contain');"
+                    <img src="${placeholderImage}" data-src="${originalCoverUrl}" alt="${safeTitle}" 
+                        class="w-full h-full object-cover transition-transform duration-500 hover:scale-110 lazy-image"
+                        onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; if(this.getAttribute('data-retry')=='true'){this.src='${errorImage}'; this.classList.add('object-contain');} else{this.setAttribute('data-retry', 'true');}"
                         loading="lazy" referrerpolicy="no-referrer">
                     <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
                     <div class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm">
@@ -563,6 +679,41 @@ function renderDoubanCards(data, container) {
     // 清空并添加所有新元素
     container.innerHTML = "";
     container.appendChild(fragment);
+    
+    // 实现图片延迟加载
+    if (DOUBAN_CONFIG.images.lazyLoad) {
+        setTimeout(initLazyLoading, 10);
+    } else {
+        // 如果不使用懒加载，立即加载所有图片
+        document.querySelectorAll('.lazy-image').forEach(img => {
+            img.src = img.getAttribute('data-src');
+        });
+    }
+}
+
+// 图片懒加载实现
+function initLazyLoading() {
+    const lazyImages = document.querySelectorAll('.lazy-image');
+    
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.getAttribute('data-src');
+                    imageObserver.unobserve(img);
+                    img.classList.remove('lazy-image');
+                }
+            });
+        });
+        
+        lazyImages.forEach(img => imageObserver.observe(img));
+    } else {
+        // 兜底方案：如果浏览器不支持IntersectionObserver，则立即加载所有图片
+        lazyImages.forEach(img => {
+            img.src = img.getAttribute('data-src');
+        });
+    }
 }
 
 // 重置到首页
