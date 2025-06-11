@@ -1489,7 +1489,7 @@ function renderEpisodeCards() {
         // 生成卡片HTML
         html += `<div class="episode-card${activeClass}" ${activeStyle} onclick="playEpisode(${realIndex})" tabindex="0" title="第${realIndex+1}集${isActive ? ' (当前播放)' : ''}">
           ${isActive ? '<span class="episode-icon" style="margin-right:4px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="white" stroke-width="1.5"/><path d="M15.4 12.5l-5.8 3.86V8.64l5.8 3.86z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' : ''}
-          <span class="episode-label"${isActive ? ' style="color: white !important; -webkit-text-fill-color: white !important; text-fill-color: white !important; background: none !important;"' : ''}>${isActive ? '当前播放: ' : ''}第${realIndex+1}集</span>
+          <span class="episode-label"${isActive ? ' style="color: white !important; -webkit-text-fill-color: white !important; text-fill-color: white !important; background: none !important;"' : ''}>第${realIndex+1}集</span>
         </div>`;
     });
     container.innerHTML = html;
