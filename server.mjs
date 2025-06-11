@@ -103,20 +103,64 @@ function isValidUrl(urlString) {
     const allowedProtocols = ['http:', 'https:'];
     
     // 从环境变量获取阻止的主机名列表
-    const blockedHostnames = (process.env.BLOCKED_HOSTS || 'localhost,127.0.0.1,0.0.0.0,::1').split(',');
+    const blockedHostnames = (process.env.BLOCKED_HOSTS || 'localhost,127.0.0.1,0.0.0.0,::1,internal,intranet,local').split(',');
     
     // 从环境变量获取阻止的 IP 前缀
-    const blockedPrefixes = (process.env.BLOCKED_IP_PREFIXES || '192.168.,10.,172.').split(',');
+    const blockedPrefixes = (process.env.BLOCKED_IP_PREFIXES || '192.168.,10.,172.16.,172.17.,172.18.,172.19.,172.20.,172.21.,172.22.,172.23.,172.24.,172.25.,172.26.,172.27.,172.28.,172.29.,172.30.,172.31.,169.254.').split(',');
     
-    if (!allowedProtocols.includes(parsed.protocol)) return false;
-    if (blockedHostnames.includes(parsed.hostname)) return false;
+    if (!allowedProtocols.includes(parsed.protocol)) {
+      log('URL 协议不允许:', parsed.protocol);
+      return false;
+    }
     
+    if (blockedHostnames.includes(parsed.hostname)) {
+      log('主机名被阻止:', parsed.hostname);
+      return false;
+    }
+    
+    // 检查是否为私有或保留的IP地址
     for (const prefix of blockedPrefixes) {
-      if (parsed.hostname.startsWith(prefix)) return false;
+      if (parsed.hostname.startsWith(prefix)) {
+        log('IP前缀被阻止:', prefix);
+        return false;
+      }
+    }
+    
+    // 检查是否为裸IP地址（不带域名的IP）
+    const ipV4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    if (ipV4Regex.test(parsed.hostname)) {
+      // 进一步验证是否为私有IP
+      const ipMatches = parsed.hostname.match(ipV4Regex);
+      const ipParts = [
+        parseInt(ipMatches[1], 10),
+        parseInt(ipMatches[2], 10),
+        parseInt(ipMatches[3], 10),
+        parseInt(ipMatches[4], 10)
+      ];
+      
+      // 检查常见的私有IP范围
+      if (
+        (ipParts[0] === 10) || // 10.0.0.0 - 10.255.255.255
+        (ipParts[0] === 172 && ipParts[1] >= 16 && ipParts[1] <= 31) || // 172.16.0.0 - 172.31.255.255
+        (ipParts[0] === 192 && ipParts[1] === 168) || // 192.168.0.0 - 192.168.255.255
+        (ipParts[0] === 127) || // 127.0.0.0 - 127.255.255.255
+        (ipParts[0] === 0) || // 0.0.0.0
+        (ipParts[0] === 169 && ipParts[1] === 254) // 169.254.0.0 - 169.254.255.255 链接本地地址
+      ) {
+        log('私有IP被阻止:', parsed.hostname);
+        return false;
+      }
+    }
+    
+    // 检查是否为localhost的别名
+    if (/^(.+\.)?local(host)?(\..+)?$/.test(parsed.hostname)) {
+      log('本地主机别名被阻止:', parsed.hostname);
+      return false;
     }
     
     return true;
-  } catch {
+  } catch (error) {
+    log('URL验证出错:', error.message);
     return false;
   }
 }
@@ -420,7 +464,34 @@ app.use(express.static(path.join(__dirname), {
 
 app.use((err, req, res, next) => {
   console.error('服务器错误:', err);
-  res.status(500).send('服务器内部错误');
+  
+  // 根据错误类型返回更具体的错误信息
+  if (err.name === 'URIError') {
+    return res.status(400).json({
+      error: 'URL格式无效',
+      message: '请检查请求URL是否正确',
+      code: 'INVALID_URL'
+    });
+  } else if (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET') {
+    return res.status(503).json({
+      error: '无法连接到远程服务',
+      message: '远程API暂时无法访问，请稍后重试',
+      code: 'CONNECTION_ERROR'
+    });
+  } else if (err.code === 'ETIMEDOUT') {
+    return res.status(504).json({
+      error: '请求超时',
+      message: '远程API响应超时，请稍后重试',
+      code: 'TIMEOUT_ERROR'
+    });
+  }
+  
+  // 默认错误响应
+  res.status(500).json({
+    error: '服务器内部错误',
+    message: config.debug ? err.message : '请稍后再试',
+    code: 'INTERNAL_ERROR'
+  });
 });
 
 app.use((req, res) => {
