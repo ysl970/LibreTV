@@ -200,11 +200,15 @@ const CACHE_EXPIRY = 24 * 60 * 60 * 1000;
 
 // 初始化豆瓣功能
 function initDouban() {
+    console.log('初始化豆瓣功能开始');
+    
     // 设置豆瓣开关的初始状态
     const doubanToggle = document.getElementById('doubanToggle');
     if (doubanToggle) {
         const isEnabled = localStorage.getItem('doubanEnabled') !== 'false';
         doubanToggle.checked = isEnabled;
+        
+        console.log('豆瓣功能是否启用:', isEnabled);
         
         // 设置开关外观
         const toggleBg = doubanToggle.nextElementSibling;
@@ -239,27 +243,36 @@ function initDouban() {
 
         // 滚动到页面顶部
         window.scrollTo(0, 0);
+    } else {
+        console.error('找不到豆瓣开关元素');
     }
 
     // 加载用户标签
     loadUserTags();
+    console.log('已加载用户标签, 电影标签:', movieTags.length, '条, 电视剧标签:', tvTags.length, '条');
 
     // 渲染电影/电视剧切换
+    console.log('开始渲染电影/电视剧切换');
     renderDoubanMovieTvSwitch();
     
     // 渲染豆瓣标签
+    console.log('开始渲染豆瓣标签');
     renderDoubanTags();
     
     // 设置新的"换一批"按钮事件（标签系统的按钮）
+    console.log('设置换一批按钮事件');
     setupDoubanRefreshBtn();
     
     // 初始加载热门内容
     if (localStorage.getItem('doubanEnabled') !== 'false') {
+        console.log('开始加载初始热门内容');
         renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
     }
     
     // 清除所有缓存，确保获取最新内容
     clearAllDoubanCache();
+    
+    console.log('豆瓣功能初始化完成');
 }
 
 // 隐藏原有分类内容，只显示标签系统内容
@@ -316,22 +329,36 @@ function clearExpiredCache() {
 
 // 根据设置更新豆瓣区域的显示状态
 function updateDoubanVisibility() {
+    console.log('更新豆瓣区域显示状态');
+    
     const doubanArea = document.getElementById('doubanArea');
-    if (!doubanArea) return;
+    if (!doubanArea) {
+        console.error('找不到doubanArea元素');
+        return;
+    }
     
     const isEnabled = localStorage.getItem('doubanEnabled') !== 'false';
     const isSearching = document.getElementById('resultsArea') && 
         !document.getElementById('resultsArea').classList.contains('hidden');
     
+    console.log('豆瓣功能状态:', {
+        isEnabled: isEnabled,
+        isSearching: isSearching
+    });
+    
     // 只有在启用且没有搜索结果显示时才显示豆瓣区域
     if (isEnabled && !isSearching) {
+        console.log('显示豆瓣区域');
         doubanArea.classList.remove('hidden');
         
         // 如果豆瓣结果为空，重新加载
         const doubanResults = document.getElementById('douban-results');
         if (doubanResults && doubanResults.children.length === 0) {
+            console.log('豆瓣结果为空，重新加载');
+            
             // 检查当前标签是否是映射标签
             if (tagToCategoryMap[doubanCurrentTag]) {
+                console.log('当前标签是映射标签:', doubanCurrentTag);
                 const { type, category } = tagToCategoryMap[doubanCurrentTag];
                 fetchCategoryContent(type, category, doubanCategories[type][category].title, true)
                     .then(data => {
@@ -349,10 +376,12 @@ function updateDoubanVisibility() {
                         `;
                     });
             } else {
+                console.log('当前标签是普通标签:', doubanCurrentTag);
                 renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
             }
         }
     } else {
+        console.log('隐藏豆瓣区域');
         doubanArea.classList.add('hidden');
     }
 }
@@ -1700,6 +1729,26 @@ function docReady(fn) {
 
 // 使用docReady初始化豆瓣功能
 docReady(function() {
+    console.log('DOM加载完成，开始初始化豆瓣功能');
+    
+    // 检查关键DOM元素是否存在
+    const doubanArea = document.getElementById('doubanArea');
+    const doubanMovieTvSwitch = document.getElementById('doubanMovieTvSwitch');
+    const doubanTags = document.getElementById('doubanTags');
+    const doubanResults = document.getElementById('douban-results');
+    
+    console.log('检查DOM元素:', {
+        doubanArea: !!doubanArea,
+        doubanMovieTvSwitch: !!doubanMovieTvSwitch,
+        doubanTags: !!doubanTags,
+        doubanResults: !!doubanResults
+    });
+    
+    if (!doubanArea || !doubanMovieTvSwitch || !doubanTags || !doubanResults) {
+        console.error('豆瓣功能初始化失败：缺少必要的DOM元素');
+        return;
+    }
+    
     // 加载用户标签
     loadUserTags();
     
@@ -1994,7 +2043,12 @@ function renderDoubanCards(data, container) {
 // 渲染电影/电视剧切换UI
 function renderDoubanMovieTvSwitch() {
     const container = document.getElementById('doubanMovieTvSwitch');
-    if (!container) return;
+    if (!container) {
+        console.error('找不到doubanMovieTvSwitch容器元素');
+        return;
+    }
+
+    console.log('开始渲染电影/电视剧切换UI');
 
     // 创建切换UI
     container.innerHTML = `
@@ -2014,15 +2068,33 @@ function renderDoubanMovieTvSwitch() {
         </div>
     `;
 
+    console.log('电影/电视剧切换UI已渲染');
+
     // 添加事件监听
-    document.getElementById('doubanMovieBtn').addEventListener('click', function() {
+    const movieBtn = document.getElementById('doubanMovieBtn');
+    const tvBtn = document.getElementById('doubanTvBtn');
+    const tagManageBtn = document.getElementById('tagManageBtn');
+    
+    if (!movieBtn || !tvBtn || !tagManageBtn) {
+        console.error('找不到电影/电视剧切换按钮或标签管理按钮', {
+            movieBtn: !!movieBtn,
+            tvBtn: !!tvBtn,
+            tagManageBtn: !!tagManageBtn
+        });
+        return;
+    }
+    
+    console.log('找到所有按钮，添加事件监听');
+
+    movieBtn.addEventListener('click', function() {
+        console.log('点击了电影按钮');
         if (doubanMovieTvCurrentSwitch !== 'movie') {
             // 更新UI
             this.classList.add('bg-pink-600', 'text-white');
             this.classList.remove('bg-[#222]', 'text-gray-300', 'hover:bg-[#333]');
             
-            document.getElementById('doubanTvBtn').classList.remove('bg-pink-600', 'text-white');
-            document.getElementById('doubanTvBtn').classList.add('bg-[#222]', 'text-gray-300', 'hover:bg-[#333]');
+            tvBtn.classList.remove('bg-pink-600', 'text-white');
+            tvBtn.classList.add('bg-[#222]', 'text-gray-300', 'hover:bg-[#333]');
             
             // 更新状态
             doubanMovieTvCurrentSwitch = 'movie';
@@ -2037,14 +2109,15 @@ function renderDoubanMovieTvSwitch() {
         }
     });
 
-    document.getElementById('doubanTvBtn').addEventListener('click', function() {
+    tvBtn.addEventListener('click', function() {
+        console.log('点击了剧集按钮');
         if (doubanMovieTvCurrentSwitch !== 'tv') {
             // 更新UI
             this.classList.add('bg-pink-600', 'text-white');
             this.classList.remove('bg-[#222]', 'text-gray-300', 'hover:bg-[#333]');
             
-            document.getElementById('doubanMovieBtn').classList.remove('bg-pink-600', 'text-white');
-            document.getElementById('doubanMovieBtn').classList.add('bg-[#222]', 'text-gray-300', 'hover:bg-[#333]');
+            movieBtn.classList.remove('bg-pink-600', 'text-white');
+            movieBtn.classList.add('bg-[#222]', 'text-gray-300', 'hover:bg-[#333]');
             
             // 更新状态
             doubanMovieTvCurrentSwitch = 'tv';
@@ -2060,24 +2133,35 @@ function renderDoubanMovieTvSwitch() {
     });
 
     // 标签管理按钮
-    document.getElementById('tagManageBtn').addEventListener('click', function() {
+    tagManageBtn.addEventListener('click', function() {
+        console.log('点击了标签管理按钮');
         showTagManageModal();
     });
+    
+    console.log('电影/电视剧切换UI事件监听已添加');
 }
 
 // 渲染豆瓣标签
 function renderDoubanTags(tags) {
     const container = document.getElementById('doubanTags');
-    if (!container) return;
+    if (!container) {
+        console.error('找不到doubanTags容器元素');
+        return;
+    }
+    
+    console.log('开始渲染豆瓣标签，容器存在:', container);
     
     // 如果没有传入标签，则根据当前选择使用对应标签
     if (!tags) {
         tags = doubanMovieTvCurrentSwitch === 'movie' ? movieTags : tvTags;
     }
     
+    console.log('使用标签:', tags);
+    
     // 确保至少有"热门"标签
     if (!tags || tags.length === 0) {
         tags = ['热门'];
+        console.log('使用默认热门标签');
     }
     
     // 创建标签HTML
@@ -2088,6 +2172,8 @@ function renderDoubanTags(tags) {
         </button>
     `).join('');
     
+    console.log('生成的标签HTML长度:', tagsHTML.length);
+    
     // 渲染标签
     container.innerHTML = `
         <div class="flex overflow-x-auto pb-2 scrollbar-hide space-x-2">
@@ -2095,11 +2181,16 @@ function renderDoubanTags(tags) {
         </div>
     `;
     
+    console.log('标签已渲染到DOM');
+    
     // 添加标签点击事件
     const tagButtons = container.querySelectorAll('.tag-btn');
+    console.log('找到标签按钮数量:', tagButtons.length);
+    
     tagButtons.forEach(btn => {
         btn.addEventListener('click', function() {
             const tag = this.getAttribute('data-tag');
+            console.log('标签被点击:', tag);
             
             // 更新UI
             tagButtons.forEach(b => {
@@ -2116,6 +2207,7 @@ function renderDoubanTags(tags) {
             
             // 检查是否是映射标签
             if (tagToCategoryMap[tag]) {
+                console.log('这是映射标签，使用分类:', tagToCategoryMap[tag]);
                 // 如果是映射标签，使用对应的分类加载内容
                 const { type, category } = tagToCategoryMap[tag];
                 
@@ -2161,6 +2253,7 @@ function renderDoubanTags(tags) {
                         `;
                     });
             } else {
+                console.log('这是普通标签，使用renderRecommend加载内容');
                 // 如果是普通标签，使用renderRecommend加载内容
                 renderRecommend(doubanCurrentTag, doubanPageSize, doubanPageStart);
             }
