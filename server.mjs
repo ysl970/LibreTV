@@ -177,8 +177,6 @@ app.use('/proxy', async (req, res) => {
             return res.status(400).json({ error: 'Invalid target URL' });
         }
 
-        console.log('Proxy request for:', targetUrl); // 添加日志
-
         // 添加请求头
         const headers = {
             'User-Agent': config.userAgent,
@@ -199,8 +197,6 @@ app.use('/proxy', async (req, res) => {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), config.timeout);
 
-                console.log(`Attempt ${retries + 1} for ${targetUrl}`); // 添加重试日志
-
                 const response = await fetch(targetUrl, {
                     headers,
                     signal: controller.signal
@@ -213,11 +209,9 @@ app.use('/proxy', async (req, res) => {
                 }
 
                 const contentType = response.headers.get('content-type');
-                console.log('Response content-type:', contentType); // 添加响应类型日志
 
                 if (contentType && contentType.includes('application/json')) {
                     const data = await response.json();
-                    console.log('Response data:', data); // 添加响应数据日志
                     return res.json(data);
                 } else {
                     const text = await response.text();
@@ -225,7 +219,7 @@ app.use('/proxy', async (req, res) => {
                 }
             } catch (error) {
                 lastError = error;
-                console.error(`Attempt ${retries + 1} failed:`, error); // 添加错误日志
+                console.error(`Proxy attempt ${retries + 1} failed:`, error.message);
                 retries++;
                 
                 if (retries <= config.maxRetries) {
@@ -239,34 +233,13 @@ app.use('/proxy', async (req, res) => {
 
         throw lastError || new Error('Request failed after retries');
     } catch (error) {
-        console.error('Proxy error:', error);
+        console.error('Proxy error:', error.message);
         res.status(500).json({
             error: 'Proxy request failed',
             message: error.message
         });
     }
 });
-
-// 辅助函数：直接发送代理请求
-async function sendProxyRequest(url, headers = {}) {
-    const proxyUrl = `/proxy/${encodeURIComponent(url)}`;
-    
-    // 构建完整URL（使用相对路径方式）
-    const response = await fetch(url, {
-        headers: {
-            'Accept': 'application/json',
-            'Cache-Control': 'no-cache',
-            'User-Agent': config.userAgent,
-            ...headers
-        }
-    });
-    
-    if (!response.ok) {
-        throw new Error(`API请求失败: ${response.status}`);
-    }
-    
-    return await response.json();
-}
 
 // 添加API路由处理
 app.get('/api/search', async (req, res) => {
@@ -291,8 +264,6 @@ app.get('/api/search', async (req, res) => {
         const apiUrl = source === 'custom'
             ? `${customApi}/?wd=${encodeURIComponent(searchQuery)}`
             : `${API_SITES[source].api}/?wd=${encodeURIComponent(searchQuery)}`;
-        
-        console.log('Search API URL:', apiUrl);
         
         try {
             // 使用代理请求API
@@ -330,11 +301,11 @@ app.get('/api/search', async (req, res) => {
                 list: data.list || [],
             });
         } catch (error) {
-            console.error('API请求错误:', error);
+            console.error('API请求错误:', error.message);
             throw error;
         }
     } catch (error) {
-        console.error('Search API Error:', error);
+        console.error('Search API Error:', error.message);
         res.status(500).json({
             code: 500,
             msg: `搜索失败: ${error.message}`
@@ -370,8 +341,6 @@ app.get('/api/detail', async (req, res) => {
         const apiUrl = source === 'custom'
             ? `${customApi}/?ac=detail&ids=${id}`
             : `${API_SITES[source].api}/?ac=detail&ids=${id}`;
-        
-        console.log('Detail API URL:', apiUrl);
         
         try {
             // 直接请求API
