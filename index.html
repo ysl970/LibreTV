@@ -29,9 +29,11 @@
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js')
                     .then(registration => {
-                        console.log('Service Worker 注册成功:', registration.scope);
+                        // 删除不必要的日志
+                        // console.log('Service Worker 注册成功:', registration.scope);
                     })
                     .catch(error => {
+                        // 保留错误日志，这对调试问题非常重要
                         console.error('Service Worker 注册失败:', error);
                     });
             });
