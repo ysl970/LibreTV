@@ -74,10 +74,6 @@ const API_SITES = {
         name: '极速资源',
         detail: 'https://jszyapi.com', 
     },
-    dbzy: {
-        api: 'https://dbzy.com/api.php/provide/vod',
-        name: '豆瓣资源',
-    },
     mozhua: {
         api: 'https://mozhuazy.com/api.php/provide/vod',
         name: '魔爪资源',
