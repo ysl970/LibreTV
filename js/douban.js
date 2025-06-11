@@ -250,9 +250,6 @@ function initDouban() {
     // 渲染豆瓣标签
     renderDoubanTags();
     
-    // 设置"换一批"按钮事件（原有分类的按钮）
-    setupMoreButtons();
-    
     // 设置新的"换一批"按钮事件（标签系统的按钮）
     setupDoubanRefreshBtn();
     
@@ -263,34 +260,12 @@ function initDouban() {
     
     // 清除所有缓存，确保获取最新内容
     clearAllDoubanCache();
-    
-    // 隐藏原有分类内容，只显示标签系统内容
-    hideOriginalCategories();
-    
-    // 如果豆瓣功能已启用，加载所有分类内容
-    if (localStorage.getItem('doubanEnabled') !== 'false') {
-        loadAllCategoryContent(true);  // 强制刷新内容
-    }
 }
 
 // 隐藏原有分类内容，只显示标签系统内容
 function hideOriginalCategories() {
-    // 获取所有豆瓣分类容器
-    const categoryContainers = document.querySelectorAll('[class^="douban-"]');
-    
-    // 获取豆瓣区域下的所有分类标题和容器
-    const categoryDivs = document.querySelectorAll('#doubanArea > div > div.mb-8');
-    
-    // 隐藏所有分类
-    categoryDivs.forEach(div => {
-        div.classList.add('hidden');
-    });
-    
-    // 确保标签系统区域可见
-    const tagSystemDiv = document.querySelector('#doubanArea > div > div.mb-6');
-    if (tagSystemDiv) {
-        tagSystemDiv.classList.remove('hidden');
-    }
+    // 不再需要此函数，因为HTML中已经删除了原有分类内容
+    console.log("hideOriginalCategories函数已弃用");
 }
 
 // 清除过期缓存
@@ -352,9 +327,6 @@ function updateDoubanVisibility() {
     if (isEnabled && !isSearching) {
         doubanArea.classList.remove('hidden');
         
-        // 隐藏原有分类内容，只显示标签系统内容
-        hideOriginalCategories();
-        
         // 如果豆瓣结果为空，重新加载
         const doubanResults = document.getElementById('douban-results');
         if (doubanResults && doubanResults.children.length === 0) {
@@ -395,65 +367,8 @@ function reinitializeLazyLoading() {
 
 // 加载所有分类内容
 function loadAllCategoryContent(refresh = false) {
-    // 优先加载的内容（首屏可见内容）
-    const priorityLoad = () => {
-        // 1. 热门电影（最受关注）
-        fetchCategoryContent('movie', 'hot', doubanCategories.movie.hot.title, refresh);
-        
-        // 2. 热门电视剧
-        fetchCategoryContent('tv', 'hot', doubanCategories.tv.hot.title, refresh);
-        
-        doubanLoadStatus.priorityLoaded = true;
-    };
-    
-    // 第二批加载（稍后加载）
-    const secondaryLoad = () => {
-        // 3. 热门综艺
-        fetchCategoryContent('variety', 'hot', doubanCategories.variety.hot.title, refresh);
-        
-        // 4. 热门动画
-        fetchCategoryContent('movie', 'animation', doubanCategories.movie.animation.title, refresh);
-        
-        doubanLoadStatus.secondaryLoaded = true;
-    };
-    
-    // 最后加载（用户可能需要滚动才能看到的内容）
-    const finalLoad = () => {
-        // 6. 热门美剧
-        fetchCategoryContent('tv', 'us', doubanCategories.tv.us.title, refresh);
-        
-        // 7. 热门港剧
-        fetchCategoryContent('tv', 'hk', doubanCategories.tv.hk.title, refresh);
-        
-        // 8. 热门韩剧
-        fetchCategoryContent('tv', 'kr', doubanCategories.tv.kr.title, refresh);
-        
-        // 9. 热门日剧
-        fetchCategoryContent('tv', 'jp', doubanCategories.tv.jp.title, refresh);
-        
-        // 10. Top250电影
-        fetchCategoryContent('movie', 'top250', doubanCategories.movie.top250.title, refresh);
-        
-        doubanLoadStatus.finalLoaded = true;
-    };
-
-    // 使用 requestAnimationFrame 确保在下一帧渲染时加载内容
-    requestAnimationFrame(() => {
-        // 立即加载首屏内容（如果尚未加载）
-        if (!doubanLoadStatus.priorityLoaded) {
-            priorityLoad();
-        }
-        
-        // 第二批内容（如果尚未加载）
-        if (!doubanLoadStatus.secondaryLoaded) {
-            setTimeout(secondaryLoad, 100);
-        }
-        
-        // 最后加载的内容（如果尚未加载）
-        if (!doubanLoadStatus.finalLoaded) {
-            setTimeout(finalLoad, 200);
-        }
-    });
+    // 不再需要此函数，因为已经删除了原有分类内容
+    console.log("loadAllCategoryContent函数已弃用");
 }
 
 // 设置"换一批"按钮点击事件
@@ -2577,33 +2492,6 @@ if (typeof showToast !== 'function') {
 
 // 设置"换一批"按钮点击事件（原有功能，保留以兼容）
 function setupMoreButtons() {
-    // 获取所有"换一批"按钮
-    const moreButtons = document.querySelectorAll('#doubanArea a[href="#"]');
-    
-    // 为每个按钮添加点击事件
-    moreButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // 获取分类和类型属性
-            const category = this.dataset.category;
-            const type = this.dataset.type;
-            
-            // 显示加载中状态
-            const containerClass = `douban-${type}-${category}`;
-            const container = document.querySelector(`.${containerClass}`);
-            if (container) {
-                container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">加载中...</div>';
-            }
-            
-            // 获取该分类的标题
-            const categoryName = getCategoryTitle(type, category);
-            
-            // 为了确保刷新内容，我们需要清除该分类的缓存
-            clearCategoryCache(type, category);
-            
-            // 使用fetchMoreCategoryContent函数获取新的内容批次
-            fetchMoreCategoryContent(type, category);
-        });
-    });
+    // 不再需要此函数，但为了保持兼容性，保留一个空函数
+    console.log("setupMoreButtons函数已弃用");
 }
