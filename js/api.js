@@ -1,3 +1,70 @@
+// 全局搜索结果缓存管理
+function getSearchCache(key) {
+    if (!SEARCH_CONFIG.resultCache.enabled) return null;
+    
+    try {
+        const cacheData = localStorage.getItem(SEARCH_CONFIG.resultCache.storageKey);
+        if (!cacheData) return null;
+        
+        const cache = JSON.parse(cacheData);
+        const item = cache[key];
+        
+        if (!item) return null;
+        
+        // 检查缓存是否过期
+        if (Date.now() - item.timestamp > SEARCH_CONFIG.resultCache.expiry) {
+            // 缓存已过期，删除并返回null
+            delete cache[key];
+            localStorage.setItem(SEARCH_CONFIG.resultCache.storageKey, JSON.stringify(cache));
+            return null;
+        }
+        
+        return item.data;
+    } catch (e) {
+        console.error('读取搜索缓存失败:', e);
+        return null;
+    }
+}
+
+function setSearchCache(key, data) {
+    if (!SEARCH_CONFIG.resultCache.enabled) return;
+    
+    try {
+        // 获取现有缓存
+        const cacheData = localStorage.getItem(SEARCH_CONFIG.resultCache.storageKey);
+        const cache = cacheData ? JSON.parse(cacheData) : {};
+        
+        // 添加新的缓存项
+        cache[key] = {
+            data: data,
+            timestamp: Date.now()
+        };
+        
+        // 如果缓存项过多，删除最旧的
+        const keys = Object.keys(cache);
+        if (keys.length > SEARCH_CONFIG.resultCache.maxItems) {
+            // 按时间戳排序
+            const oldestKeys = keys
+                .map(k => ({ key: k, timestamp: cache[k].timestamp }))
+                .sort((a, b) => a.timestamp - b.timestamp)
+                .slice(0, keys.length - SEARCH_CONFIG.resultCache.maxItems)
+                .map(item => item.key);
+            
+            // 删除最旧的项
+            oldestKeys.forEach(k => delete cache[k]);
+        }
+        
+        // 保存缓存
+        localStorage.setItem(SEARCH_CONFIG.resultCache.storageKey, JSON.stringify(cache));
+    } catch (e) {
+        console.error('保存搜索缓存失败:', e);
+        // 如果存储失败（可能是存储空间已满），尝试清空缓存
+        try {
+            localStorage.removeItem(SEARCH_CONFIG.resultCache.storageKey);
+        } catch (err) {}
+    }
+}
+
 // 改进的API请求处理函数
 async function handleApiRequest(url) {
     const customApi = url.searchParams.get('customApi') || '';
@@ -11,14 +78,34 @@ async function handleApiRequest(url) {
                 throw new Error('缺少搜索参数');
             }
             
+            // 生成缓存键
+            const cacheKey = `search_${source}_${searchQuery}_${customApi}`;
+            
+            // 尝试从缓存获取
+            const cachedData = getSearchCache(cacheKey);
+            
+            if (cachedData) {
+                // 使用缓存数据
+                return cachedData;
+            }
+            
             // 处理聚合搜索
             if (source === 'aggregated') {
-                return await handleAggregatedSearch(searchQuery);
+                const result = await handleAggregatedSearch(searchQuery);
+                // 缓存结果
+                if (result) {
+                    setSearchCache(cacheKey, result);
+                }
+                return result;
             }
             
             // 处理多个自定义API的聚合搜索
             if (source === 'custom' && customApi.includes(',')) {
-                return await handleMultipleCustomSearch(searchQuery, customApi);
+                const result = await handleMultipleCustomSearch(searchQuery, customApi);
+                if (result) {
+                    setSearchCache(cacheKey, result);
+                }
+                return result;
             }
             
             // 验证API和source的有效性
@@ -73,10 +160,15 @@ async function handleApiRequest(url) {
                     }
                 });
                 
-                return JSON.stringify({
+                const result = JSON.stringify({
                     code: 200,
                     list: data.list || [],
                 });
+                
+                // 缓存结果
+                setSearchCache(cacheKey, result);
+                
+                return result;
             } catch (fetchError) {
                 clearTimeout(timeoutId);
                 console.error('Search API Error:', fetchError.message); // 简化错误日志
