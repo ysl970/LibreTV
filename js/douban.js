@@ -615,7 +615,7 @@ function showCategoryModal(items, title, type, category) {
     modal.id = 'categoryModal';
     modal.className = 'fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4';
     
-    // 模态框内容
+    // 模态框内容 - 使用与LibreTV-douban.js相似的样式
     modal.innerHTML = `
         <div class="bg-[#111] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="flex justify-between items-center p-4 border-b border-[#333]">
@@ -672,6 +672,99 @@ function getCategoryFromTitle(title) {
     return 'hot';
 }
 
+// 渲染分类内容
+function renderCategoryContent(data, container) {
+    // 清空容器
+    container.innerHTML = '';
+    
+    if (!data || !data.subjects || data.subjects.length === 0) {
+        container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">暂无内容</div>';
+        return;
+    }
+    
+    // 创建一个文档片段，减少DOM操作次数
+    const fragment = document.createDocumentFragment();
+    
+    data.subjects.forEach(item => {
+        // 创建卡片元素
+        const card = document.createElement('div');
+        card.className = 'bg-[#111] hover:bg-[#222] transition-all duration-300 rounded-lg overflow-hidden flex flex-col transform hover:scale-105 shadow-md hover:shadow-lg';
+        
+        // 安全处理标题，防止XSS
+        const safeTitle = item.title
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        
+        // 评分处理
+        let ratingHtml = '';
+        if (item.rate && parseFloat(item.rate) > 0) {
+            const rating = parseFloat(item.rate);
+            const ratingClass = rating >= 8 ? 'text-green-500' : (rating >= 6 ? 'text-yellow-500' : 'text-red-500');
+            ratingHtml = `
+                <div class="absolute top-2 right-2 bg-black/70 ${ratingClass} text-xs px-2 py-1 rounded-sm">
+                    ${rating}分
+                </div>
+            `;
+        }
+        
+        // 使用data-src代替src，实现懒加载
+        const thumbnailPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450"%3E%3Crect width="300" height="450" fill="%23333"%3E%3C/rect%3E%3C/svg%3E';
+        
+        // 处理图片URL
+        // 1. 直接使用豆瓣图片URL (添加no-referrer属性)
+        const originalCoverUrl = item.cover;
+        
+        // 2. 也准备代理URL作为备选
+        const proxiedCoverUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
+        
+        // 构建卡片HTML - 使用与LibreTV-douban.js相同的样式
+        card.innerHTML = `
+            <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
+                <img src="${thumbnailPlaceholder}" 
+                    data-src="${originalCoverUrl}" 
+                    alt="${safeTitle}" 
+                    class="w-full h-full object-cover transition-transform duration-500 hover:scale-110 lazy-image"
+                    onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; this.classList.add('object-contain');"
+                    loading="lazy" referrerpolicy="no-referrer">
+                <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
+                ${ratingHtml}
+                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors">
+                    <a href="${item.url}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" onclick="event.stopPropagation();">
+                        🔗
+                    </a>
+                </div>
+            </div>
+            <div class="p-2 text-center bg-[#111]">
+                <button onclick="fillAndSearchWithDouban('${safeTitle}')" 
+                        class="text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
+                        title="${safeTitle}">
+                    ${safeTitle}
+                </button>
+            </div>
+        `;
+        
+        // 添加到文档片段
+        fragment.appendChild(card);
+    });
+    
+    // 一次性添加所有元素到DOM
+    container.appendChild(fragment);
+    
+    // 检查子元素数量，根据屏幕宽度决定何时添加scrollable类
+    const isMobile = window.innerWidth <= 767;
+    const threshold = isMobile ? 3 : 7;
+    
+    if (container.children.length >= (isMobile ? 4 : 8)) {
+        container.classList.add('scrollable');
+    } else {
+        container.classList.remove('scrollable');
+    }
+    
+    // 初始化懒加载
+    initLazyLoading(container);
+}
+
 // 渲染模态框中的项目
 function renderModalItems(items) {
     if (!items || items.length === 0) {
@@ -715,7 +808,7 @@ function renderModalItems(items) {
         const originalCoverUrl = item.cover;
         const proxiedCoverUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
         
-        // 构建卡片HTML
+        // 构建卡片HTML - 使用与LibreTV-douban.js相同的样式
         card.innerHTML = `
             <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
                 <img src="${originalCoverUrl}" 
@@ -1118,99 +1211,6 @@ function processContentByCategory(items, type, category) {
     return processedItems;
 }
 
-// 渲染分类内容
-function renderCategoryContent(data, container) {
-    // 清空容器
-    container.innerHTML = '';
-    
-    if (!data || !data.subjects || data.subjects.length === 0) {
-        container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">暂无内容</div>';
-        return;
-    }
-    
-    // 创建一个文档片段，减少DOM操作次数
-    const fragment = document.createDocumentFragment();
-    
-    data.subjects.forEach(item => {
-        // 创建卡片元素
-        const card = document.createElement('div');
-        card.className = 'bg-[#111] hover:bg-[#222] transition-all duration-300 rounded-lg overflow-hidden flex flex-col transform hover:scale-105 shadow-md hover:shadow-lg';
-        
-        // 安全处理标题，防止XSS
-        const safeTitle = item.title
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-        
-        // 评分处理
-        let ratingHtml = '';
-        if (item.rate && parseFloat(item.rate) > 0) {
-            const rating = parseFloat(item.rate);
-            const ratingClass = rating >= 8 ? 'text-green-500' : (rating >= 6 ? 'text-yellow-500' : 'text-red-500');
-            ratingHtml = `
-                <div class="absolute top-2 right-2 bg-black/70 ${ratingClass} text-xs px-2 py-1 rounded-sm">
-                    ${rating}分
-                </div>
-            `;
-        }
-        
-        // 使用data-src代替src，实现懒加载
-        const thumbnailPlaceholder = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450"%3E%3Crect width="300" height="450" fill="%23333"%3E%3C/rect%3E%3C/svg%3E';
-        
-        // 处理图片URL - 添加LibreTV的逻辑
-        // 1. 直接使用豆瓣图片URL (添加no-referrer属性)
-        const originalCoverUrl = item.cover;
-        
-        // 2. 也准备代理URL作为备选
-        const proxiedCoverUrl = PROXY_URL + encodeURIComponent(originalCoverUrl);
-        
-        // 构建卡片HTML
-        card.innerHTML = `
-            <div class="relative w-full aspect-[2/3] overflow-hidden cursor-pointer" onclick="fillAndSearchWithDouban('${safeTitle}')">
-                <img src="${thumbnailPlaceholder}" 
-                    data-src="${originalCoverUrl}" 
-                    alt="${safeTitle}" 
-                    class="w-full h-full object-cover transition-transform duration-500 hover:scale-110 lazy-image"
-                    onerror="this.onerror=null; this.src='${proxiedCoverUrl}'; this.classList.add('object-contain');"
-                    loading="lazy" referrerpolicy="no-referrer">
-                <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-60"></div>
-                ${ratingHtml}
-                <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-sm hover:bg-[#333] transition-colors h-6 flex items-center">
-                    <a href="${item.url}" target="_blank" rel="noopener noreferrer" title="在豆瓣查看" onclick="event.stopPropagation();">
-                        🔗
-                    </a>
-                </div>
-            </div>
-            <div class="p-2 text-center bg-[#111]">
-                <button onclick="fillAndSearchWithDouban('${safeTitle}')" 
-                        class="text-sm font-medium text-white truncate w-full hover:text-pink-400 transition"
-                        title="${safeTitle}">
-                    ${safeTitle}
-                </button>
-            </div>
-        `;
-        
-        // 添加到文档片段
-        fragment.appendChild(card);
-    });
-    
-    // 一次性添加所有元素到DOM
-    container.appendChild(fragment);
-    
-    // 检查子元素数量，根据屏幕宽度决定何时添加scrollable类
-    const isMobile = window.innerWidth <= 767;
-    const threshold = isMobile ? 3 : 7;
-    
-    if (container.children.length >= (isMobile ? 4 : 8)) {
-        container.classList.add('scrollable');
-    } else {
-        container.classList.remove('scrollable');
-    }
-    
-    // 初始化懒加载
-    initLazyLoading(container);
-}
-
 // 初始化图片懒加载
 function initLazyLoading(container) {
     if ('IntersectionObserver' in window) {
@@ -1411,68 +1411,67 @@ async function fillAndSearchWithDouban(title) {
     }
     
     // 确保豆瓣资源API被选中
-    if (typeof selectedAPIs !== 'undefined') {
-        // 检查是否已经选择了豆瓣资源API
-        if (!selectedAPIs.includes('dbzy')) {
-            // 在设置中勾选豆瓣资源API复选框
-            const doubanCheckbox = document.querySelector('input[id="api_dbzy"]');
-            if (doubanCheckbox) {
-                doubanCheckbox.checked = true;
+    if (typeof selectedAPIs !== 'undefined' && !selectedAPIs.includes('dbzy')) {
+        // 在设置中勾选豆瓣资源API复选框
+        const doubanCheckbox = document.querySelector('input[id="api_dbzy"]');
+        if (doubanCheckbox) {
+            doubanCheckbox.checked = true;
+            
+            // 触发updateSelectedAPIs函数以更新状态
+            if (typeof updateSelectedAPIs === 'function') {
+                updateSelectedAPIs();
+            } else {
+                // 如果函数不可用，则手动添加到selectedAPIs
+                selectedAPIs.push('dbzy');
+                localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
                 
-                // 触发updateSelectedAPIs函数以更新状态
-                if (typeof updateSelectedAPIs === 'function') {
-                    updateSelectedAPIs();
-                } else {
-                    // 如果函数不可用，则手动添加到selectedAPIs
-                    selectedAPIs.push('dbzy');
-                    localStorage.setItem('selectedAPIs', JSON.stringify(selectedAPIs));
-                    
-                    // 更新选中API计数（如果有这个元素）
-                    const countEl = document.getElementById('selectedApiCount');
-                    if (countEl) {
-                        countEl.textContent = selectedAPIs.length;
-                    }
+                // 更新选中API计数（如果有这个元素）
+                const countEl = document.getElementById('selectedAPICount');
+                if (countEl) {
+                    countEl.textContent = selectedAPIs.length;
                 }
-                
-                showToast('已自动选择豆瓣资源API', 'info');
             }
+            
+            showToast('已自动选择豆瓣资源API', 'info');
         }
     }
     
     // 填充搜索框并执行搜索
     const input = document.getElementById('searchInput');
     if (input) {
-        // 优化搜索关键词，提高搜索匹配度
-        let searchKeyword = optimizeSearchKeyword(safeTitle);
+        input.value = safeTitle;
         
-        // 设置搜索框的值
-        input.value = searchKeyword;
-        
-        // 检查search函数是否存在
-        if (typeof search === 'function') {
+        // 显示加载提示
+        if (typeof showLoading === 'function') {
             showLoading('正在搜索豆瓣内容...');
-            await search(); // 使用已有的search函数执行搜索
-            hideLoading();
-        } else {
-            // 如果search函数不存在，尝试自己实现基本的搜索功能
-            showToast('搜索功能不可用', 'error');
-            return;
         }
         
-        // 更新浏览器URL，使其反映当前的搜索状态
         try {
-            // 使用URI编码确保特殊字符能够正确显示
-            const encodedQuery = encodeURIComponent(searchKeyword);
-            // 使用HTML5 History API更新URL，不刷新页面
-            window.history.pushState(
-                { search: searchKeyword }, 
-                `搜索: ${searchKeyword} - YTPPTV`, 
-                `/s=${encodedQuery}`
-            );
-            // 更新页面标题
-            document.title = `搜索: ${searchKeyword} - YTPPTV`;
-        } catch (e) {
-            console.error('更新浏览器历史失败:', e);
+            await search(); // 使用已有的search函数执行搜索
+            
+            // 更新浏览器URL，使其反映当前的搜索状态
+            try {
+                // 使用URI编码确保特殊字符能够正确显示
+                const encodedQuery = encodeURIComponent(safeTitle);
+                // 使用HTML5 History API更新URL，不刷新页面
+                window.history.pushState(
+                    { search: safeTitle }, 
+                    `搜索: ${safeTitle} - YTPPTV`, 
+                    `/s=${encodedQuery}`
+                );
+                // 更新页面标题
+                document.title = `搜索: ${safeTitle} - YTPPTV`;
+            } catch (e) {
+                console.error('更新浏览器历史失败:', e);
+            }
+        } catch (error) {
+            console.error('搜索失败:', error);
+            showToast('搜索失败，请稍后重试', 'error');
+        } finally {
+            // 隐藏加载提示
+            if (typeof hideLoading === 'function') {
+                hideLoading();
+            }
         }
 
         // 在移动设备上，搜索后自动滚动到顶部
@@ -1644,3 +1643,103 @@ function clearAllDoubanCache() {
 
 // 添加到全局作用域，方便调试
 window.clearAllDoubanCache = clearAllDoubanCache;
+
+// 显示资源选择模态框 - 豆瓣版
+function showDoubanResourceModal(title, resources) {
+    // 过滤掉视频数为0的资源，除非是当前正在使用的资源
+    const currentApi = document.getElementById('currentApiName')?.textContent || '';
+    const filteredResources = resources.filter(resource => {
+        // 如果是当前正在使用的API，即使视频数为0也要显示
+        if (resource.api === currentApi) {
+            return true;
+        }
+        // 否则只显示视频数大于0的资源
+        return resource.count > 0;
+    });
+    
+    // 如果过滤后没有资源，显示提示
+    if (filteredResources.length === 0) {
+        showToast('没有可用的资源', 'warning');
+        return;
+    }
+    
+    // 创建模态框
+    let modal = document.getElementById('doubanResourceModal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+    
+    modal = document.createElement('div');
+    modal.id = 'doubanResourceModal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4';
+    
+    // 模态框内容
+    modal.innerHTML = `
+        <div class="bg-[#111] rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-[#333]">
+                <h3 class="text-xl font-bold text-white">选择资源</h3>
+                <button id="closeDoubanResourceModal" class="text-gray-400 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    ${filteredResources.map(resource => `
+                        <button 
+                            onclick="selectDoubanResource('${resource.api}', '${resource.url}')" 
+                            class="bg-[#1a1a1a] hover:bg-[#333] text-white p-3 rounded-lg transition-colors flex flex-col items-center justify-center gap-1 border border-[#333] hover:border-white">
+                            <span class="text-sm font-medium truncate w-full text-center">${resource.api}</span>
+                            <span class="text-xs text-gray-400">${resource.count} 个视频</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 添加到页面
+    document.body.appendChild(modal);
+    
+    // 关闭按钮事件
+    document.getElementById('closeDoubanResourceModal').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    
+    // 点击背景关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
+}
+
+// 关闭模态框函数
+function closeModal() {
+    const modal = document.getElementById('categoryModal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+}
+
+// 选择资源函数 - 豆瓣版
+function selectDoubanResource(api, url) {
+    // 关闭资源模态框
+    const modal = document.getElementById('doubanResourceModal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+    
+    // 更新当前API名称显示
+    const apiNameEl = document.getElementById('currentApiName');
+    if (apiNameEl) {
+        apiNameEl.textContent = api;
+    }
+    
+    // 如果有播放函数，调用它
+    if (typeof playVideo === 'function') {
+        playVideo(url);
+    } else {
+        // 否则直接跳转
+        window.location.href = url;
+    }
+}
