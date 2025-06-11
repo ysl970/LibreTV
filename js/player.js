@@ -1520,7 +1520,7 @@ function showResourceModal() {
         .map(([key, val]) => ({ key, name: val.name }));
     
     // 显示加载中
-    list.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;">正在加载资源列表...</div>';
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:#aaa;grid-column:1/-1;">正在加载资源列表...</div>';
     modal.style.display = 'flex';
     
     Promise.all(resourceOptions.map(async opt => {
@@ -1540,7 +1540,8 @@ function showResourceModal() {
         list.innerHTML = resourceWithCounts.map(opt =>
             `<div class="resource-modal-item${opt.key === currentSource ? ' active' : ''}" data-key="${opt.key}">
                 <span>${opt.name}</span>
-                <span>${opt.count !== '' ? opt.count + '个视频' : ''}${opt.key === currentSource ? ' <svg style=\"vertical-align:middle;margin-left:6px;\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 6L9 17l-5-5\"></path></svg>' : ''}</span>
+                <span>${opt.count !== '' ? opt.count + '个视频' : ''}</span>
+                ${opt.key === currentSource ? '<div class="check-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"></path></svg></div>' : ''}
             </div>`
         ).join('');
         list.querySelectorAll('.resource-modal-item').forEach(item => {
@@ -1576,7 +1577,7 @@ function showResourceModal() {
         });
     }).catch(err => {
         console.error('加载资源列表失败:', err);
-        list.innerHTML = '<div style="text-align:center;padding:20px;color:#ff6b6b;">加载资源列表失败</div>';
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:#ff6b6b;grid-column:1/-1;">加载资源列表失败</div>';
     });
 }
 
