@@ -57,7 +57,7 @@ const API_CONFIG = {
 };
 
 // 优化后的正则表达式模式
-const M3U8_PATTERN = /\$https?:\/\/[^"'\s]+?\.m3u8/g;
+const M3U8_PATTERN = /\$(https?:\/\/[^"'\s]+?\.m3u8)/g;
 
 // 添加自定义播放器URL
 const CUSTOM_PLAYER_URL = 'player.html'; // 使用相对路径引用本地player.html
@@ -109,4 +109,66 @@ const HISTORY_CONFIG = {
     storageKey: 'viewingHistory',  // 存储键名
     maxItems: 50,                  // 最大历史记录数量
     expireDays: 30                 // 历史记录过期天数
+};
+
+// 添加豆瓣API配置和缓存机制
+const DOUBAN_CONFIG = {
+    // 缓存配置
+    cache: {
+        enabled: true,           // 是否启用缓存
+        storageKey: 'doubanCache', // 本地存储键名
+        expiry: 6 * 60 * 60 * 1000, // 缓存过期时间(6小时)
+        maxItems: 20             // 每种类型最多缓存项数
+    },
+    // API配置
+    api: {
+        timeout: 8000,           // API请求超时时间(毫秒)
+        primaryMirrors: [         // 主要API镜像列表(按优先级排序)
+            '/proxy/https://movie.douban.com/j/search_subjects', // 通过本地代理(首选)
+            'https://api.allorigins.win/get?url=' + encodeURIComponent('https://movie.douban.com/j/search_subjects') // 通过公共代理
+        ],
+        retryDelay: 1000,        // 重试延迟时间(毫秒)
+        maxRetries: 2,           // 最大重试次数
+        batchSize: 16            // 每批请求项数
+    },
+    // 默认初始配置
+    defaults: {
+        type: 'movie',           // 默认类型(电影)
+        tag: '热门',              // 默认标签
+        pageStart: 0,            // 默认起始页
+        pageSize: 16             // 默认页大小
+    },
+    // 图片优化
+    images: {
+        lazyLoad: true,          // 是否启用懒加载
+        placeholderImage: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="150" viewBox="0 0 100 150"%3E%3Crect width="100" height="150" fill="%23222222"/%3E%3Ctext x="50" y="75" font-family="Arial" font-size="12" fill="%23ffffff" text-anchor="middle"%3E加载中...%3C/text%3E%3C/svg%3E',
+        errorImage: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="150" viewBox="0 0 100 150"%3E%3Crect width="100" height="150" fill="%23222222"/%3E%3Ctext x="50" y="75" font-family="Arial" font-size="12" fill="%23ffffff" text-anchor="middle"%3E加载失败%3C/text%3E%3C/svg%3E'
+    }
+};
+
+// 搜索优化配置
+const SEARCH_CONFIG = {
+    debounceTime: 500,          // 搜索输入防抖时间(毫秒)
+    minSearchLength: 2,          // 最小搜索长度
+    preloadResults: true,        // 是否预加载结果
+    resultCache: {
+        enabled: true,           // 是否启用结果缓存
+        storageKey: 'searchResultCache', // 本地存储键名
+        expiry: 12 * 60 * 60 * 1000, // 缓存过期时间(12小时)
+        maxItems: 20             // 最大缓存项数
+    }
+};
+
+// 页面性能优化配置
+const PERFORMANCE_CONFIG = {
+    resourceHints: true,        // 是否启用资源提示(preconnect等)
+    minifyHTML: true,           // 是否最小化HTML
+    dynamicImport: true,        // 是否使用动态导入
+    inlineImages: true,         // 是否内联小图片
+    optimizeForFirstView: true, // 是否优化首屏加载
+    loadPriority: {
+        critical: ['config.js', 'app.js', 'styles.css'], // 关键资源
+        high: ['api-sites.js'],  // 高优先级资源
+        low: ['douban.js', 'wakelock.js'] // 低优先级资源
+    }
 };
