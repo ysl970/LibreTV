@@ -275,11 +275,35 @@
                 </div>
             </div>
             
-            <!-- 豆瓣热门推荐区域: 默认隐藏，现在位于搜索区域下方，调整宽度 -->
-            <div id="doubanArea" class="w-full my-8 hidden">
-                <div class="mx-auto max-w-screen-xl px-2">
-                    <!-- 1. 热门电视剧区域 -->
-                    <div class="mb-8">
+            <!-- 豆瓣推荐区域 -->
+            <div id="doubanArea" class="w-full">
+                <div class="mx-auto max-w-7xl px-2">
+                    <!-- 豆瓣切换和标签区域 -->
+                    <div class="mb-6">
+                        <!-- 电影/电视剧切换 -->
+                        <div id="doubanMovieTvSwitch" class="mb-4"></div>
+                        
+                        <!-- 标签列表 -->
+                        <div id="doubanTags" class="mb-4"></div>
+                        
+                        <!-- 换一批按钮和结果区域 -->
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-xl font-bold gradient-text">豆瓣推荐</h2>
+                            <button id="doubanRefreshBtn" class="text-sm text-gray-400 hover:text-white flex items-center">
+                                换一批 
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        <!-- 豆瓣结果区域 -->
+                        <div id="douban-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"></div>
+                    </div>
+                    
+                    <!-- 原有豆瓣分类内容 - 默认隐藏 -->
+                    <!-- 1. 热播电视剧区域 -->
+                    <div class="mb-8 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">热播电视剧</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hot" data-type="tv">
@@ -293,7 +317,7 @@
                     </div>
 
                     <!-- 2. 热门综艺区域 -->
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">热播综艺</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hot" data-type="variety">
@@ -307,7 +331,7 @@
                     </div>
 
                     <!-- 3. 热播电影区域 -->
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">热播电影</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hot" data-type="movie">
@@ -321,7 +345,7 @@
                     </div>
 
                     <!-- 4. 热播动画区域 -->
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">热播动画</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="animation" data-type="movie">
@@ -335,7 +359,7 @@
                     </div>
 
                     <!-- 6. 热播美剧区域 -->
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">热播美剧</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="us" data-type="tv">
@@ -349,7 +373,7 @@
                     </div>
 
                     <!-- 7. 热播港剧区域 -->
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">热播港剧</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="hk" data-type="tv">
@@ -363,7 +387,7 @@
                     </div>
 
                     <!-- 8. 热播韩剧区域 -->
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">热播韩剧</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="kr" data-type="tv">
@@ -377,7 +401,7 @@
                     </div>
 
                     <!-- 9. 热播日剧区域 -->
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">热播日剧</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="jp" data-type="tv">
@@ -391,7 +415,7 @@
                     </div>
 
                     <!-- 10. Top250电影区域 -->
-                    <div class="mb-8">
+                    <div class="mb-8 hidden">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-xl font-bold gradient-text">Top250电影</h2>
                             <a href="#" class="text-sm text-gray-400 hover:text-white flex items-center" data-category="top250" data-type="movie">
