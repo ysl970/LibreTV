@@ -8,12 +8,28 @@
     <meta name="keywords" content="在线视频,免费视频,视频搜索,电影,电视剧,YTPPTV">
     <meta name="author" content="YTPPTV Team">
 
+    <!-- 资源提示和预加载 -->
+    <link rel="dns-prefetch" href="//movie.douban.com">
+    <link rel="preconnect" href="//movie.douban.com" crossorigin>
+    <link rel="dns-prefetch" href="//api.allorigins.win">
+    <link rel="preconnect" href="//api.allorigins.win" crossorigin>
+    
+    <!-- 预加载关键CSS资源 -->
+    <link rel="preload" href="css/styles.css" as="style">
+    <link rel="preload" href="css/index.css" as="style">
+    
+    <!-- 预加载关键JS资源 -->
+    <link rel="preload" href="js/config.js" as="script">
+    <link rel="preload" href="js/app.js" as="script">
+    <link rel="preload" href="js/api-sites.js" as="script">
+
     <!-- Favicon -->
     <link rel="icon" href="image/logo.png">
     <link rel="apple-touch-icon" href="image/logo-black.png">
     <link rel="manifest" href="manifest.json">
     
-    <script src="libs/tailwindcss.min.js"></script>
+    <!-- 核心资源 -->
+    <script src="libs/tailwindcss.min.js" defer></script>
     <link rel="stylesheet" href="css/tailwind.min.css">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/index.css">
@@ -21,23 +37,26 @@
     
     <!-- 引入API站点配置 -->
     <script src="js/api-sites.js"></script>
-    <script src="js/douban.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
     
-    <!-- 注册Service Worker -->
+    <!-- 延迟加载非关键资源 -->
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
+        window.addEventListener('load', function() {
+            // 延迟加载豆瓣模块
+            const doubanScript = document.createElement('script');
+            doubanScript.src = 'js/douban.js'; 
+            document.head.appendChild(doubanScript);
+            
+            // 注册Service Worker 
+            if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => {
-                        // 删除不必要的日志
-                        // console.log('Service Worker 注册成功:', registration.scope);
-                    })
                     .catch(error => {
                         // 保留错误日志，这对调试问题非常重要
                         console.error('Service Worker 注册失败:', error);
                     });
-            });
-        }
+            }
+        });
     </script>
 </head>
 <body class="page-bg text-white">
@@ -453,12 +472,9 @@
         // 保存原始 js‑sha256 实现，避免被 password.js 覆盖
         window._jsSha256 = window.sha256;
     </script>
-    <script src="js/config.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/api.js"></script>
     <script src="js/douban.js"></script>
     <script src="js/password.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/index-page.js"></script>
 
     <!-- PWA 注册 -->
     <script src="js/pwa-register.js"></script>
@@ -475,8 +491,5 @@
 
     <!-- 版本检测脚本 -->
     <script src="js/version-check.js"></script>
-    
-    <!-- 添加弹窗和URL搜索参数处理脚本 -->
-    <script src="js/index-page.js"></script>
 </body>
 </html>
