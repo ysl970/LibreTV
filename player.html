@@ -146,20 +146,6 @@
     <meta http-equiv="Cache-Control" content="no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-
-    <!-- 资源提示和预加载 -->
-    <link rel="dns-prefetch" href="//movie.douban.com">
-    <link rel="preconnect" href="//movie.douban.com" crossorigin>
-    
-    <!-- 预加载关键CSS资源 -->
-    <link rel="preload" href="css/styles.css" as="style">
-    <link rel="preload" href="css/player.css" as="style">
-    
-    <!-- 预加载关键JS资源 -->
-    <link rel="preload" href="js/config.js" as="script">
-    <link rel="preload" href="js/api-sites.js" as="script">
-    <link rel="preload" href="js/player.js" as="script">
-    <link rel="preload" href="libs/hls.min.js" as="script">
 </head>
 <body>
     <header class="player-header-fixed p-2 md:p-4 flex items-center border-b border-[#333] gap-1 md:gap-2">
@@ -384,37 +370,5 @@
         </div>
       </div>
     </div>
-
-    <!-- 使用DOMContentLoaded而不是window.onload以加快感知加载速度 -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 页面基本元素已加载，此时可以初始化UI
-            initPlayerUI();
-        });
-        
-        // 初始化播放器UI
-        function initPlayerUI() {
-            // 显示加载中提示
-            const playerContainer = document.getElementById('playerContainer');
-            if (playerContainer) {
-                playerContainer.innerHTML = `
-                    <div class="flex items-center justify-center w-full h-full bg-black">
-                        <div class="text-center">
-                            <div class="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                            <p class="mt-4 text-white text-lg">正在加载播放器...</p>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // 页面完全加载后再初始化播放器
-            window.addEventListener('load', function() {
-                // 现在可以安全地访问DOM并加载播放器相关脚本
-                const playerScript = document.createElement('script');
-                playerScript.src = 'js/player.js'; 
-                document.head.appendChild(playerScript);
-            });
-        }
-    </script>
 </body>
 </html>
