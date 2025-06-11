@@ -217,7 +217,7 @@ function initializePageContent() {
 
     // 渲染集数列表
     renderEpisodes();
-    
+
     // 初始渲染资源信息卡片
     renderResourceInfoBar();
 
@@ -1540,7 +1540,7 @@ function showResourceModal() {
         list.innerHTML = resourceWithCounts.map(opt =>
             `<div class="resource-modal-item${opt.key === currentSource ? ' active' : ''}" data-key="${opt.key}">
                 <span>${opt.name}</span>
-                <span style="color:#ffd700;font-size:1em;min-width:3em;text-align:right;">${opt.count !== '' ? opt.count + '个视频' : ''}${opt.key === currentSource ? ' <svg style=\"vertical-align:middle;margin-left:6px;\" width=\"18\" height=\"18\" viewBox=\"0 0 20 20\" fill=\"#ffd700\"><circle cx=\"10\" cy=\"10\" r=\"8\"/><path d=\"M7 10l2 2 4-4\" stroke=\"#232a36\" stroke-width=\"2\" fill=\"none\"/></svg>' : ''}</span>
+                <span>${opt.count !== '' ? opt.count + '个视频' : ''}${opt.key === currentSource ? ' <svg style=\"vertical-align:middle;margin-left:6px;\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M20 6L9 17l-5-5\"></path></svg>' : ''}</span>
             </div>`
         ).join('');
         list.querySelectorAll('.resource-modal-item').forEach(item => {
@@ -1794,13 +1794,13 @@ function renderResourceInfoBar() {
             if (typeof API_SITES === 'undefined' || !API_SITES) {
                 console.error('API_SITES未定义，尝试加载...');
                 try {
-                    // 尝试加载api-sites.js
+        // 尝试加载api-sites.js
                     const script = document.createElement('script');
                     script.src = 'js/api-sites.js';
                     script.onload = () => {
                         console.log('成功加载API_SITES，重新渲染资源信息');
                         setTimeout(renderResourceInfoBar, 100);
-                    };
+        };
                     document.head.appendChild(script);
                 } catch (e) {
                     console.error('加载API_SITES失败:', e);
@@ -1809,30 +1809,30 @@ function renderResourceInfoBar() {
             }
             
             // 方法1：直接通过source_code匹配
-            if (currentSource && API_SITES[currentSource]) {
-                resourceName = API_SITES[currentSource].name;
+    if (currentSource && API_SITES[currentSource]) {
+        resourceName = API_SITES[currentSource].name;
                 console.log('通过source_code直接匹配成功:', resourceName);
                 return true;
-            }
+    } 
             
             // 方法2：如果是自定义API
             if (currentSource && currentSource.startsWith('custom_')) {
-                try {
-                    const customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]');
-                    const customIndex = parseInt(currentSource.replace('custom_', ''), 10);
-                    if (customAPIs[customIndex]) {
-                        resourceName = customAPIs[customIndex].name || '自定义资源';
+        try {
+            const customAPIs = JSON.parse(localStorage.getItem('customAPIs') || '[]');
+            const customIndex = parseInt(currentSource.replace('custom_', ''), 10);
+            if (customAPIs[customIndex]) {
+                resourceName = customAPIs[customIndex].name || '自定义资源';
                         console.log('通过自定义API匹配成功:', resourceName);
                         return true;
-                    }
-                } catch (e) {
-                    console.error('获取自定义API信息失败:', e);
-                }
             }
-            
+        } catch (e) {
+            console.error('获取自定义API信息失败:', e);
+        }
+    } 
+    
             // 方法3：通过视频URL域名匹配
             if (videoUrl && domainFromUrl) {
-                for (const [key, api] of Object.entries(API_SITES)) {
+        for (const [key, api] of Object.entries(API_SITES)) {
                     // 通过API URL匹配
                     try {
                         const apiUrlObj = new URL(api.api);
@@ -1840,7 +1840,7 @@ function renderResourceInfoBar() {
                         
                         // 域名完全匹配
                         if (domainFromUrl === apiHost) {
-                            resourceName = api.name;
+                resourceName = api.name;
                             console.log('通过域名完全匹配成功:', resourceName);
                             return true;
                         }
@@ -1850,11 +1850,11 @@ function renderResourceInfoBar() {
                             resourceName = api.name;
                             console.log('通过域名部分匹配成功:', resourceName);
                             return true;
-                        }
-                        
+            }
+            
                         // 通过detail匹配
                         if (api.detail) {
-                            try {
+            try {
                                 const detailUrlObj = new URL(api.detail);
                                 const detailHost = detailUrlObj.hostname;
                                 if (domainFromUrl === detailHost || domainFromUrl.includes(detailHost) || detailHost.includes(domainFromUrl)) {
@@ -1867,16 +1867,16 @@ function renderResourceInfoBar() {
                         
                         // 通过URL字符串匹配
                         if (videoUrl.includes(api.api) || (api.detail && videoUrl.includes(api.detail))) {
-                            resourceName = api.name;
+                    resourceName = api.name;
                             console.log('通过URL字符串匹配成功:', resourceName);
                             return true;
-                        }
-                    } catch (e) {
-                        console.error('域名匹配出错:', e);
-                    }
                 }
+            } catch (e) {
+                        console.error('域名匹配出错:', e);
             }
-            
+        }
+    }
+    
             // 方法4：通过source_code部分匹配
             if (currentSource) {
                 for (const [key, api] of Object.entries(API_SITES)) {
@@ -1964,10 +1964,10 @@ function renderResourceInfoBar() {
     // 绑定切换资源弹窗事件
     const switchBtn = document.getElementById('switchResourceBtn');
     if (switchBtn) {
-        switchBtn.onclick = function(e) {
-            e.preventDefault();
-            showResourceModal && showResourceModal();
-        };
+      switchBtn.onclick = function(e) {
+        e.preventDefault();
+        showResourceModal && showResourceModal();
+      };
     }
 }
 
@@ -2030,13 +2030,13 @@ window.addEventListener('DOMContentLoaded', function () {
         const apiLoaded = await loadApiSites();
         if (apiLoaded) {
             console.log("API加载成功，开始渲染资源信息卡片");
-            renderResourceInfoBar();
-        } else {
+        renderResourceInfoBar();
+    } else {
             console.error("API加载失败，尝试使用默认渲染");
-        }
+            }
         
         // 无论API加载是否成功，都要渲染集数卡片
-        renderEpisodeCards();
+    renderEpisodeCards();
     })();
     
     // 确保URL中的index参数被正确应用
