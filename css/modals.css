@@ -31,7 +31,7 @@
 }
 
 .modal-title {
-    font-size: 1.5rem;
+    font-size: var(--text-level1);
     font-weight: 700;
     background: linear-gradient(to right, #00ccff, #ff3c78);
     -webkit-background-clip: text;
@@ -42,20 +42,22 @@
 }
 
 .modal-close {
-    color: #9ca3af;
+    color: var(--text-tertiary);
     font-size: 1.5rem;
     transition: color 0.2s;
     flex-shrink: 0;
 }
 
 .modal-close:hover {
-    color: white;
+    color: var(--text-primary);
 }
 
 .modal-body {
     overflow: auto;
     flex: 1;
     min-height: 0;
+    font-size: var(--text-level3);
+    color: var(--text-secondary);
 }
 
 /* 密码验证模态框 */
@@ -71,10 +73,11 @@
     width: 100%;
     background-color: #111;
     border: 1px solid #333;
-    color: white;
+    color: var(--text-primary);
     padding: 1rem;
     border-radius: 0.5rem;
     margin-bottom: 1rem;
+    font-size: var(--text-level3);
 }
 
 .password-input:focus {
@@ -84,11 +87,12 @@
 
 .password-submit {
     width: 100%;
-    background-color: #3b82f6;
+    background-color: var(--text-highlight);
     color: white;
     padding: 0.5rem 1rem;
     border-radius: 0.25rem;
     font-weight: 500;
+    font-size: var(--text-level3);
 }
 
 .password-submit:hover {
@@ -99,6 +103,7 @@
     color: #ef4444;
     margin-top: 0.5rem;
     display: none;
+    font-size: var(--text-level4);
 }
 
 /* 声明模态框 */
@@ -107,8 +112,9 @@
 }
 
 .disclaimer-content {
-    color: #d1d5db;
+    color: var(--text-secondary);
     line-height: 1.5;
+    font-size: var(--text-level3);
 }
 
 .disclaimer-content p {
@@ -116,7 +122,7 @@
 }
 
 .disclaimer-content strong {
-    color: #60a5fa;
+    color: var(--text-accent);
 }
 
 .disclaimer-button {
@@ -127,6 +133,7 @@
     font-weight: 600;
     border-radius: 0.5rem;
     transition: all 0.3s;
+    font-size: var(--text-level3);
 }
 
 .disclaimer-button:hover {
@@ -148,6 +155,7 @@
     transition: all 0.3s;
     opacity: 0;
     z-index: 50;
+    font-size: var(--text-level4);
 }
 
 .toast.show {
@@ -189,8 +197,8 @@
 }
 
 .loading-text {
-    color: white;
-    font-size: 1.125rem;
+    color: var(--text-primary);
+    font-size: var(--text-level3);
 }
 
 /* 动画效果 */
@@ -211,4 +219,32 @@
 
 .modal-overlay.hide {
     animation: fadeOut 0.3s forwards;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+    .modal-content {
+        padding: 1.5rem;
+        width: 95%;
+    }
+    
+    .modal-title {
+        font-size: var(--text-level1);
+        max-width: 75%;
+    }
+    
+    .modal-body {
+        font-size: var(--text-level4);
+    }
+    
+    .disclaimer-content,
+    .password-input,
+    .password-submit,
+    .disclaimer-button {
+        font-size: var(--text-level4);
+    }
+    
+    .loading-text {
+        font-size: var(--text-level4);
+    }
 }
