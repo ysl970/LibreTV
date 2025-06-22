@@ -1,21 +1,54 @@
 # LibreTV - 免费在线视频搜索与观看平台
 
-<div align="center">
-  <img src="image/logo.png" alt="LibreTV Logo" width="120">
-  <br>
+<div 对齐="居中">
+  <img src="image/logo.png" alt="LibreTV 标志" width="120">
+  <换行>
   <p><strong>自由观影，畅享精彩</strong></p>
-</div>
-
+输入：div
+视频数据采集站
+非凡采集站：http://ffzy5.tv/
+爱坤资源：iKun资源
+暴风资源：暴风资源
+苹果cms官方  https://www.applecms.cc
+赞片cms官网  https://www.zanpiancms.com
+量子资源网：量子资源站帮助中心
+新浪资源网：新浪资源—-备用采集接口
+虎牙资源网：虎牙资源—-采集接口
+光速资源网： 光速资源—-备用采集接口
+极速资源网：帮助中心-极速资源
+红牛资源网：红牛资源—-备用采集接口
+如意资源网：如意资源网-www.ryzyw.com
+魔爪资源网：魔爪资源采集
+华为吧资源：华为吧资源
+豆瓣资源站：豆瓣资源站
+茅台资源站：茅台资源站
+索尼资源：索尼资源网
+U酷资源站：U酷资源站
+快车资源站：快车资源网
+金鹰资源站：金鹰资源采集网
+淘片资源站：淘片资源网
+卧龙资源站：卧龙资源网
+牛牛资源站：牛牛资源网欢迎您
+小绵羊资源站：小绵羊视频解析平台
+虾米资源站：虾米资源站-官采
+麒麟资源站：麒麟资源站
+蜂巢资源站：蜂巢片库 - 苹果cms - 海洋cms - 影视站采集
+豪华资源站：豪华资源
+魔都资源站：魔都资源网 - 打造全网最优质资源站
+火花资源站：火花官采 - 官方影片地址实时采集
+速播资源站：速播资源
+黑木耳资源站：黑木耳资源站
 ## 📺 项目简介
 
 LibreTV 是一个轻量级、免费的在线视频搜索与观看平台，提供来自多个视频源的内容搜索与播放服务。无需注册，即开即用，支持多种设备访问。项目结合了前端技术和后端代理功能，可部署在支持服务端功能的各类网站托管服务上。**项目门户**： [libretv.is-an.org](https://libretv.is-an.org)
 
 本项目基于 [bestK/tv](https://github.com/bestK/tv) 进行重构与增强。
 
-<details>
-  <summary>点击查看项目截图</summary>
-  <img src="https://github.com/user-attachments/assets/df485345-e83b-4564-adf7-0680be92d3c7" alt="项目截图" style="max-width:600px">
-</details>
+<<详细信息>>
+  <概要>点击查看项目截图</概要>
+<概要>点击查看项目截图</概要>
+  <img src="https://github.com/user-attachments/assets/df485345-e83b-4564-adf7-0680be92d3c7" alt="项目截图" style="max-width:600px"><img src="https://github.com/user-attachments/assets/df485345-e83b-4564-adf7-0680be92d3c7" alt="项目截图" style="max-width:600px">
+
 
 ## 🥇 感谢赞助
 
@@ -26,11 +59,11 @@ LibreTV 是一个轻量级、免费的在线视频搜索与观看平台，提供
 
 选择以下任一平台，点击一键部署按钮，即可快速创建自己的 LibreTV 实例：
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLibreSpark%2FLibreTV)  
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LibreSpark/LibreTV)  
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/LibreSpark/LibreTV) 
+[![在 Vercel 上部署](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FLibreSpark%2FLibreTV)  
+[![部署到Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/LibreSpark/LibreTV)  
+[![部署到Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/LibreSpark/LibreTV) 
 
-## ⚠️ 安全与隐私提醒
+##⚠️ 安全与隐私提醒
 
 ### 🔒 强烈建议设置密码保护
 
@@ -159,18 +192,22 @@ npm run dev
 - **Vercel**: Dashboard > 您的项目 > Settings > Environment Variables
 - **Netlify**: Dashboard > 您的项目 > Site settings > Build & deploy > Environment
 - **Docker**: 修改 `docker run` 中 `your_password` 为你的密码
-- **Docker Compose**: 修改 `docker-compose.yml` 中的 `your_password` 为你的密码
-- **本地开发**: SET PASSWORD=your_password
+- **Docker Compose**：修改`docker-compose.yml`中的`your_password`为你的密码
+- **本地开发**: 设置密码=你的密码
 
 ### API兼容性
 
-LibreTV 支持标准的苹果 CMS V10 API 格式。添加自定义 API 时需遵循以下格式：
+LibreTV 支持标准的苹果 CMS V10 API 格式。添加自定义 API 时需遵循以下格式。
 - 搜索接口: `https://example.com/api.php/provide/vod/?ac=videolist&wd=关键词`
 - 详情接口: `https://example.com/api.php/provide/vod/?ac=detail&ids=视频ID`
 
-**添加 CMS 源**:
+**添加CMS源**:
 1. 在设置面板中选择"自定义接口"
-2. 接口地址: `https://example.com/api.php/provide/vod`
+2. 接口地址: `
+
+https://example.com/api.php/provide/vod`
+
+
 
 ## ⌨️ 键盘快捷键
 
